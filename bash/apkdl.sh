@@ -1,5 +1,7 @@
 #!/bin/bash
 
+shopt -s extglob
+
 # --- Colored log indicators ---
 good="\033[92;1m[✔]\033[0m"
 bad="\033[91;1m[✘]\033[0m"
