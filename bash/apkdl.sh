@@ -570,7 +570,7 @@ downloadAPK() {
 }
 
 while true; do
-  options=(APKMirror ReVanced)
+  options=(APKMirror Uptodown ReVanced)
   [ $isAndroid -eq 1 ] && options+=(Configuration)
   buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "10"; then selected=${options[selected]}; fi
   case "$selected" in
