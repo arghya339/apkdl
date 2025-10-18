@@ -599,7 +599,6 @@ while true; do
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
-        dlLink="$finalDownloadButtonLink"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
         echo; read -p "Press Enter to continue..."
@@ -653,7 +652,6 @@ while true; do
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
-        dlLink="$finalDownloadButtonLink"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
         echo; read -p "Press Enter to continue..."

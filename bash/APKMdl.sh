@@ -333,9 +333,8 @@ getDownloadLink() {
     # https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=XXXXXXX&key=XxX 
     # https://www.androidpolice.com/2020/07/04/how-to-download-apps-without-the-play-store-and-why-apkmirror-is-the-best-place-to-get-them/
     # https://github.com/illogical-robot/apkmirror-public/issues
-  [ -n "$finalDownloadButtonLink" ] && { finalDownloadButtonLink="https://www.apkmirror.com$finalDownloadButtonLink"; echo -e "$good Found final download Link: ${Blue}$finalDownloadButtonLink${Reset}"; }
+  [ -n "$finalDownloadButtonLink" ] && { dlLink="https://www.apkmirror.com$finalDownloadButtonLink"; echo -e "$good Found final download Link: ${Blue}$dlLink${Reset}"; return; } || return 1
   fi
-  [ -z "$finalDownloadButtonLink" ] && return 1 || return 0
 }
 
 getAppDetails() {
