@@ -33,10 +33,6 @@ curl -sL -o "$HOME/.apkdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl
 apkdl="$HOME/apkdl"
 mkdir -p $apkdl
 
-curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
-curl -sL -o "$apkdl/dlUptodown.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlUptodown.sh"
-curl -sL -o "$apkdl/RVdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/RVdl.sh"
-
 apkdlJson="$apkdl/apkdl.json"  # Configuration file to store apkdl settings
 
 isRipLocale=1  # Default value (true/on/1) for RipLocale, it's delete locale from apk file except device specific locale by default
@@ -575,6 +571,8 @@ while true; do
   buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "10"; then selected=${options[selected]}; fi
   case "$selected" in
     APKMirror)
+      curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
+      
       source $apkdl/APKMdl.sh
       
       buttons=("<appName>" "<pkgName>"); confirmPrompt "Please select a method to get appLink" "buttons" && opt=appName || opt=pkgName
@@ -605,6 +603,8 @@ while true; do
       fi
       ;;
     Uptodown)
+      curl -sL -o "$apkdl/dlUptodown.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlUptodown.sh"
+      
       source $apkdl/dlUptodown.sh
       
       UptodownSearch
@@ -625,8 +625,10 @@ while true; do
       fi
       ;;
     ReVanced)
+      curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
       source $apkdl/APKMdl.sh
       
+      curl -sL -o "$apkdl/RVdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/RVdl.sh"
       source $apkdl/RVdl.sh
       [ $? -ne 0 ] && continue
       
