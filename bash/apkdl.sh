@@ -334,6 +334,11 @@ if [ $isMacOS -eq 1 ]; then
     curl -L --progress-bar -C - -o $HOME/Downloads/aria2c-macos-$Arch.tar https://github.com/tofuliang/aria2/releases/download/20240919/aria2c-macos-$Arch.tar
     pv "$HOME/Downloads/aria2c-macos-$Arch.tar" | tar -xf - -C "$HOME/Downloads" && rm -f "$HOME/Downloads/aria2c-macos-$Arch.tar"
     sudo mv $HOME/Downloads/aria2c /usr/local/bin/aria2c
+    if aria2c -v &>/dev/null; then
+      aria2c -v | head -1 | awk '{print $3}'
+    else
+      sudo xattr -d com.apple.quarantine /usr/local/bin/aria2c && aria2c -v | head -1 | awk '{print $3}'
+    fi
     rm -f ~/aria2Executing
   else
     rm -f ~/aria2Executing
