@@ -545,7 +545,7 @@ while true; do
     APKMirror)
       source $apkdl/APKMdl.sh
       
-      buttons=(<appName> <pkgName>); confirmPrompt "Please select a method to get appLink" "buttons" && opt=appName || opt=pkgName
+      buttons=("<appName>" "<pkgName>"); confirmPrompt "Please select a method to get appLink" "buttons" && opt=appName || opt=pkgName
      
       if [ "$opt" == "appName" ]; then
         searchApp
