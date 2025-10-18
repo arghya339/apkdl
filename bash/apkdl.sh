@@ -77,7 +77,7 @@ if [ $isMacOS -eq 1 ]; then
   [ $(uname -m) == "x86_64" ] && Arch=$Arch || Arch=arm64
   USER_AGENT="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$crVersion Mobile Safari/537.36"
 elif [ $isAndroid -eq 1 ]; then
-  Download="/scard/Download"
+  Download="/sdcard/Download"
   cpuAbi=$(getprop ro.product.cpu.abi)
   Android=$(getprop ro.build.version.release)
   Model=$(getprop ro.product.model)
