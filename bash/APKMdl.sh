@@ -388,7 +388,7 @@ apkm2apk() {
     fi
   else
     while true; do
-      curl -L --progress-bar -o $APKEditor -C - https://github.com/REAndroid/APKEditor/releases/download/V$tag_name/APKEditor-$tag_name.jar
+      curl -L --progress-bar -o $APKEditorPath -C - https://github.com/REAndroid/APKEditor/releases/download/V$tag_name/APKEditor-$tag_name.jar
       [ $? -eq 0 ] && break || sleep 5
     done
   fi
@@ -404,7 +404,7 @@ apkm2apk() {
       pv "$apkPath" | bsdtar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "base.apk" "split_config.arm64_v8a.apk" "split_config.armeabi_v7a.apk" "split_config.x86_64.apk" "split_config.x86.apk" "split_config.${locale}.apk" "split_config.${lcd_dpi}.apk"
       bsdtar_exit_status=$?
     fi
-    if [ $bsdtar_exit_code -ne 0 ]; then  # check if bsdtar return exit code 1 (error)
+    if [ $bsdtar_exit_status -ne 0 ]; then  # check if bsdtar return exit code 1 (error)
       rm -rf "$Download/${appName}_v${version}-${arch}"
       java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
     else

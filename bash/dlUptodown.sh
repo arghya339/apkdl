@@ -176,3 +176,50 @@ UptodownAppInfo() {
   echo -e "${info} reqOS         : ${Reset}${requirements}\n"
 }
 
+apks2apk() {
+  owner="ReAndroid"; repo="APKEditor"
+  ghApiResponseJson=$(curl -sL ${auth} "https://api.github.com/repos/$owner/$repo/releases/latest")
+  tag_name=$(jq -r '.tag_name | sub("^V"; "")' <<< "$ghApiResponseJson")  # 1.4.5
+  APKEditor="APKEditor-$tag_name.jar"
+  APKEditorPath="$HOME/$APKEditor"
+  findAPKEditorPath=$(find "$HOME" -maxdepth 1 -type f -name "APKEditor-*.jar" -print -quit)
+  if [ -f "$findAPKEditorPath" ]; then
+    findAPKEditor=$(basename "$findAPKEditorPath" 2>/dev/null)
+    if [ "$APKEditor" != "$findAPKEditor" ]; then
+      echo -e "$notice diffs: $APKEditor ~ $findAPKEditor"
+      rm -f "$findAPKEditorPath"
+      while true; do
+        curl -L --progress-bar -o $APKEditorPath -C - https://github.com/REAndroid/APKEditor/releases/download/V$tag_name/APKEditor-$tag_name.jar
+        [ $? -eq 0 ] && break || sleep 5
+      done
+    fi
+  else
+    while true; do
+      curl -L --progress-bar -o $APKEditorPath -C - https://github.com/REAndroid/APKEditor/releases/download/V$tag_name/APKEditor-$tag_name.jar
+      [ $? -eq 0 ] && break || sleep 5
+    done
+  fi
+  
+  if [ $isMacOS -eq 1 ]; then
+    java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+  elif [ $isAndroid -eq 1 ]; then
+    mkdir -p "$Download/${appName}_v${version}-${arch}"
+    termux-wake-lock
+    if [ $RipLib -eq 1 ]; then
+      pv "$apkPath" | bsdtar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.${cpuAbi//-/_}.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
+      bsdtar_exit_status=$?
+    elif [ $RipLib -eq 1 ]; then
+      pv "$apkPath" | bsdtar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.arm64_v8a.apk" "config.armeabi_v7a.apk" "config.x86_64.apk" "config.x86.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
+      bsdtar_exit_status=$?
+    fi
+    if [ $bsdtar_exit_status -ne 0 ]; then  # check if bsdtar return exit code 1 (error)
+      rm -rf "$Download/${appName}_v${version}-${arch}"
+      java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+    else
+      rm -f "$apkPath"
+      java -jar $APKEditorPath m -i "$Download/${appName}_v${version}-${arch}" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -rf "$Download/${appName}_v${version}-${arch}"
+    fi
+    termux-wake-unlock
+  fi
+}
+#####################################################################################################################################################################################

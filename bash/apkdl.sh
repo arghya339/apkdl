@@ -620,6 +620,7 @@ while true; do
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
+        [ -f "$Download/${appName}_v${version}-${arch}.apks" ] && apks2apk
         echo; read -p "Press Enter to continue..."
       fi
       ;;
