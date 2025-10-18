@@ -545,9 +545,16 @@ while true; do
     APKMirror)
       source $apkdl/APKMdl.sh
       
-      searchApp
-      if [ $? -ne 0 ]; then
-        continue
+      buttons=(<appName> <pkgName>); confirmPrompt "Please select a method to get appLink" "buttons" && opt=appName || opt=pkgName
+     
+      if [ "$opt" == "appName" ]; then
+        searchApp
+        if [ $? -ne 0 ]; then
+          continue
+        fi
+      elif [ "$opt" == "pkgName" ]; then
+        fetchAppsInfo
+        [ $? -ne 0 ] && continue
       fi
       
       getLatestUploads

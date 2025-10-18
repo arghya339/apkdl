@@ -15,17 +15,21 @@ cf_chl_error() {
 }
 
 fetchAppsInfo() {
-  local pkgName=$1
-  RESPONSE_JSON=$(curl -sS --doh-url "$cloudflareDOH" $APKM_REST_API_URL -A "$USER_AGENT" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Basic $AUTH_TOKEN" -d "{\"pnames\":[\"$pkgName\"]}")
-  if echo "$RESPONSE_JSON" | jq -e ".data[] | select(.pname == \"$pkgName\") | .exists == true" > /dev/null 2>&1; then
-    appName=$(jq -r ".data[] | select(.pname == \"$pkgName\") | .app.name" <<< "$RESPONSE_JSON")
-    appName="${appName//amp;/}"
-    searchTerm=$(echo "$appName" | sed 's/ /+/g')
-    appLink="https://www.apkmirror.com$(jq -r ".data[] | select(.pname == \"$pkgName\") | .app.link" <<< "$RESPONSE_JSON")"
-    echo -e "$info Url for ${Green}$appName${Reset}: ${Blue}$appLink${Reset}"
-    return
+  while true; do read -r -p ">> Enter pkgName: " pkgName; [[ "$pkgName" =~ ^[Qq] ]] && pkgName=; break; [ -n "$pkgName" ] && break || echo -e "$notice Please enter a valid pkgName!"; done
+  
+  if [ -n "$pkgName" ]; then
+    RESPONSE_JSON=$(curl -sS --doh-url "$cloudflareDOH" $APKM_REST_API_URL -A "$USER_AGENT" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Basic $AUTH_TOKEN" -d "{\"pnames\":[\"$pkgName\"]}")
+    if echo "$RESPONSE_JSON" | jq -e ".data[] | select(.pname == \"$pkgName\") | .exists == true" > /dev/null 2>&1; then
+      appName=$(jq -r ".data[] | select(.pname == \"$pkgName\") | .app.name" <<< "$RESPONSE_JSON")
+      appName="${appName//amp;/}"
+      appLink="https://www.apkmirror.com$(jq -r ".data[] | select(.pname == \"$pkgName\") | .app.link" <<< "$RESPONSE_JSON")"
+      echo -e "$info Url for ${Green}$appName${Reset}: ${Blue}$appLink${Reset}"
+      return
+    else
+      echo -e "$bad pkgName: ${Blue}$pkgName${Reset} not found on APKMirror!" >&2
+      return 1
+    fi
   else
-    echo -e "$bad pkgName: ${Blue}$pkgName${Reset} not found on APKMirror!" >&2
     return 1
   fi
 }
