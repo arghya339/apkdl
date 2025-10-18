@@ -167,6 +167,42 @@ getLatestUploads() {
   [ -z "$versionLink" ] && return 1 || return 0
 }
 
+getVersionLink() {
+  echo -e "$running Searching for target app version in APKMirror's Latest Uploads page.."
+  appPageHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$appLink")
+  echo "$appPageHTML" | grep -q "_cf_chl_" 2>/dev/null && cf_chl_error
+  latestUploadsUrl="https://www.apkmirror.com$(pup '#primary a:contains("See more uploads...") attr{href}' <<< "$appPageHTML")"
+  baseUploadsUrl=$(basename "$latestUploadsUrl")
+  page=1  # start searching target app vresion from first page (latest uploads)
+  while true; do
+    if [ $page -eq 1 ]; then
+      echo -e "$info Latest $appName Uploads"
+    else
+      echo -e "$info Latest $appName Uploads - Page $page"
+      latestUploadsUrl="https://www.apkmirror.com/uploads/page/$page/$baseUploadsUrl"
+    fi
+    latestUploadsHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$latestUploadsUrl")
+    echo "$latestUploadsHTML" | grep -q "_cf_chl_" 2>/dev/null && cf_chl_error
+    pup 'span.infoSlide-name:contains("Version:") + span.infoSlide-value text{}' <<< $latestUploadsHTML  # print Version list (30items/page) from latest uploads page html
+    # extract both title (appName version) & link (versionLink)
+    latestUploadsJSON=$(pup 'a.fontBlack json{}' <<< "$latestUploadsHTML" | jq -c '[.[] | select(.text != null) | {title: .text, link: ("https://www.apkmirror.com" + .href)}]')
+    # try to match target version with a title in json_output and extract its link if found
+    versionLink=$(jq -r --arg version "$version" '.[] | select(.title | test($version)) | .link' <<< "$latestUploadsJSON" | head -n1)
+    if [ -n "$versionLink" ]; then
+      # if versionLink populate (not empty) then print successfull messages
+      echo -e "$good Found version $version"
+      echo -e "$info versionLink: ${Blue}$versionLink${Reset}"
+      break  # break while loop
+      return
+    else
+      echo -e "$notice Version $version not found on page $page, moving to next page.."
+      ((page++))  # increase +1 page number
+      continue  # skip next iteration (remaining commands) of loop then continue to next iteration
+    fi
+  done  # end of while loop
+  [ -z "$versionLink" ] && return 1
+}
+
 getVariant() {
   echo -e "$running Get Variant list from APKMirror.."
   variantHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$versionLink")

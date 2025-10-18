@@ -577,8 +577,19 @@ while true; do
       source $apkdl/RVdl.sh
       [ $? -ne 0 ] && continue
       
-      getLatestUploads
-      [ $? -ne 0 ] && continue
+      if [ -n "$version" ]; then
+        buttons=("<Auto>" "<Manual>"); confirmPrompt "Please select a method to get versionLink" "buttons" && opt=Auto || opt=Manual
+        if [ "$opt" == "Auto" ]; then
+          getVersionLink
+          [ $? -ne 0 ] && continue
+        elif [ "$opt" == "Manual" ]; then
+          getLatestUploads
+          [ $? -ne 0 ] && continue
+        fi
+      else
+        getLatestUploads
+        [ $? -ne 0 ] && continue
+      fi
       
       getVariant
       [ $? -ne 0 ] && continue
