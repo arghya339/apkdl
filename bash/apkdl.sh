@@ -549,29 +549,20 @@ while true; do
      
       if [ "$opt" == "appName" ]; then
         searchApp
-        if [ $? -ne 0 ]; then
-          continue
-        fi
+        [ $? -ne 0 ] && continue
       elif [ "$opt" == "pkgName" ]; then
         fetchAppsInfo
         [ $? -ne 0 ] && continue
       fi
       
       getLatestUploads
-      getLatestUploads_exitStatus=$?
-      if [ $getLatestUploads_exitStatus -ne 0 ]; then
-        continue
-      fi
+      [ $? -ne 0 ] && continue
       
       getVariant
-      getVariant_exitStatus=$?
-      if [ $getVariant_exitStatus -ne 0 ]; then
-        continue
-      fi
+      [ $? -ne 0 ] && continue
       
       getDownloadLink
-      getDownloadLink_exitStatus=$?
-      if [ $getDownloadLink_exitStatus -eq 0 ]; then
+      if [ $? -eq 0 ]; then
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
@@ -584,25 +575,16 @@ while true; do
       source $apkdl/APKMdl.sh
       
       source $apkdl/RVdl.sh
-      if [ $? -ne 0 ]; then
-        continue
-      fi
+      [ $? -ne 0 ] && continue
       
       getLatestUploads
-      getLatestUploads_exitStatus=$?
-      if [ $getLatestUploads_exitStatus -ne 0 ]; then
-        continue
-      fi
+      [ $? -ne 0 ] && continue
       
       getVariant
-      getVariant_exitStatus=$?
-      if [ $getVariant_exitStatus -ne 0 ]; then
-        continue
-      fi
+      [ $? -ne 0 ] && continue
       
       getDownloadLink
-      getDownloadLink_exitStatus=$?
-      if [ $getDownloadLink_exitStatus -eq 0 ]; then
+      if [ $? -eq 0 ]; then
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
