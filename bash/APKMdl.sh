@@ -317,9 +317,11 @@ getDownloadLink() {
   
   if [ "$fileType" == "Download APK" ]; then
     file_ext=".apk"
+    CERTIFICATE=$(<<< "$downloadButtonHTML" awk '/<h4>APK certificate fingerprints<\/h4>/,/<h5>The cryptographic signature guarantees/' | sed -n 's/.*Certificate: *<span[^>]*>\([^<]*\)<\/span.*/\1/p' | head -n1)
     SHA256=$(<<<"$downloadButtonHTML" awk '/<h4>APK file hashes<\/h4>/,/<h5>Verify the file you downloaded/' | sed -n 's/.*SHA-256: *<span[^>]*>\([0-9a-fA-F]\{64\}\)<\/span.*/\1/p' | head -n1)
   else
     file_ext=".apkm"
+    CERTIFICATE=$(<<< "$downloadButtonHTML" awk '/<h4>APK certificate fingerprints<\/h4>/,/<h5>The cryptographic signature of each APK/' | sed -n 's/.*Certificate: *<span[^>]*>\([^<]*\)<\/span.*/\1/p' | head -n1)
     SHA256=$(<<<"$downloadButtonHTML" awk '/<h4>APK bundle file hashes<\/h4>/,/<h5>Verify the APK bundle file you downloaded/' | sed -n 's/.*SHA-256: *<span[^>]*>\([0-9a-fA-F]\{64\}\)<\/span.*/\1/p' | head -n1)
   fi
 
@@ -334,6 +336,38 @@ getDownloadLink() {
   [ -n "$finalDownloadButtonLink" ] && { finalDownloadButtonLink="https://www.apkmirror.com$finalDownloadButtonLink"; echo -e "$good Found final download Link: ${Blue}$finalDownloadButtonLink${Reset}"; }
   fi
   [ -z "$finalDownloadButtonLink" ] && return 1 || return 0
+}
+
+getAppDetails() {
+  echo -e "$running Scraping app details from: ${Blue}$variantLink${Reset}"
+  downloadButtonJSON=$(pup 'div.apk-detail-table json{}' --plain <<< "$downloadButtonHTML")
+  
+  VERSION=$(jq -r '.. | objects | select(.text? and (.text | test("^Version:"))) | .text | sub("^Version: *"; "")' <<< "$downloadButtonJSON" | sed -E 's/ *Downloads:.*//;s/ +\(/ \(/' | head -n1)
+  LANGUAGES=$(jq -r '.. | objects | select(.class == "accent_color" and .href == "#languages" and .text) | .text' <<< "$downloadButtonJSON" | head -n1)
+  PACKAGE=$(jq -r '.. | objects | select(.text? and (.text | test("^Package:"))) | .text | sub("^Package: *"; "")' <<< "$downloadButtonJSON" | head -n1)
+  DOWNLOADS=$(jq -r '.. | objects | select(.text? and (.text | test("Downloads: [0-9,]+"))) | .text | capture("Downloads: (?<d>[0-9,]+)") | .d' <<< "$downloadButtonJSON" | head -n1)
+  FILESIZE=$(jq -r '.. | .text? | select(type == "string" and test("^[0-9]+\\.[0-9]+ MB \\("))' <<< "$downloadButtonJSON" | head -n1)
+  MIN_VERSION=$(jq -r '.. | objects | select(.text? and (.text | test("Min: Android"))) | .text | sub("Min: *"; "") | sub("Target:.*"; "") | gsub(" +$"; "")' <<< "$downloadButtonJSON" | head -n1)
+  TARGET_VERSION=$(jq -r '.. | objects | select(.text? and (.text | test("Min: Android"))) | .text' <<< "$downloadButtonJSON" | head -n1 | sed -nE 's/.*Target: (Android [0-9]+ \(API [0-9]+\)).*/\1/p')
+  ARCHITECTURES=$(jq -r '.. | objects | select(.text? and (.text | test("arm64-v8a|armeabi-v7a|x86|x86_64"))) | .text' <<< "$downloadButtonJSON" | head -n1)
+  EXTRA_FEATURES=$(jq -r '.. | objects | select(.text? and (.text | test("^Supports Android Auto$"))) | .text' <<< "$downloadButtonJSON" | head -n1)
+  UPLOAD_TIME=$(jq -r '.. | objects | select(.class? == "datetime_utc" and .text?) | .text' <<< "$downloadButtonJSON" | head -n1)
+  [ -z "$UPLOAD_TIME" ] && UPLOAD_TIME=$(jq -r '.. | objects | select(.text? and (.text | test("^Uploaded"))) | .text | sub("^Uploaded by .+[A-Z][a-z]{3} [0-9]{1,2}, [0-9]{4} at [0-9]{1,2}:[0-9]{2}[AP]M UTC"; "")' <<< "$downloadButtonJSON" | head -1)
+  UPLOADED_BY=$(jq -r '.. | objects | select(.text? and (.text | test("^Uploaded by "))) | .text | sub("^Uploaded by *"; "")' <<< "$downloadButtonJSON" | head -n1)
+  
+  echo "🏷️ Version: $VERSION"
+  echo "🌐 Languages: $LANGUAGES"
+  echo "📦 Package: $PACKAGE"
+  echo "📥 Downloads: $DOWNLOADS"
+  echo "💿 File size: $FILESIZE"
+  echo "📱 Min: $MIN_VERSION"
+  echo "🎯 Target: $TARGET_VERSION"
+  echo "🛠 Supported arch: $ARCHITECTURES"
+  echo "🔑 Certificate: $CERTIFICATE"
+  echo "# SHA-256 SUM: $SHA256"
+  [ -n "$EXTRA_FEATURES" ] && echo "✨ Extra Features: $EXTRA_FEATURES"
+  echo "📅 Upload time: $UPLOAD_TIME"
+  echo "👤 Uploaded by: $UPLOADED_BY"
 }
 
 downloadAPK() {

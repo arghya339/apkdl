@@ -568,6 +568,7 @@ while true; do
       
       getDownloadLink
       if [ $? -eq 0 ]; then
+        getAppDetails
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
@@ -601,6 +602,7 @@ while true; do
       
       getDownloadLink
       if [ $? -eq 0 ]; then
+        getAppDetails
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
