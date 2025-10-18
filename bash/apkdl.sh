@@ -71,6 +71,7 @@ fi
 cloudflareDOH="https://cloudflare-dns.com/dns-query"
 cloudflareIP="1.1.1.1,1.0.0.1"
 crVersion="140.0.0.0"
+crVersion=$(curl -sL "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1" | jq -r '.[0].version')
 
 if [ $isMacOS -eq 1 ]; then
   Download="$HOME/Downloads"
@@ -83,7 +84,6 @@ elif [ $isAndroid -eq 1 ]; then
   Model=$(getprop ro.product.model)
   Build=$(getprop ro.build.id)
   K="$Model Build/$Build"
-  crVersion=$(curl -sL "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1" | jq -r '.[0].version')
   USER_AGENT="Mozilla/5.0 (Linux; Android $Android; $K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${crVersion} Mobile Safari/537.36"
 fi
 
