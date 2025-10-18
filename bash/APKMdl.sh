@@ -233,9 +233,25 @@ getVariant() {
     IFS=$'\t' read -r version version_code type arch os dpi link <<< "${variants_table_row[$i]}"
     
     if [ $i -eq 0 ]; then
-      options=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
+      if [ $isAndroid -eq 1 ]; then
+        if [ "$arch" == "$cpuAbi" ]; then
+          options=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi (Recommended)")
+        else
+          options=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
+        fi
+      else
+        options=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
+      fi
     else
-      options+=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
+      if [ $isAndroid -eq 1 ]; then
+        if [ "$arch" == "$cpuAbi" ]; then
+          options+=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi (Recommended)")
+        else
+          options+=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
+        fi
+      else
+        options+=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
+      fi
     fi
   done
   
