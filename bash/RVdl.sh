@@ -1,12 +1,13 @@
 #!/bin/bash
 
 current_patches_release_version=$(curl -sLX 'GET' 'https://api.revanced.app/v4/patches/version' -H 'accept: application/json' | jq -r '.version')  # Get current patches release version from ReVanced API
+patches_release_version=$(jq -r '.ReVanced' "$apkdlJson" 2>/dev/null)
 
 # Check if revanced.json file exists and patches_release_version match with current_patches_release_version
-if [ -f $apkdl/revanced.json ] && [ -f $apkdl/patches_release_version ] && [ "$(cat $apkdl/patches_release_version)" == "$current_patches_release_version" ]; then
+if [ -f $apkdl/revanced.json ] && jq -e '.ReVanced != null' "$apkdlJson" >/dev/null 2>&1 && [ "$patches_release_version" == "$current_patches_release_version" ]; then
   apps_json=$(cat $apkdl/revanced.json)  # Loading data from revanced.json file
 else
-  echo "$current_patches_release_version" > $apkdl/patches_release_version  # Store current patches release version in patches_release_version file
+  config "ReVanced" "$current_patches_release_version"  # Store current patches release version in apkdlJson file
   echo -e "$running Fetching fresh data from APKMirror API..."
     
   # Get list of patches from current patches release using ReVanced API
