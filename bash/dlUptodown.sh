@@ -1,5 +1,9 @@
 #!/bin/bash
 
+decodeHTML() {
+  echo "$1" | sed -e 's/&amp;/\&/g' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e "s/&#39;/'/g" -e 's/&quot;/"/g' -e 's/&nbsp;/ /g'
+}
+
 UptodownSearch() {
   while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
   if [ -n "$appName" ]; then
