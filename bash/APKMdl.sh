@@ -192,8 +192,8 @@ getVersionLink() {
       # if versionLink populate (not empty) then print successfull messages
       echo -e "$good Found version $version"
       echo -e "$info versionLink: ${Blue}$versionLink${Reset}"
+      return
       break  # break while loop
-      return 0
     else
       echo -e "$notice Version $version not found on page $page, moving to next page.."
       ((page++))  # increase +1 page number
