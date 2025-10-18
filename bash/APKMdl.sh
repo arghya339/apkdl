@@ -370,32 +370,6 @@ getAppDetails() {
   echo "👤 Uploaded by: $UPLOADED_BY"
 }
 
-downloadAPK() {
-  while true; do
-    if [ $isAndroid -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: https://www.apkmirror.com/" --async-dns=true --async-dns-server="$cloudflareIP" "$finalDownloadButtonLink"
-      exitStatus=$?
-    elif [ $isMacOS -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: $variantLink" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server=$cloudflareIP "$finalDownloadButtonLink"
-      exitStatus=$?
-    fi
-    echo
-    [ $exitStatus -eq 0 ] && break || sleep 5
-  done 
-  
-  if [ $isAndroid -eq 1 ]; then
-    sha256sum=$(sha256sum "$apkPath" | cut -d' ' -f1)
-  elif [ $isMacOS -eq 1 ]; then
-    sha256sum=$(shasum -a 256 "$apkPath" | cut -d' ' -f1)
-  fi
-  if [ "$sha256sum" == "$SHA256" ]; then
-    echo -e "$good Downloaded file appears in the original state."
-  else
-    echo -e "$bad Look like downloaded file appears corrupted!"
-    echo -e "$notice SHA-256 SUM Diffs - Expected: ${Cyan}$SHA256${Reset} ~ Result: ${Cyan}$sha256sum${Reset}"
-  fi
-}
-
 apkm2apk() {
   owner="ReAndroid"; repo="APKEditor"
   ghApiResponseJson=$(curl -sL ${auth} "https://api.github.com/repos/$owner/$repo/releases/latest")

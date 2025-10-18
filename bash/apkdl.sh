@@ -34,6 +34,7 @@ apkdl="$HOME/apkdl"
 mkdir -p $apkdl
 
 curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
+curl -sL -o "$apkdl/dlUptodown.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlUptodown.sh"
 curl -sL -o "$apkdl/RVdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/RVdl.sh"
 
 apkdlJson="$apkdl/apkdl.json"  # Configuration file to store apkdl settings
@@ -542,6 +543,32 @@ elif [ $isAndroid -eq 1 ]; then
   fi
 fi
 
+downloadAPK() {
+  while true; do
+    if [ $isAndroid -eq 1 ]; then
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: https://www.apkmirror.com/" --async-dns=true --async-dns-server="$cloudflareIP" "$finalDownloadButtonLink"
+      exitStatus=$?
+    elif [ $isMacOS -eq 1 ]; then
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: $variantLink" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server=$cloudflareIP "$finalDownloadButtonLink"
+      exitStatus=$?
+    fi
+    echo
+    [ $exitStatus -eq 0 ] && break || sleep 5
+  done 
+  
+  if [ $isAndroid -eq 1 ]; then
+    sha256sum=$(sha256sum "$apkPath" | cut -d' ' -f1)
+  elif [ $isMacOS -eq 1 ]; then
+    sha256sum=$(shasum -a 256 "$apkPath" | cut -d' ' -f1)
+  fi
+  if [ "$sha256sum" == "$SHA256" ]; then
+    echo -e "$good Downloaded file appears in the original state."
+  else
+    echo -e "$bad Look like downloaded file appears corrupted!"
+    echo -e "$notice SHA-256 SUM Diffs - Expected: ${Cyan}$SHA256${Reset} ~ Result: ${Cyan}$sha256sum${Reset}"
+  fi
+}
+
 while true; do
   options=(APKMirror ReVanced)
   [ $isAndroid -eq 1 ] && options+=(Configuration)
@@ -574,6 +601,25 @@ while true; do
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
+        echo; read -p "Press Enter to continue..."
+      fi
+      ;;
+    Uptodown)
+      source $apkdl/dlUptodown.sh
+      
+      UptodownSearch
+      [ $? -ne 0 ] && continue
+
+      UptodownVersionLink
+      [ $? -ne 0 ] && continue
+
+      UptodownDownloadLink
+      if [ $? -eq 0 ]; then
+        UptodownAppInfo
+        appName=$(echo "${appName%%[:—(]*}" | xargs)
+        fileName="${appName}_v${version}-${arch}${file_ext}"
+        apkPath="$Download/$fileName"
+        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         echo; read -p "Press Enter to continue..."
       fi
       ;;
