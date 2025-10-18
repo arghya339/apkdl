@@ -546,10 +546,10 @@ fi
 downloadAPK() {
   while true; do
     if [ $isAndroid -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: https://www.apkmirror.com/" --async-dns=true --async-dns-server="$cloudflareIP" "$finalDownloadButtonLink"
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: https://www.apkmirror.com/" --async-dns=true --async-dns-server="$cloudflareIP" "$dlLink"
       exitStatus=$?
     elif [ $isMacOS -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: $variantLink" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server=$cloudflareIP "$finalDownloadButtonLink"
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: $variantLink" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server=$cloudflareIP "$dlLink"
       exitStatus=$?
     fi
     echo
@@ -599,6 +599,7 @@ while true; do
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
+        dlLink="$finalDownloadButtonLink"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
         echo; read -p "Press Enter to continue..."
@@ -652,6 +653,7 @@ while true; do
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
+        dlLink="$finalDownloadButtonLink"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
         echo; read -p "Press Enter to continue..."
