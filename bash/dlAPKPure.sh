@@ -173,7 +173,7 @@ APKPureVariant() {
     type="${type[$selected]}"
     pkgName="${pkgName[$selected]}"
     baseAPK="${baseAPK[$selected]}"
-    [ "$arch" == "apk" ] && file_ext=".apk" || file_ext=".apks"
+    [ "$type" == "apk" ] && file_ext=".apk" || file_ext=".apks"
 
     echo -e "$info version               : $version"
     echo -e "$info versionCode           : $versionCode"
