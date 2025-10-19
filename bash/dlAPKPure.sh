@@ -142,7 +142,7 @@ APKPureVariant() {
     xFileSHA1[$index]=$(echo "$line" | jq -r '.children[3].children[1].children[0].children[6].children[1].text')
     uploadedBy[$index]=$(echo "$line" | jq -r '.children[3].children[1].children[0].children[5].children[1].text')
     xUploadedBy[$index]=$(echo "$line" | jq -r '.children[3].children[1].children[0].children[7].children[1].text')
-    type[$index]=$(echo "$line" | jq -r '.class')
+    #type[$index]=$(echo "$line" | jq -r '.class')
     pkgName[$index]=$(echo "$line" | jq -r '.["data-dt-app"]')
     ((index++))
   done < <(jq -c '.[]' <<< "$variantsJSON")
@@ -161,6 +161,7 @@ APKPureVariant() {
   if [[ "$selected" =~ ^[0-9]+$ ]]; then
     version="${version[$selected]}"
     versionCode="${versionCode[$selected]}"
+    TYPE="${TYPE[$selected]}"
     updateOn="${updateOn[$selected]}"
     fileSize="${fileSize[$selected]}"
     dlLink=$(decodeHTML "${dlLink[$selected]}")
@@ -168,15 +169,15 @@ APKPureVariant() {
     requiresAndroid="${requiresAndroid[$selected]}"
     signatures="${signatures[$selected]}"
     screenDPI="${screenDPI[$selected]}"
-    [ "${TYPE[$selected]}" == "APK" ] && fileSHA1="${fileSHA1[$selected]}" || baseAPK="${fileSHA1[$selected]}"
-    [ "${TYPE[$selected]}" == "APK" ] && uploadedBy="${uploadedBy[$selected]}" || splitAPK="${uploadedBy[$selected]}"
-    type="${type[$selected]}"
+    [ "${TYPE}" == "APK" ] && fileSHA1="${fileSHA1[$selected]}" || baseAPK="${fileSHA1[$selected]}"
+    [ "${TYPE}" == "APK" ] && uploadedBy="${uploadedBy[$selected]}" || splitAPK="${uploadedBy[$selected]}"
     pkgName="${pkgName[$selected]}"
     baseAPK="${baseAPK[$selected]}"
-    [ "$type" == "apk" ] && file_ext=".apk" || file_ext=".apks"
+    [ "$TYPE" == "APK" ] && file_ext=".apk" || file_ext=".apks"
 
     echo -e "$info version               : $version"
     echo -e "$info versionCode           : $versionCode"
+    echo -e "$info TYPE                  : $TYPE"
     echo -e "$info updateON              : $updateOn"
     echo -e "$info fileSize              : $fileSize"
     echo -e "$info dlLink                : ${Blue}$dlLink${Reset}"
@@ -184,13 +185,12 @@ APKPureVariant() {
     echo -e "$info requiresAndroid       : $requiresAndroid"
     echo -e "$info signatures            : $signatures"
     echo -e "$info screenDPI             : $screenDPI"
-    [ "${TYPE[$selected]}" == "XAPK" ] && fileSHA1="$xFileSHA1"
+    [ "${TYPE}" == "XAPK" ] && fileSHA1="$xFileSHA1"
     echo -e "$info fileSHA1              : $fileSHA1"
     [ "$baseAPK" != "" ] && echo -e "$info baseAPK               : $baseAPK"
     [ "$splitAPK" != "" ] && echo -e "$info splitAPK              : $splitAPK"
-    [ "${TYPE[$selected]}" == "APK" ] && echo -e "$info uploadedBy            : $uploadedBy"
-    [ "${TYPE[$selected]}" == "XAPK" ] && echo -e "$info uploadedBy            : $xUploadedBy"
-    echo -e "$info type                  : $type"
+    [ "${TYPE}" == "APK" ] && echo -e "$info uploadedBy            : $uploadedBy"
+    [ "${TYPE}" == "XAPK" ] && echo -e "$info uploadedBy            : $xUploadedBy"
     echo -e "$info pkgName               : $pkgName"
     return
   else
