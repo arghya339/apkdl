@@ -566,7 +566,7 @@ downloadAPK() {
 }
 
 while true; do
-  options=(APKMirror Uptodown ReVanced)
+  options=(APKMirror Uptodown APKPure ReVanced)
   [ $isAndroid -eq 1 ] && options+=(Configuration)
   buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "10"; then selected=${options[selected]}; fi
   case "$selected" in
@@ -620,6 +620,26 @@ while true; do
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
+        [ -f "$Download/${appName}_v${version}-${arch}.apks" ] && apks2apk
+        echo; read -p "Press Enter to continue..."
+      fi
+      ;;
+    APKPure)
+      curl -sL -o "$apkdl/dlAPKPure.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlAPKPure.sh"
+      source $apkdl/dlAPKPure.sh
+
+      APKPureSearch
+      [ $? -ne 0 ] && continue
+
+      AllVersions
+      [ $? -ne 0 ] && continue
+
+      APKPureVariant
+      if [ $? -eq 0 ]; then
+        appName=$(echo "${appName%%[:—(]*}" | xargs)
+        fileName="${appName}_v${version}-${arch}${file_ext}"
+        apkPath="$Download/$fileName"
+        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && dlAPKPure
         [ -f "$Download/${appName}_v${version}-${arch}.apks" ] && apks2apk
         echo; read -p "Press Enter to continue..."
       fi
