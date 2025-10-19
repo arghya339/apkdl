@@ -216,7 +216,7 @@ dlAPKPure() {
   elif [ $isMacOS -eq 1 ]; then
     sha1sum=$(shasum -a 1 "$apkPath" | cut -d' ' -f1)
   fi
-  if [ "$FileSHA1" == "$sha1sum" ]; then
+  if [ "$fileSHA1" == "$sha1sum" ]; then
     echo -e "$good Downloaded file appears in the original state.\n"
   else
     echo -e "$notice Look like downloaded file appears corrupted!"
