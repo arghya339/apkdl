@@ -220,7 +220,7 @@ dlAPKPure() {
     echo -e "$good Downloaded file appears in the original state.\n"
   else
     echo -e "$notice Look like downloaded file appears corrupted!"
-    echo -e "$notice SHA1 SUM Diffs - Expected: ${Cyan}$SHA1${Reset} ~ Result: ${Cyan}$sha1sum${Reset}"
+    echo -e "$notice SHA1 SUM Diffs - Expected: ${Cyan}$fileSHA1${Reset} ~ Result: ${Cyan}$sha1sum${Reset}"
   fi
 }
 #######################################################################################################
