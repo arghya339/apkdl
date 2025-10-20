@@ -239,7 +239,7 @@ dlAPKPure() {
       exitStatus=$?
     fi
     echo
-    [ $exitStatus -eq 0 ] && break || sleep 5
+    [ $exitStatus -eq 0 ] && { rm -f cookies.txt; break; } || sleep 5
   done 
   
   if [ $isAndroid -eq 1 ]; then
