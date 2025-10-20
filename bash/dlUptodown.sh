@@ -39,7 +39,7 @@ UptodownSearch() {
       appLink="${urls[$selected]}"
       echo -e "$info Selected app: $appName"
       echo -e "$info Description: ${descriptions[$selected]}"
-      echo -e "$info Url: $appLink"
+      echo -e "$info appLink: ${Blue}$appLink${Reset}"
       return
     else
       return 1
