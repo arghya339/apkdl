@@ -122,6 +122,10 @@ decodeHTML() {
 
 APKPureVariant() {
   aria2c -q -o apkpure_page.html -d "$HOME" "${ALL_HEADER[@]}" --connect-timeout=30 --save-cookies=cookies.txt --load-cookies=cookies.txt --check-certificate=false --referer="$AllVersions" --async-dns=true --async-dns-server="$cloudflareIP" "$versionLink" && versionHTML=$(cat "$HOME/apkpure_page.html") && rm -f ~/apkpure_page.html
+  downloads=$(pup 'ul.dev-partnership-head-info li div.head text{}' <<< "$versionHTML" | sed -n '2p')
+  languages=$(pup 'div.fancybox-custom-dialog-2#language-dialog ul li text{}' <<< "$versionHTML")
+  permissions=$(pup 'div.fancybox-custom-dialog-2#permission-dialog ul li text{}' <<< "$versionHTML")
+  
   variantsJSON=$(pup 'div.apk json{}' <<< "$versionHTML")
   echo "$variantsJSON" > APKPure.json
   index=0
@@ -192,6 +196,9 @@ APKPureVariant() {
     [ "${TYPE}" == "APK" ] && echo -e "$info uploadedBy            : $uploadedBy"
     [ "${TYPE}" == "XAPK" ] && echo -e "$info uploadedBy            : $xUploadedBy"
     echo -e "$info pkgName               : $pkgName"
+    echo -e "$info Downloads             : $downloads"
+    #echo -e "$info Languages             : $languages"
+    #echo -e "$info Permissions           : $permissions"
     return
   else
     return 1
