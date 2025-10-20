@@ -18,9 +18,9 @@ ALL_HEADER=(
 
 APKPureSearch() {
   while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
-  
-  if [ -n "$appName" ]; then
-    app_name=$(echo "$appName" | tr '[:upper:]' '[:lower:]' | sed 's/ /+/g')
+  app_name=$(echo "$appName" | tr '[:upper:]' '[:lower:]' | sed 's/ /+/g')
+
+  if [ -n "$app_name" ]; then
     apiUrl="https://apkpure.com/api/v1/search_suggestion_new?key=${app_name}&limit=20"
     aria2c -q -o response.json "${ALL_HEADER[@]}" --connect-timeout=30 --save-cookies=cookies.txt --check-certificate=false --referer="https://apkpure.com" --async-dns=true --async-dns-server="$cloudflareIP" "$apiUrl"
     responseJSON=$(cat response.json) && rm -f response.json
@@ -39,18 +39,42 @@ APKPureSearch() {
         ((index++))
       fi
     done < <(jq -r '.[] | select(.packageName != null) | @base64' <<< "$responseJSON")
-
-    buttons=("<Select>" "<Back>")
-    if menu "titles" "buttons" "10"; then
-      appName=${titles[$selected]}
-      pkgName=${packages[$selected]}
-      appLink=${urls[$selected]}
-      echo -e "$info appName: $appName"
-      echo -e "$info pkgName: $pkgName"
-      echo -e "$info appLink: ${Blue}$appLink${Reset}"
-      return
+   
+    if [ ${#titles[@]} -gt 0 ]; then
+      buttons=("<Select>" "<Back>")
+      if menu "titles" "buttons" "10"; then
+        appName=${titles[$selected]}
+        pkgName=${packages[$selected]}
+        appLink=${urls[$selected]}
+        echo -e "$info appName: $appName"
+        echo -e "$info pkgName: $pkgName"
+        echo -e "$info appLink: ${Blue}$appLink${Reset}"
+        return
+      else
+        return 1
+      fi
     else
-      return 1
+      searchUrl="https://apkpure.com/search?q=$app_name"
+      aria2c -q -o apkpure_page.html -d "$HOME" "${ALL_HEADER[@]}" --connect-timeout=30 --load-cookies=cookies.txt --save-cookies=cookies.txt --check-certificate=false --referer="https://apkpure.com/" --async-dns=true --async-dns-server="$cloudflareIP" "$searchUrl" && searchHTML=$(cat "$HOME/apkpure_page.html") && rm -f ~/apkpure_page.html
+      while IFS=, read -r appLink appName by; do
+        appLinks+=("$appLink")
+        appNames+=("$appName")
+        bys+=("$by")
+      done < <(pup 'ul.search-res li a.dd json{}' <<< "$searchHTML" | jq -r '.[] | "\(.href),\(.children[1].children[0].text),\(.children[1].children[1].text)"')
+      for i in "${!appNames[@]}"; do
+        results+=("${appNames[i]} by ${bys[i]}")
+      done
+      buttons=("<Select>" "<Back>")
+      if menu "results" "buttons" "10"; then
+        appName="${appNames[$selected]}"
+        by="${bys[$selected]}"
+        appLink="${appLinks[$selected]}"
+        echo -e "$info Seleced App: $appName by $by"
+        echo -e "$info appLink: ${Blue}$appLink${Reset}"
+        return
+      else
+        return 1
+      fi
     fi
   else
     return 1
