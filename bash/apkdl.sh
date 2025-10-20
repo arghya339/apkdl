@@ -683,7 +683,7 @@ while true; do
 
       APKPureVariant
       if [ $? -eq 0 ]; then
-        appName=$(echo "${appName%%[:—(]*}" | xargs)
+        appName=$(echo "${appName%%[/:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && dlAPKPure
