@@ -175,7 +175,7 @@ UptodownAppInfo() {
   echo -e "${info} fileSize      : ${Reset}${size}"
   echo -e "${info} Downloads     : ${Reset}${downloads}"
   echo -e "${info} fileType      : ${Reset}${Type}"
-  echo -e "${info} supportArch   : ${Reset}${arch}"
+  echo -e "${info} supportedArch : ${Reset}${arch}"
   echo -e "${info} fileSHA256    : ${Reset}${SHA256}"
   echo -e "${info} reqOS         : ${Reset}${requirements}\n"
 }
