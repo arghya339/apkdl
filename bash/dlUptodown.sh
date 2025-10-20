@@ -71,7 +71,7 @@ UptodownVersionLink() {
         done < <(jq -r '.data[] | [.fileID, .version, .sdkVersion, .kindFile, .versionURL.url, .versionURL.extraURL, .versionURL.versionID, .lastUpdate] | @tsv' <<< "$versionsJSON")
         availableVersions=()
         for ((i=0; i<${#fileIDs[@]}; i++)); do
-          availableVersions+=("v${versions[$i]} | min ${sdkVersions[$i]} | ${kindFiles[$i]} | ${lastUpdates[$i]} | ID: ${fileIDs[$i]}")
+          availableVersions+=("v${versions[$i]} | min ${sdkVersions[$i]} | fileType ${kindFiles[$i]} | lastUpdate ${lastUpdates[$i]}")
         done
         [ $page -ne 1 ] && availableVersions+=("SEE LESS")
         availableVersions+=("SEE MORE")
