@@ -73,10 +73,14 @@ UptodownVersionLink() {
         for ((i=0; i<${#fileIDs[@]}; i++)); do
           availableVersions+=("v${versions[$i]} | min ${sdkVersions[$i]} | ${kindFiles[$i]} | ${lastUpdates[$i]} | ID: ${fileIDs[$i]}")
         done
+        [ $page -ne 1 ] && availableVersions+=("SEE LESS")
         availableVersions+=("SEE MORE")
         if menu "availableVersions" "buttons" "12"; then
           selected=$selected
-          if [ $selected -eq $((${#availableVersions[@]}-1)) ]; then
+          if [ $page -ne 1 ] && [ $selected -eq $((${#availableVersions[@]}-2)) ]; then
+            ((page--))
+            continue
+          elif [ $selected -eq $((${#availableVersions[@]}-1)) ]; then
             ((page++))
             continue
           else
