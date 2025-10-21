@@ -69,7 +69,7 @@ APKPureSearch() {
         appName="${appNames[$selected]}"
         by="${bys[$selected]}"
         appLink="${appLinks[$selected]}"
-        echo -e "$info Seleced App: $appName by $by"
+        echo -e "$info Selected App: $appName by $by"
         echo -e "$info appLink: ${Blue}$appLink${Reset}"
         return
       else
