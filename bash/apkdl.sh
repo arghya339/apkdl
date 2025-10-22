@@ -323,6 +323,7 @@ if [ $isMacOS -eq 1 ]; then
   formulaeInstall "jq"  # jq install/update
   formulaeInstall "pv"  # pv install/update
   formulaeInstall "pup"  # pup install/update
+  formulaeInstall "android-platform-tools"  # android-platform-tools install/update
   formulaeInstall "openjdk"  # java install/update
   grep -q 'export PATH="/usr/local/opt/openjdk/bin:$PATH"' ~/.zshrc 2>/dev/null || echo 'export PATH="/usr/local/opt/openjdk/bin:$PATH"' >> ~/.zshrc
   # https://github.com/aria2/aria2/issues/1920
@@ -340,6 +341,27 @@ if [ $isMacOS -eq 1 ]; then
   else
     rm -f ~/aria2Executing
   fi
+  getSerial() {
+    deviceCount=$(adb devices | grep -c "device$")
+    if [ $deviceCount -eq 0 ]; then
+      serial=
+    elif [ $deviceCount -eq 1 ]; then
+      serial=$(adb devices | grep "device$" | awk '{print $1}')
+    elif [ $deviceCount -gt 1 ]; then
+      serials=($(adb devices | grep "device$" | awk '{print $1}'))
+      devices=()
+      for i in "${!serials[@]}"; do
+        serial="${serials[i]}"
+        model=$(adb -s $serial shell getprop ro.product.model)
+        devices+=("$model ($serial)")
+      done
+      buttons=("<Select>" "<Back>")
+      if menu "devices" "buttons"; then
+        serial="${serials[$selected]}"
+      fi
+    fi
+    [ $deviceCount -gt 0 ] && echo -e "$info serial: $serial"
+  }; getSerial
 elif [ $isAndroid -eq 1 ]; then
   pkg update > /dev/null 2>&1 || apt update >/dev/null 2>&1  # It downloads latest package list with versions from Termux remote repository, then compares them to local (installed) pkg versions, and shows a list of what can be upgraded if they are different.
   outdatedPKG=$(apt list --upgradable 2>/dev/null)  # list of outdated pkg
