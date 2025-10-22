@@ -613,10 +613,37 @@ apks2apk() {
 }
 
 while true; do
-  options=(APKMirror Uptodown APKPure ReVanced)
+  options=(GitHub APKMirror Uptodown APKPure ReVanced)
   [ $isAndroid -eq 1 ] && options+=(Configuration)
   buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "10"; then selected=${options[selected]}; fi
   case "$selected" in
+    GitHub)
+      curl -sL -o "$apkdl/dlGitHub.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlGitHub.sh"
+      source $apkdl/dlGitHub.sh
+
+      searchGH
+      [ $? -ne 0 ] && continue
+
+      latestReleasesStatus=$(curl -sL "$releasesUrl/latest" | jq -r '.status')
+      if [ "$latestReleasesStatus" -eq "404" ]; then
+        Releases
+        [ $? -ne 0 ] && continue
+      else
+        buttons=("<Latest>" "<Releases>"); confirmPrompt "Please Select release type" "buttons" && opt=Latest || opt=Releases
+        if [ "$opt" == "Latest" ]; then
+          Latest
+          [ $? -ne 0 ] && continue
+        else
+          Releases
+          [ $? -ne 0 ] && continue
+        fi
+      fi
+
+      fileName=$(basename "$asset_browser_download_url")
+      filePath="$Download/$fileName"
+      [ ! -f $filePath ] && dlGH
+      echo; read -p "Press Enter to continue..."
+      ;;
     APKMirror)
       curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
       
