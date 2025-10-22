@@ -151,7 +151,6 @@ APKPureVariant() {
   permissions=$(pup 'div.fancybox-custom-dialog-2#permission-dialog ul li text{}' <<< "$versionHTML")
   
   variantsJSON=$(pup 'div.apk json{}' <<< "$versionHTML")
-  echo "$variantsJSON" > APKPure.json
   index=0
   while IFS= read -r line; do
     version[$index]=$(echo "$line" | jq -r '.children[1].children[0].children[0].text')
