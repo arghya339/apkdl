@@ -112,7 +112,7 @@ UptodownDownloadLink() {
   dataVersion=$(sed -n 's/.*<button class="button variants" data-version="\([^"]*\)".*/\1/p' <<< "$versionHTML")  # 'ALL VARIANTS' BUTTON ID
   if [ -z "$dataVersion" ]; then
     variantHTML="$versionHTML"
-    dataUrl=$(sed -n 's/.*data-url="\([^"]*\)".*/\1/p' <<< "$variantHTML" | head -n1)
+    dataUrl=$(pup '#detail-download-button attr{data-url}' <<< "$variantHTML")
     dlLink="https://dw.uptodown.com/dwn/${dataUrl}"
     echo -e "$info dlUrl: ${Blue}$dlLink${Reset}"
   else
@@ -138,7 +138,7 @@ UptodownDownloadLink() {
       fi
     done
     if [ $variantCount -eq 1 ]; then
-      data_url=$(curl -sL -A "$USER_AGENT" "$location_url" | sed -n 's/.*data-url="\([^"]*\).*/\1/p' | head -1)
+      data_url=$(curl -sL -A "$USER_AGENT" "$location_url" | pup '#detail-download-button attr{data-url}')
       dlLink="https://dw.uptodown.com/dwn/${data_url}"
       echo -e "$info dlUrl: ${Blue}$dlLink${Reset}"
       return
@@ -146,7 +146,7 @@ UptodownDownloadLink() {
       if menu "variants" "buttons" "12"; then
         selected=$selected
         location_url="${location_urls[$selected]}"
-        data_url=$(curl -sL -A "$USER_AGENT" "$location_url" | sed -n 's/.*data-url="\([^"]*\).*/\1/p' | head -n1)
+        data_url=$(curl -sL -A "$USER_AGENT" "$location_url" | pup '#detail-download-button attr{data-url}')
         dlLink="https://dw.uptodown.com/dwn/${data_url}"
         echo -e "$info dlUrl: ${Blue}$dlLink${Reset}"
         return
