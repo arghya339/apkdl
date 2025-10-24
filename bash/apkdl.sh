@@ -72,7 +72,7 @@ crVersion=$(curl -sL "https://chromiumdash.appspot.com/fetch_releases?channel=St
 
 if [ $isMacOS -eq 1 ]; then
   Download="$HOME/Downloads"
-  [ $(uname -m) == "x86_64" ] && Arch=$Arch || Arch=arm64
+  [ $(uname -m) == "x86_64" ] && Arch=amd64 || Arch=arm64
   USER_AGENT="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$crVersion Mobile Safari/537.36"
 elif [ $isAndroid -eq 1 ]; then
   Download="/sdcard/Download"
