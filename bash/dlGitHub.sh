@@ -8,11 +8,11 @@ searchGH() {
     page=1
     while true; do
       [ $page -eq 1 ] && searchUrl="https://api.github.com/search/repositories?q=$appName" || searchUrl="https://api.github.com/search/repositories?q=$appName&page=$page"
-      searchJSON=$(curl -sL "$searchUrl" | jq -r '.items[] | [.name, .description // "No description", .html_url, .downloads_url, (.releases_url | sub("{\\/id}"; "")), .created_at, .updated_at, .homepage // "No homepage", .stargazers_count, .language // "Not specified", .forks_count, .license?.name // "No license", (.topics | join(", ") // "No topics")] | @tsv')
-      names=() descriptions=() html_urls=() downloads_urls=() releases_urls=() created_ats=() updated_ats=() homepages=() stargazers_indexs=() languages=() forks_indexs=() licenses=() topics_list=()
+      searchJSON=$(curl -sL "$searchUrl" | jq -r '.items[] | [.full_name, .description // "No description", .html_url, .downloads_url, (.releases_url | sub("{\\/id}"; "")), .created_at, .updated_at, .homepage // "No homepage", .stargazers_count, .language // "Not specified", .forks_count, .license?.name // "No license", (.topics | join(", ") // "No topics")] | @tsv')
+      full_names=() descriptions=() html_urls=() downloads_urls=() releases_urls=() created_ats=() updated_ats=() homepages=() stargazers_indexs=() languages=() forks_indexs=() licenses=() topics_list=()
       index=0
-      while IFS=$'\t' read -r name description html_url downloads_url releases_url created_at updated_at homepage stargazers_index language forks_index license topics; do
-        names[$index]="$name"
+      while IFS=$'\t' read -r full_name description html_url downloads_url releases_url created_at updated_at homepage stargazers_index language forks_index license topics; do
+        full_names[$index]="$full_name"
         descriptions[$index]="$description"
         html_urls[$index]="$html_url"
         downloads_urls[$index]="$downloads_url"
@@ -31,7 +31,7 @@ searchGH() {
       echo -e "$info Found $index repositories:"
       availableRepo=()
       for ((i=0; i<index; i++)); do
-        availableRepo+=("${names[$i]} - ${descriptions[$i]}")
+        availableRepo+=("${full_names[$i]} - ${descriptions[$i]}")
       done
       [ $page -ne 1 ] && availableRepo+=(Previous)
       availableRepo+=(Next)
@@ -46,7 +46,7 @@ searchGH() {
           continue
         else
           releasesUrl="${releases_urls[$selected]}"
-          echo -e "$info Repository Details for ${names[$selected]}:"
+          echo -e "$info Repository Details for ${full_names[$selected]}:"
           echo -e "$info Description: ${descriptions[$selected]}"
           echo -e "$info URL: ${Blue}${html_urls[$selected]}${Reset}"
           echo -e "$info Releases URL: ${Blue}${releases_urls[$selected]}${Reset}"
