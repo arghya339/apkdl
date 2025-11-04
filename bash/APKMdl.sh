@@ -374,8 +374,8 @@ apkm2apk() {
   ghApiResponseJson=$(curl -sL ${auth} "https://api.github.com/repos/$owner/$repo/releases/latest")
   tag_name=$(jq -r '.tag_name | sub("^V"; "")' <<< "$ghApiResponseJson")  # 1.4.5
   APKEditor="APKEditor-$tag_name.jar"
-  APKEditorPath="$HOME/$APKEditor"
-  findAPKEditorPath=$(find "$HOME" -maxdepth 1 -type f -name "APKEditor-*.jar" -print -quit)
+  APKEditorPath="$apkdl/$APKEditor"
+  findAPKEditorPath=$(find "$apkdl" -maxdepth 1 -type f -name "APKEditor-*.jar" -print -quit)
   if [ -f "$findAPKEditorPath" ]; then
     findAPKEditor=$(basename "$findAPKEditorPath" 2>/dev/null)
     if [ "$APKEditor" != "$findAPKEditor" ]; then
