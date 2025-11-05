@@ -15,7 +15,7 @@ adbInstall() {
   if [ $DisableVerifyAdbInstalls -eq 1 ]; then
     [ $Android -le 10 ] && adb -s $serial shell "settings put global package_verifier_enable 0" || adb -s $serial shell "settings put global verifier_verify_adb_installs 0"  # Disable Verify Adb Installs
   fi
-  output=$(adb -s $serial shell pm install ${cmd} "/data/local/tmp/${outputFileName}" 2>&1); echo "$output"
+  output=$(adb -s $serial shell pm install ${cmd} "\"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
   #adb -s $serial install ${cmd} "/data/local/tmp/$outputFileName" 2>&1
   #adb -s $serial shell cmd package install ${cmd} "/data/local/tmp/$outputFileName" > /dev/null 2>&1
   [ $DisablePlayProtect -eq 1 ] && adb -s $serial shell "settings put global package_verifier_user_consent 1"  # Enabled Play Protect
