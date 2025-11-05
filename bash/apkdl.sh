@@ -536,7 +536,8 @@ while true; do
               apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              echo -e "$notice ext: $ext"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && { echo -e "$running execute adbInstall()"; adbInstall "$apkPath"; }
             fi
           fi
         fi
