@@ -3,7 +3,7 @@
 aapt2=("$HOME/Library/Android/sdk/build-tools/"*/aapt2) && aapt2="${aapt2[-1]}"
 Android=$(adb -s $serial shell getprop ro.build.version.release | cut -d. -f1)
 
-apkInstall() {
+adbInstall() {
   local outputAPK=$1
   local outputFileName=$(basename "$outputAPK")
   app_info=$($aapt2 dump badging "$outputAPK" 2>/dev/null)
