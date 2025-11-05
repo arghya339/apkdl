@@ -536,7 +536,7 @@ while true; do
               apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
             fi
           fi
         fi
@@ -569,7 +569,7 @@ while true; do
               apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
             fi
           fi
         fi
@@ -600,7 +600,7 @@ while true; do
               apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
             fi
           fi
         fi
@@ -647,7 +647,7 @@ while true; do
               apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
             fi
           fi
         fi
