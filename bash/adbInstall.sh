@@ -3,7 +3,6 @@
 aapt2=("$HOME/Library/Android/sdk/build-tools/"*/aapt2) && aapt2="${aapt2[-1]}"
 
 adbInstall() {
-  echo -e "$running execute adbInstall()"
   local outputAPK=$1
   local outputFileName=$(basename "$outputAPK")
   app_info=$($aapt2 dump badging "$outputAPK" 2>/dev/null)
@@ -11,7 +10,7 @@ adbInstall() {
   appName=$(awk -F"'" '/application-label:/ {print $2}' <<< "$app_info")
   local activityClass=$(adb -s $serial shell "pm resolve-activity --brief $pkgName" | tail -n 1)
   Android=$(adb -s $serial shell getprop ro.build.version.release | cut -d. -f1)
-  adb -s $serial push "$outputAPK" "/data/local/tmp/$outputFileName"
+  adb -s $serial push "$outputAPK" "/data/local/tmp/$outputFileName" 2>/dev/null
   [ $DisablePlayProtect -eq 1 ] && adb -s $serial shell "settings put global package_verifier_user_consent -1"  # Disabled Play Protect
   if [ $DisableVerifyAdbInstalls -eq 1 ]; then
     [ $Android -le 10 ] && adb -s $serial shell "settings put global package_verifier_enable 0" || adb -s $serial shell "settings put global verifier_verify_adb_installs 0"  # Disable Verify Adb Installs
@@ -40,5 +39,4 @@ adbInstall() {
       adb -s $serial shell "pm rollback-app $pkgName"
     fi
   fi
-  echo -e "$notice serial: $serial, apkPath: $outputAPK, pkgName: $pkgName, appName: $appName, Android: $Android, activity: $activityClass, cmd: $cmd, cmdLog $output"
 }
