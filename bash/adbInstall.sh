@@ -11,17 +11,19 @@ adbInstall() {
   appName=$(awk -F"'" '/application-label:/ {print $2}' <<< "$app_info")
   local activityClass=$(adb -s $serial shell "pm resolve-activity --brief $pkgName" | tail -n 1)
   Android=$(adb -s $serial shell getprop ro.build.version.release | cut -d. -f1)
+  adb -s $serial shell cp "$outputAPK" "/data/local/tmp/$outputFileName"
   [ $DisablePlayProtect -eq 1 ] && adb -s $serial shell "settings put global package_verifier_user_consent -1"  # Disabled Play Protect
   if [ $DisableVerifyAdbInstalls -eq 1 ]; then
     [ $Android -le 10 ] && adb -s $serial shell "settings put global package_verifier_enable 0" || adb -s $serial shell "settings put global verifier_verify_adb_installs 0"  # Disable Verify Adb Installs
   fi
-  output=$(adb -s $serial shell pm install ${cmd} "$outputAPK" 2>&1)
-  #adb -s $serial install ${cmd} "$outputAPK" 2>&1
-  #adb -s $serial shell cmd package install ${cmd} "$outputAPK" > /dev/null 2>&1
+  output=$(adb -s $serial shell pm install ${cmd} "/data/local/tmp/$outputFileName" 2>&1)
+  #adb -s $serial install ${cmd} "/data/local/tmp/$outputFileName" 2>&1
+  #adb -s $serial shell cmd package install ${cmd} "/data/local/tmp/$outputFileName" > /dev/null 2>&1
   [ $DisablePlayProtect -eq 1 ] && adb -s $serial shell "settings put global package_verifier_user_consent 1"  # Enabled Play Protect
   if [ $DisableVerifyAdbInstalls -eq 1 ]; then
     [ $Android -le 10 ] && adb -s $serial shell "settings put global package_verifier_enable 1" || adb -s $serial shell "settings put global verifier_verify_adb_installs 1"  # Enabled Verify Adb Installs
   fi
+  adb -s $serial shell rm -f "/data/local/tmp/$outputFileName"
   if [[ $output == *"Downgrade detected"* ]] && [ $KeepsData -eq 1 ]; then
     echo -e "${Green}$appName uninstall successfully with keeps app data.${Reset}\n${Yellow}Don't forget to restart Simplify after reboot!${Reset}"
     adb -s $serial shell "cmd package uninstall -k $pkgName"
