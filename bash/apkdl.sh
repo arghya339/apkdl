@@ -326,26 +326,26 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
     [ -z $locale ] && locale=$(getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
     density=$(getprop ro.sf.lcd_density)  # Get the device screen density
   elif [ $isMacOS -eq 1 ]; then
-    locale=$(adb -s $serial getprop persist.sys.locale | cut -d'-' -f1)  # Get System Languages
-    [ -z $locale ] && locale=$(adb -s $serial getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
-    density=$(adb -s $serial getprop ro.sf.lcd_density)  # Get the device screen density
+    locale=$(adb -s $serial shell getprop persist.sys.locale | cut -d'-' -f1)  # Get System Languages
+    [ -z $locale ] && locale=$(adb -s $serial shell getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
+    density=$(adb -s $serial shell getprop ro.sf.lcd_density)  # Get the device screen density
   fi
   if [ $RipLocale -eq 0 ]; then
     locale="[a-z][a-z]"
   fi
   if [ $RipDpi -eq 1 ]; then
     # Check and categorize the density
-    if [ "$density" -le 120 ]; then
+    if [ "$density" -le "120" ]; then
       lcd_dpi="ldpi"  # Low Density
-    elif [ "$density" -le 160 ]; then
+    elif [ "$density" -le "160" ]; then
       lcd_dpi="mdpi"  # Medium Density
-    elif [ "$density" -le 240 ]; then
+    elif [ "$density" -le "240" ]; then
       lcd_dpi="hdpi"  # High Density
-    elif [ "$density" -le 320 ]; then
+    elif [ "$density" -le "320" ]; then
       lcd_dpi="xhdpi"  # Extra High Density
-    elif [ "$density" -le 480 ]; then
+    elif [ "$density" -le "480" ]; then
       lcd_dpi="xxhdpi"  # Extra Extra High Density
-    elif [ "$density" -gt 480 ] || [ "$density" -ge 640 ]; then
+    elif [ "$density" -gt "480" ] || [ "$density" -ge "640" ]; then
       lcd_dpi="xxxhdpi"  # Extra Extra Extra High Density
     else
       lcd_dpi="*dpi"
@@ -366,7 +366,12 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   Reinstall=$(jq -r '.Reinstall' "$apkdlJson" 2>/dev/null)
   EnableRoolback=$(jq -r '.EnableRoolback' "$apkdlJson" 2>/dev/null)
 
-  [ $InstallPackageFor -eq 0 ] && cmd="--user $(am get-current-user)" || cmd="--user all"
+  if [ $InstallPackageFor -eq 0 ]; then
+    [ $isAndroid -eq 1 ] && cmd="--user $(am get-current-user)"
+    [ $isMacOS -eq 1 ] && cmd="--user $(adb -s $serial shell "pm list users | grep running | grep -o 'UserInfo{[0-9]*' | grep -o '[0-9]'")"
+  else
+    cmd="--user all"
+  fi
   [ $GrantAllRuntimePermissions -eq 1 ] && cmd+=" -g"
   [ $InstalledAsTestOnly -eq 1 ] && cmd+=" -t"
   [ $BypassLowTargetSdkBolck -eq 1 ] && cmd+=" --bypass-low-target-sdk-block"
