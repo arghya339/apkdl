@@ -1,7 +1,6 @@
 #!/bin/bash
 
 aapt2=("$HOME/Library/Android/sdk/build-tools/"*/aapt2) && aapt2="${aapt2[-1]}"
-Android=$(adb -s $serial shell getprop ro.build.version.release | cut -d. -f1)
 
 adbInstall() {
   local outputAPK=$1
@@ -10,6 +9,7 @@ adbInstall() {
   pkgName=$(awk -F"'" '/package/ {print $2}' <<< "$app_info" | head -1)
   appName=$(awk -F"'" '/application-label:/ {print $2}' <<< "$app_info")
   local activityClass=$(adb -s $serial shell "pm resolve-activity --brief $pkgName" | tail -n 1)
+  Android=$(adb -s $serial shell getprop ro.build.version.release | cut -d. -f1)
   [ $DisablePlayProtect -eq 1 ] && adb -s $serial shell "settings put global package_verifier_user_consent -1"  # Disabled Play Protect
   if [ $DisableVerifyAdbInstalls -eq 1 ]; then
     [ $Android -le 10 ] && adb -s $serial shell "settings put global package_verifier_enable 0" || adb -s $serial shell "settings put global verifier_verify_adb_installs 0"  # Disable Verify Adb Installs
