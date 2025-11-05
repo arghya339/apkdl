@@ -366,7 +366,7 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   Reinstall=$(jq -r '.Reinstall' "$apkdlJson" 2>/dev/null)
   EnableRoolback=$(jq -r '.EnableRoolback' "$apkdlJson" 2>/dev/null)
 
-  [ $InstallPackageFor -eq 0 ] && cmd="--user $(am get-current-user)" || cmd="--all-users"
+  [ $InstallPackageFor -eq 0 ] && cmd="--user $(am get-current-user)" || cmd="--user all"
   [ $GrantAllRuntimePermissions -eq 1 ] && cmd+=" -g"
   [ $InstalledAsTestOnly -eq 1 ] && cmd+=" -t"
   [ $BypassLowTargetSdkBolck -eq 1 ] && cmd+=" --bypass-low-target-sdk-block"
