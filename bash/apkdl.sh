@@ -38,6 +38,16 @@ apkdlJson="$apkdl/apkdl.json"  # Configuration file to store apkdl settings
 isRipLocale=1  # Default value (true/on/1) for RipLocale, it's delete locale from apk file except device specific locale by default
 isRipDpi=1  # Default value (true/on/1) for RipDpi, it's delete dpi from apk file except device specific dpi by default
 isRipLib=1  # Default value (true/on/1) for RipLib, it's delete lib dir from apk file except device specific arch lib by default
+isU=0  # Install Package for 0 (default-user), possible 1 (all-users)
+isK=0  # Allow Downgrade with keeps App data 0 (false) because it's required reboot after pkg install, possible 1 (true)
+isG=0  # Grant All Runtime Permissions 0 (false) due to Security Risk, possible 1
+isT=0  # Installed as test-only app 0, possible 1
+isL=1  # Bypass Low Target SDK Bolck 1 (true) it's allow Android 14+ to install apps that target below API level 23 (Android 6 and below), possible value 0
+isV=1  # Disable Play Protect Package Verification 1 (true), possible 0
+isA=0  # 'Disable Play Protect' is Enabled; this makes Enabling 'Disable Verify ADB installs' unnecessary
+isI="com.android.vending"  # default: PlayStore | possible Installer: com.android.packageinstaller (PackageInstaller), com.android.shell (Shell), adb
+isR=1  # Reinstall Existing Installed Package 1 (true) because without this app can't be installed if installed and to-be-installed version are same, possible 0
+isB=0  # Enable Version Roolback 0, possible 1
 
 # Config creation function
 config() {
@@ -513,6 +523,12 @@ while true; do
         RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)"
         RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)"
         options=(RipLocale RipDpi RipLib)
+        if [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
+          options+=("SU/ SUI/ ADB Installation Options")
+        fi
+        if [ "$(getprop ro.product.manufacturer)" == "Genymobile" ] && ! "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
+          options+=(Pair\ ADB)
+        fi
         buttons=("<Select>" "<Back>"); if menu "options" "buttons"; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
           RipLocale) if [ $RipLocale -eq 1 ]; then echo "RipLocale == true"; else echo "RipLocale == false"; fi
@@ -529,6 +545,110 @@ while true; do
             m1="Device specific arch lib will be kept in apk file"
             m2="All lib dir will be kept in apk file"
             tfConfig "RipLib" "$isRipLib" "$m1" "$m2"
+            ;;
+          "SU/ SUI/ ADB Installation Options")
+            while true; do
+              InstallPackageFor=$(jq -r '.InstallPackageFor' "$apkdlJson" 2>/dev/null)
+              KeepsData=$(jq -r '.KeepsData' "$apkdlJson" 2>/dev/null)
+              GrantAllRuntimePermissions=$(jq -r '.GrantAllRuntimePermissions' "$apkdlJson" 2>/dev/null)
+              InstalledAsTestOnly=$(jq -r '.InstalledAsTestOnly' "$apkdlJson" 2>/dev/null)
+              BypassLowTargetSdkBolck=$(jq -r '.BypassLowTargetSdkBolck' "$apkdlJson" 2>/dev/null)
+              DisablePlayProtect=$(jq -r '.DisablePlayProtect' "$apkdlJson" 2>/dev/null)
+              DisableVerifyAdbInstalls=$(jq -r '.DisableVerifyAdbInstalls' "$apkdlJson" 2>/dev/null)
+              Installer=$(jq -r '.Installer' "$apkdlJson" 2>/dev/null)
+              Reinstall=$(jq -r '.Reinstall' "$apkdlJson" 2>/dev/null)
+              EnableRoolback=$(jq -r '.EnableRoolback' "$apkdlJson" 2>/dev/null)
+              options=("Install Package for *user" "Allow Downgrade with keeps App data (reboot required)" "Grant All Runtime/ Requested Permissions" Installed\ as\ test-only\ app Bypass\ Low\ Target\ SDK\ Bolck Disable\ Play\ Protect\ Package\ Verification Disable\ Verify\ Adb\ Installs Installer "Reinstall (Replace/ Upgrade) Existing Installed Package" Enable\ Version\ Roolback)
+              buttons=("<Select>" "<Back>"); if menu "options" "buttons" "10"; then selected="${options[$selected]}"; else break; fi
+              case "$selected" in
+                "Install Package for *user")
+                  if [ "$InstallPackageFor" -eq 0 ]; then echo "InstallPackageFor == 0 (default-user)"; else echo "InstallPackageFor == 1 (all-users)"; fi
+                  buttons=("<default-user>" "<all-users>"); confirmPrompt "InstallPackageFor" "buttons" "$isU" && u=default-user || u=all-users
+                  if [ -n "$u" ]; then
+                    case "$u" in
+                      [Dd]*) config "InstallPackageFor" "0" && echo -e "$good ${Green}Install Package for default-user set successfully!${Reset}" ;;
+                      [Aa]*) config "InstallPackageFor" "1" && echo -e "$good ${Green}Install Package for all-user set successfully!${Reset}" ;;
+                    esac
+                    sleep 2
+                  fi
+                  ;;
+                "Allow Downgrade with keeps App data (reboot required)")
+                  if [ "$KeepsData" -eq 0 ]; then echo "KeepsData == false"; else echo "KeepsData == true"; fi
+                  m1="Allow Downgrade with keeps App data Enabled"
+                  m2="Allow Downgrade with keeps App data Disabled"
+                  tfConfig "KeepsData" "$isK" "$m1" "$m2"
+                  ;;
+                "Grant All Runtime/ Requested Permissions")
+                  if [ "$GrantAllRuntimePermissions" -eq 0 ]; then echo "GrantAllRuntimePermissions == false"; else echo "GrantAllRuntimePermissions == true"; fi
+                  m1="Grant All Runtime Permissions Enabled"
+                  m2="Grant All Runtime Permissions Disabled"
+                  tfConfig "GrantAllRuntimePermissions" "$isG" "$m1" "$m2"
+                  ;;
+                Installed\ as\ test-only\ app)
+                  if [ "$InstalledAsTestOnly" -eq 0 ]; then echo "InstalledAsTestOnly == false"; else echo "InstalledAsTestOnly == true"; fi
+                  m1="Installed as test-only Enabled"
+                  m2="Installed as test-only Disabled"
+                  tfConfig "InstalledAsTestOnly" "$isT" "$m1" "$m2"
+                  ;;
+                Bypass\ Low\ Target\ SDK\ Bolck)
+                  if [ "$BypassLowTargetSdkBolck" -eq 1 ]; then echo "BypassLowTargetSdkBolck == true"; else echo "BypassLowTargetSdkBolck == false"; fi
+                  m1="Bypass Low Target SDK Bolck Enabled"
+                  m2="Bypass Low Target SDK Bolck Disabled"
+                  tfConfig "BypassLowTargetSdkBolck" "$isL" "$m1" "$m2"
+                  ;;
+                Disable\ Play\ Protect\ Package\ Verification)
+                  if [ "$DisablePlayProtect" -eq 1 ]; then echo "DisablePlayProtect == true"; else echo "DisablePlayProtect == false"; fi
+                  m1="Play Protect Package Verification Disabled"
+                  m2="Play Protect Package Verification Enabled"
+                  tfConfig "DisablePlayProtect" "$isV" "$m1" "$m2"
+                  ;;
+                Disable\ Verify\ Adb\ Installs)
+                  [ $DisableVerifyAdbInstalls -eq 1 ] && echo "DisableVerifyAdbInstalls == true" || echo "DisableVerifyAdbInstalls == false"
+                  m1="Verify Adb Installs Disabled"; m2="Verify Adb Installs Enabled"; tfConfig "DisableVerifyAdbInstalls" "$isA" "$m1" "$m2"
+                  ;;
+                Installer)
+                  case "$Installer" in
+                    "com.android.vending") echo "Installer == com.android.vending (PlayStore)" ;;
+                    "com.android.packageinstaller") echo "Installer == com.android.packageinstaller (PackageInstaller)" ;;
+                    "com.android.shell") echo "Installer == com.android.shell (Shell)" ;;
+                    "adb") echo "Installer == adb" ;;
+                  esac
+                  options=(Play\ Store Package\ Installer Shell ADB)
+                  buttons=("<Select>" "<Back>"); if menu "options" "buttons" "4"; then selected="${options[$selected]}"; fi
+                  if [ -n "$selected" ]; then
+                    case "$selected" in
+                      Play\ Store) config "Installer" "com.android.vending" && echo -e "$good ${Green}Successfully set Installer as 'com.android.vending' (PlayStore)${Reset}" ;;
+                      Package\ Installer) config "Installer" "com.android.packageinstaller" && echo -e "$good ${Green}Successfully set Installer as 'com.android.packageinstaller' (PackageInstaller)${Reset}" ;;
+                      Shell) config "Installer" "com.android.shell" && echo -e "$good ${Green}Successfully set Installer as 'com.android.shell' (Shell)${Reset}" ;;
+                      ADB) config "Installer" "adb" && echo -e "$good ${Green}Successfully set Installer as 'adb'${Reset}" ;;
+                    esac
+                    sleep 2
+                  fi
+                  ;;
+                "Reinstall (Replace/ Upgrade) Existing Installed Package")
+                  if [ "$Reinstall" -eq 1 ]; then echo "Reinstall == true"; else echo "Reinstall == false"; fi
+                  m1="Reinstall Existing Installed Package Enabled"
+                  m2="Reinstall Existing Installed Package Disabled"
+                  tfConfig "Reinstall" "$isR" "$m1" "$m2"
+                  ;;
+                Enable\ Version\ Roolback)
+                  if [ "$EnableRoolback" -eq 0 ]; then echo "EnableRoolback == false"; else echo "EnableRoolback == true"; fi
+                  m1="Version Roolback Enabled"
+                  m2="Version Roolback Disabled"
+                  tfConfig "EnableRoolback" "$isB" "$m1" "$m2"
+                  ;;
+              esac
+            done
+            ;;
+          Pair\ ADB)
+            echo -e "Enable Developer Options:\n  1. Open Settings app on your device\n  2. tap About Phone\n  3. Find & tap 7 times on Build Number\n  4. You may need to enter your lock screen password\n  >>You will see a toast message saying 'You are now a developer!'"
+            echo -e "Enable Wireless Debugging:\n  1. Go back to main Settings screen\n  2. Scroll down & tap System\n  3. Tap Developer Options\n  4. Scroll down & find Wireless Debugging\n  5. Toggle it ON\n  6. A new dialog box will appear with a warning. Read it and tap Allow"
+            echo -e "Pair Device with Pairing Code:\n  1. In Wireless Debugging menu, tap Pair device with pairing code. It will show you a IP address & port (e.g., 192.168.1.50:40435) and a 6-digit pairing code (e.g., 123456).\n  2. open Termux & enter [IP address:port] [Wi-Fi pairing code] (e.g., 192.168.1.50:40435 123456)\n"
+            am start -n "com.android.settings/.Settings\$WirelessDebuggingActivity" >/dev/null 2>&1
+            [ $? -ne 0 ] && am start -n "com.android.settings/.Settings\$DevelopmentSettingsDashboardActivity" >/dev/null 2>&1 || am start -n com.android.settings/.Settings\$MyDeviceInfoActivity >/dev/null 2>&1
+            read -r -p "HOST[:PORT] [PAIRING CODE] " input
+            host_port=$(echo "$input" | awk '{print $1}'); pairing_code=$(echo "$input" | awk '{print $2}')
+            ~/adb pair "$host_port" "$pairing_code"
             ;;
         esac
       done

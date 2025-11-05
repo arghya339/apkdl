@@ -79,7 +79,7 @@
       activityClass="com.android.settings/.Settings\$WirelessDebuggingActivity"  # Open Wireless Debugging Settings
       url="https://youtu.be/YRd0FBfdntQ"  # YouTube/@MrPalash360: Start Shizuku Android 11+
     fi
-    echo -e "$info Please start Shizuku by following guide: $url" && sleep 1
+    echo -e "$info Please start Shizuku by following guide: ${Blue}$url${Reset}" && sleep 1
     am start -n "$activityClass" > /dev/null 2>&1
     termux-open-url "$url"
   fi
@@ -153,7 +153,9 @@
 
   # Create apkdl config
   all_key=("RipLocale" "RipDpi" "RipLib")
+  all_key+=("InstallPackageFor" "KeepsData" "GrantAllRuntimePermissions" "InstalledAsTestOnly" "BypassLowTargetSdkBolck" "DisablePlayProtect" "DisableVerifyAdbInstalls" "Installer" "Reinstall" "EnableRoolback")
   all_value=("$isRipLocale" "$isRipDpi" "$isRipLib")
+  all_value+=("$isU" "$isK" "$isG" "$isT" "$isL" "$isV" "$isA" "$isI" "$isR" "$isB")
   # Loop through all keys and set values if they don't exist
   for i in "${!all_key[@]}"; do
     ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
@@ -195,4 +197,48 @@
     fi
   elif [ $RipDpi -eq 0 ]; then
     lcd_dpi="*dpi"
+  fi
+  
+  curl -sL -o "$apkdl/apkInstall.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/apkInstall.sh"
+  source $apkdl/apkInstall.sh
+  
+  # --- Create apkdl shortcut on Laucher Home ---
+  if [ ! -f "$HOME/.shortcuts/apkdl" ] || [ ! -f "$HOME/.termux/widget/dynamic_shortcuts/apkdl" ]; then
+    # Download & Install Termux:Widget app from GitHub
+    if ! am start -n com.termux.widget/com.termux.widget.TermuxLaunchShortcutActivity > /dev/null 2>&1; then
+      tag_name=$(curl -s ${auth} "https://api.github.com/repos/termux/termux-widget/releases/latest" | jq -r '.tag_name')
+      while true; do
+        curl -L -C - --progress-bar -o "$Download/termux-widget-app_${tag_name}+github.debug.apk" "https://github.com/termux/termux-widget/releases/download/$tag_name/termux-widget-app_$tag_name+github.debug.apk"
+        [ $? -eq 0 ] && break || sleep 5
+      done
+      apkPath=$(find "$Download" -type f -name "termux-widget-app_v*+github.debug.apk" -print -quit)  # find downloaded Termux:Widget app package
+      [ -f "$apkPath" ] && apkInstall.sh "$apkPath" ""  # Install Termux:Widget app using apkInstall.sh
+    fi
+    # Create apkdl shortcut
+    if am start -n com.termux.widget/com.termux.widget.TermuxLaunchShortcutActivity > /dev/null 2>&1; then
+      [ -f "$apkPath" ] && rm -f "$apkPath"  # if Termux:Widget app package exist then remove it 
+      echo -e "$notice Please wait few seconds! Creating apkdl shortcut to access apkdl from Launcher Widget."
+      mkdir -p ~/.shortcuts  # create $HOME/.shortcuts dir if it not exist
+      echo -e "#!/usr/bin/bash\nbash \$PREFIX/bin/apkdl" > ~/.shortcuts/apkdl  # create apkdl shortcut script
+      mkdir -p ~/.termux/widget/dynamic_shortcuts
+      echo -e "#!/usr/bin/bash\nbash \$PREFIX/bin/apkdl" > ~/.termux/widget/dynamic_shortcuts/apkdl  # create apkdl dynamic shortcut script
+      chmod +x ~/.termux/widget/dynamic_shortcuts/apkdl  # give execute (--x) permissions to apkdl script
+      echo -e "$info From Termux:Widget app tap on ${Green}apkdl → Add to home screen${Reset}. Opening Termux:Widget app in 6 seconds.." && sleep 6
+      am start -n com.termux.widget/com.termux.widget.TermuxCreateShortcutActivity > /dev/null 2>&1  # open Termux:Widget app shortcut create activity (screen/view) to add shortcut on Launcher Home
+    fi
+    # Enabled Display over other apps
+    if [ $su -eq 1 ]; then
+      if [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ]; then
+        su -c "setenforce 0"  # set SELinux to Permissive mode to unblock unauthorized operations
+        su -c "cmd appops set com.termux SYSTEM_ALERT_WINDOW allow"
+        su -c "setenforce 1"  # set SELinux to Enforcing mode to block unauthorized operations
+      else
+        su -c "cmd appops set com.termux SYSTEM_ALERT_WINDOW allow"
+      fi
+    elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
+      $HOME/rish -c "cmd appops set com.termux SYSTEM_ALERT_WINDOW allow"
+    else
+      echo -e "$info Please manually turn on: ${Green}Display over other apps → Termux → Allow display over other apps${Reset}" && sleep 6
+      am start -a android.settings.action.MANAGE_OVERLAY_PERMISSION &> /dev/null  # open manage overlay permission settings
+    fi
   fi
