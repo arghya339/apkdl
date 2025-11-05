@@ -302,6 +302,84 @@ elif [ $isAndroid -eq 1 ]; then
   source $apkdl/Termux.sh
 fi
 
+if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
+  # Create apkdl config
+  all_key=("RipLocale" "RipDpi" "RipLib")
+  all_key+=("InstallPackageFor" "KeepsData" "GrantAllRuntimePermissions" "InstalledAsTestOnly" "BypassLowTargetSdkBolck" "DisablePlayProtect" "DisableVerifyAdbInstalls" "Installer" "Reinstall" "EnableRoolback")
+  all_value=("$isRipLocale" "$isRipDpi" "$isRipLib")
+  all_value+=("$isU" "$isK" "$isG" "$isT" "$isL" "$isV" "$isA" "$isI" "$isR" "$isB")
+  # Loop through all keys and set values if they don't exist
+  for i in "${!all_key[@]}"; do
+    ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
+  done
+
+  # Get RipLocale value from json
+  jq -e '.RipLocale != null' "$apkdlJson" >/dev/null 2>&1 && RipLocale="$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)" || RipLocale=1
+  # Get RipDpi value from json
+  jq -e '.RipDpi != null' "$apkdlJson" >/dev/null 2>&1 && RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)" || RipDpi=1
+  # Get RipLib value from json
+  jq -e '.RipLib != null' "$apkdlJson" >/dev/null 2>&1 && RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)" || RipLib=1
+
+  # Build locale & lcd_dpi
+  if [ $isAndroid -eq 1 ]; then
+    locale=$(getprop persist.sys.locale | cut -d'-' -f1)  # Get System Languages
+    [ -z $locale ] && locale=$(getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
+    density=$(getprop ro.sf.lcd_density)  # Get the device screen density
+  elif [ $isMacOS -eq 1 ]; then
+    locale=$(adb -s $serial getprop persist.sys.locale | cut -d'-' -f1)  # Get System Languages
+    [ -z $locale ] && locale=$(adb -s $serial getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
+    density=$(adb -s $serial getprop ro.sf.lcd_density)  # Get the device screen density
+  fi
+  if [ $RipLocale -eq 0 ]; then
+    locale="[a-z][a-z]"
+  fi
+  if [ $RipDpi -eq 1 ]; then
+    # Check and categorize the density
+    if [ "$density" -le 120 ]; then
+      lcd_dpi="ldpi"  # Low Density
+    elif [ "$density" -le 160 ]; then
+      lcd_dpi="mdpi"  # Medium Density
+    elif [ "$density" -le 240 ]; then
+      lcd_dpi="hdpi"  # High Density
+    elif [ "$density" -le 320 ]; then
+      lcd_dpi="xhdpi"  # Extra High Density
+    elif [ "$density" -le 480 ]; then
+      lcd_dpi="xxhdpi"  # Extra Extra High Density
+    elif [ "$density" -gt 480 ] || [ "$density" -ge 640 ]; then
+      lcd_dpi="xxxhdpi"  # Extra Extra Extra High Density
+    else
+      lcd_dpi="*dpi"
+    fi
+  elif [ $RipDpi -eq 0 ]; then
+    lcd_dpi="*dpi"
+  fi
+
+  POST_INSTALL="$apkdl/POST_INSTALL"; mkdir -p "$POST_INSTALL"
+  InstallPackageFor=$(jq -r '.InstallPackageFor' "$apkdlJson" 2>/dev/null)
+  KeepsData=$(jq -r '.KeepsData' "$apkdlJson" 2>/dev/null)
+  GrantAllRuntimePermissions=$(jq -r '.GrantAllRuntimePermissions' "$apkdlJson" 2>/dev/null)
+  InstalledAsTestOnly=$(jq -r '.InstalledAsTestOnly' "$apkdlJson" 2>/dev/null)
+  BypassLowTargetSdkBolck=$(jq -r '.BypassLowTargetSdkBolck' "$apkdlJson" 2>/dev/null)
+  DisablePlayProtect=$(jq -r '.DisablePlayProtect' "$apkdlJson" 2>/dev/null)
+  DisableVerifyAdbInstalls=$(jq -r '.DisableVerifyAdbInstalls' "$apkdlJson" 2>/dev/null)
+  Installer=$(jq -r '.Installer' "$apkdlJson" 2>/dev/null)
+  Reinstall=$(jq -r '.Reinstall' "$apkdlJson" 2>/dev/null)
+  EnableRoolback=$(jq -r '.EnableRoolback' "$apkdlJson" 2>/dev/null)
+
+  [ $InstallPackageFor -eq 0 ] && cmd="--user $(am get-current-user)" || cmd="--all-users"
+  [ $GrantAllRuntimePermissions -eq 1 ] && cmd+=" -g"
+  [ $InstalledAsTestOnly -eq 1 ] && cmd+=" -t"
+  [ $BypassLowTargetSdkBolck -eq 1 ] && cmd+=" --bypass-low-target-sdk-block"
+  case "$Installer" in
+    "com.android.vending") cmd+=" -i com.android.vending" ;;
+    "com.android.packageinstaller") cmd+=" -i com.android.packageinstaller" ;;
+    "com.android.shell") cmd+=" -i com.android.shell" ;;
+    "adb") cmd+=" -i adb" ;;
+  esac
+  [ $Reinstall -eq 1 ] && cmd+=" -r"
+  [ $EnableRoolback -eq 1 ] && cmd+=" --enable-rollback"
+fi
+
 downloadAPK() {
   while true; do
     if [ $isAndroid -eq 1 ]; then

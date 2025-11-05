@@ -151,54 +151,6 @@
   pkgInstall "findutils"  # find utils update
   pkgInstall "glow"  # glow install/update
 
-  # Create apkdl config
-  all_key=("RipLocale" "RipDpi" "RipLib")
-  all_key+=("InstallPackageFor" "KeepsData" "GrantAllRuntimePermissions" "InstalledAsTestOnly" "BypassLowTargetSdkBolck" "DisablePlayProtect" "DisableVerifyAdbInstalls" "Installer" "Reinstall" "EnableRoolback")
-  all_value=("$isRipLocale" "$isRipDpi" "$isRipLib")
-  all_value+=("$isU" "$isK" "$isG" "$isT" "$isL" "$isV" "$isA" "$isI" "$isR" "$isB")
-  # Loop through all keys and set values if they don't exist
-  for i in "${!all_key[@]}"; do
-    ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
-  done
-
-  # Get RipLocale value from json
-  jq -e '.RipLocale != null' "$apkdlJson" >/dev/null 2>&1 && RipLocale="$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)" || RipLocale=1
-  # Get RipDpi value from json
-  jq -e '.RipDpi != null' "$apkdlJson" >/dev/null 2>&1 && RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)" || RipDpi=1
-  # Get RipLib value from json
-  jq -e '.RipLib != null' "$apkdlJson" >/dev/null 2>&1 && RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)" || RipLib=1
-
-  # Build locale
-  if [ $RipLocale -eq 1 ]; then
-    locale=$(getprop persist.sys.locale | cut -d'-' -f1)  # Get System Languages
-    [ -z $locale ] && locale=$(getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
-  elif [ $RipLocale -eq 0 ]; then
-    locale="[a-z][a-z]"
-  fi
-
-  # Build lcd_dpi
-  if [ $RipDpi -eq 1 ]; then
-    density=$(getprop ro.sf.lcd_density)  # Get the device screen density
-    # Check and categorize the density
-    if [ "$density" -le 120 ]; then
-      lcd_dpi="ldpi"  # Low Density
-    elif [ "$density" -le 160 ]; then
-      lcd_dpi="mdpi"  # Medium Density
-    elif [ "$density" -le 240 ]; then
-      lcd_dpi="hdpi"  # High Density
-    elif [ "$density" -le 320 ]; then
-      lcd_dpi="xhdpi"  # Extra High Density
-    elif [ "$density" -le 480 ]; then
-      lcd_dpi="xxhdpi"  # Extra Extra High Density
-    elif [ "$density" -gt 480 ] || [ "$density" -ge 640 ]; then
-      lcd_dpi="xxxhdpi"  # Extra Extra Extra High Density
-    else
-      lcd_dpi="*dpi"
-    fi
-  elif [ $RipDpi -eq 0 ]; then
-    lcd_dpi="*dpi"
-  fi
-  
   curl -sL -o "$apkdl/apkInstall.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/apkInstall.sh"
   source $apkdl/apkInstall.sh
   

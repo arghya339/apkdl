@@ -1,30 +1,6 @@
 #!/usr/bin/bash
 
 Android=$(getprop ro.build.version.release | cut -d. -f1)
-POST_INSTALL="$apkdl/POST_INSTALL"; mkdir -p "$POST_INSTALL"
-InstallPackageFor=$(jq -r '.InstallPackageFor' "$apkdlJson" 2>/dev/null)
-KeepsData=$(jq -r '.KeepsData' "$apkdlJson" 2>/dev/null)
-GrantAllRuntimePermissions=$(jq -r '.GrantAllRuntimePermissions' "$apkdlJson" 2>/dev/null)
-InstalledAsTestOnly=$(jq -r '.InstalledAsTestOnly' "$apkdlJson" 2>/dev/null)
-BypassLowTargetSdkBolck=$(jq -r '.BypassLowTargetSdkBolck' "$apkdlJson" 2>/dev/null)
-DisablePlayProtect=$(jq -r '.DisablePlayProtect' "$apkdlJson" 2>/dev/null)
-DisableVerifyAdbInstalls=$(jq -r '.DisableVerifyAdbInstalls' "$apkdlJson" 2>/dev/null)
-Installer=$(jq -r '.Installer' "$apkdlJson" 2>/dev/null)
-Reinstall=$(jq -r '.Reinstall' "$apkdlJson" 2>/dev/null)
-EnableRoolback=$(jq -r '.EnableRoolback' "$apkdlJson" 2>/dev/null)
-
-[ $InstallPackageFor -eq 0 ] && cmd="--user $(am get-current-user)" || cmd="--all-users"
-[ $GrantAllRuntimePermissions -eq 1 ] && cmd+=" -g"
-[ $InstalledAsTestOnly -eq 1 ] && cmd+=" -t"
-[ $BypassLowTargetSdkBolck -eq 1 ] && cmd+=" --bypass-low-target-sdk-block"
-case "$Installer" in
-  "com.android.vending") cmd+=" -i com.android.vending" ;;
-  "com.android.packageinstaller") cmd+=" -i com.android.packageinstaller" ;;
-  "com.android.shell") cmd+=" -i com.android.shell" ;;
-  "adb") cmd+=" -i adb" ;;
-esac
-[ $Reinstall -eq 1 ] && cmd+=" -r"
-[ $EnableRoolback -eq 1 ] && cmd+=" --enable-rollback"
 
 [ ! -f "$HOME/aapt2" ] && { curl -sL "https://github.com/arghya339/aapt2/releases/download/all/aapt2_$cpuAbi" --progress-bar -o "$HOME/aapt2" && chmod +x "$HOME/aapt2"; }
 
