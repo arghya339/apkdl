@@ -493,8 +493,7 @@ while true; do
             if [ $isAndroid -eq 1 ]; then
               apkInstall "$filePath"
             elif [ $isMacOS -eq 1 ]; then
-              echo -e "$notice isMacOS=true"
-              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && { echo -e "$running execute adbInstall()"; adbInstall "$filePath"; }
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
             fi
           fi
         fi
