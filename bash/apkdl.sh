@@ -529,6 +529,7 @@ while true; do
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
+        [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
         if [ -f "$apkPath" ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
@@ -536,8 +537,7 @@ while true; do
               apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              echo -e "$notice ext: $ext"
-              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && { echo -e "$running execute adbInstall()"; adbInstall "$apkPath"; }
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
             fi
           fi
         fi
@@ -563,6 +563,7 @@ while true; do
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apks" ] && apks2apk
+        [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
         if [ -f "$apkPath" ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
@@ -594,6 +595,7 @@ while true; do
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && dlAPKPure
         [ -f "$Download/${appName}_v${version}-${arch}.apks" ] && apks2apk
+        [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
         if [ -f "$apkPath" ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
@@ -641,6 +643,7 @@ while true; do
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
+        [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
         if [ -f "$apkPath" ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
