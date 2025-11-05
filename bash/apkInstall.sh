@@ -149,7 +149,7 @@ apkInstall() {
     sleep 15 && am start -n "$activityClass" &> /dev/null  # launch app after update
   fi
   
-  if [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices 2>/dev/null | head -2 | tail -1 | cut -f1) shell "id" >/dev/null 2>&1; then
+  if [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
     if [ $EnableRoolback -eq 1 ]; then
       read -r -p "Is the $appName app working correctly? [Y/n]: " response
       if [[ "$response" == [Yy]* ]]; then
@@ -166,7 +166,7 @@ apkInstall() {
           fi
         elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
           $HOME/rish -c "pm rollback-app $pkgName"
-        elif "$HOME/adb" -s $(~/adb devices 2>/dev/null | head -2 | tail -1 | cut -f1) shell "id" >/dev/null 2>&1; then
+        elif "$HOME/adb" -s $(~/adb devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
           $HOME/adb -s $(~/adb devices 2>/dev/null | head -2 | tail -1 | awk '{print $1}') shell "pm rollback-app $pkgName"
         fi
       fi
