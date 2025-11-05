@@ -484,7 +484,20 @@ while true; do
 
       fileName=$(basename "$asset_browser_download_url")
       filePath="$Download/$fileName"
-      [ ! -f $filePath ] && dlGH
+      ext="${fileName##*.}"
+      [ ! -f "$filePath" ] && dlGH
+      if [ -f "$filePath" ]; then
+        if ([ $isMacOS -eq 1 ] && { [[ "$ext" == "apk" && -n "$serial" ]] || [[ "$ext" == "dmg" ]]; }) || [ $isAndroid -eq 1 ]; then
+          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+          if [ "$opt" == "Yes" ]; then
+            if [ $isAndroid -eq 1 ]; then
+              apkInstall "$filePath"
+            elif [ $isMacOS -eq 1 ]; then
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
+            fi
+          fi
+        fi
+      fi
       echo; read -p "Press Enter to continue..."
       ;;
     APKMirror)
@@ -516,6 +529,17 @@ while true; do
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
+        if [ -f "$apkPath" ]; then
+          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+          if [ "$opt" == "Yes" ]; then
+            if [ $isAndroid -eq 1 ]; then
+              apkInstall "$apkPath"
+            elif [ $isMacOS -eq 1 ]; then
+              ext="${fileName##*.}"
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$apkPath"
+            fi
+          fi
+        fi
         echo; read -p "Press Enter to continue..."
       fi
       ;;
@@ -538,6 +562,17 @@ while true; do
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apks" ] && apks2apk
+        if [ -f "$apkPath" ]; then
+          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+          if [ "$opt" == "Yes" ]; then
+            if [ $isAndroid -eq 1 ]; then
+              apkInstall "$apkPath"
+            elif [ $isMacOS -eq 1 ]; then
+              ext="${fileName##*.}"
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$apkPath"
+            fi
+          fi
+        fi
         echo; read -p "Press Enter to continue..."
       fi
       ;;
@@ -558,6 +593,17 @@ while true; do
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && dlAPKPure
         [ -f "$Download/${appName}_v${version}-${arch}.apks" ] && apks2apk
+        if [ -f "$apkPath" ]; then
+          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+          if [ "$opt" == "Yes" ]; then
+            if [ $isAndroid -eq 1 ]; then
+              apkInstall "$apkPath"
+            elif [ $isMacOS -eq 1 ]; then
+              ext="${fileName##*.}"
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$apkPath"
+            fi
+          fi
+        fi
         echo; read -p "Press Enter to continue..."
       fi
       ;;
@@ -594,6 +640,17 @@ while true; do
         apkPath="$Download/$fileName"
         [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
+        if [ -f "$apkPath" ]; then
+          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+          if [ "$opt" == "Yes" ]; then
+            if [ $isAndroid -eq 1 ]; then
+              apkInstall "$apkPath"
+            elif [ $isMacOS -eq 1 ]; then
+              ext="${fileName##*.}"
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$apkPath"
+            fi
+          fi
+        fi
         echo; read -p "Press Enter to continue..."
       fi
       ;;
