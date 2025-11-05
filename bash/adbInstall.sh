@@ -38,5 +38,5 @@ adbInstall() {
       adb -s $serial shell "pm rollback-app $pkgName"
     fi
   fi
-  echo -e "$notice serial: $serial, apkPath: $outputAPk, pkgName: $pkgName, appName: $appName, Android: $Android, activity: $activityClass, cmd: $cmd, cmdLog $output"
+  echo -e "$notice serial: $serial, apkPath: $outputAPK, pkgName: $pkgName, appName: $appName, Android: $Android, activity: $activityClass, cmd: $cmd, cmdLog $output"
 }
