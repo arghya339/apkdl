@@ -3,7 +3,7 @@
 aapt2=("$HOME/Library/Android/sdk/build-tools/"*/aapt2) && aapt2="${aapt2[-1]}"
 
 adbInstall() {
-  local outputAPK=$1
+  local outputAPK="${1}"
   local outputFileName=$(basename "$outputAPK")
   app_info=$($aapt2 dump badging "$outputAPK" 2>/dev/null)
   pkgName=$(awk -F"'" '/package/ {print $2}' <<< "$app_info" | head -1)
