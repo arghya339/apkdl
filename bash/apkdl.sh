@@ -700,7 +700,7 @@ while true; do
             m2="All lib dir will be kept in apk file"
             tfConfig "RipLib" "$isRipLib" "$m1" "$m2"
             ;;
-          "SU/ SUI/ ADB Installation Options"|"ADB Installation Options")
+          "SU Installation Options"|"SUI Installation Options"|"ADB Installation Options")
             while true; do
               InstallPackageFor=$(jq -r '.InstallPackageFor' "$apkdlJson" 2>/dev/null)
               KeepsData=$(jq -r '.KeepsData' "$apkdlJson" 2>/dev/null)
