@@ -669,15 +669,19 @@ while true; do
         RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)"
         RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)"
         options=(RipLocale RipDpi RipLib)
-        if [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-          options+=("SU/ SUI/ ADB Installation Options")
-        else
-          options+=("ADB Installation Options")
-        fi
         if [ $isAndroid -eq 1 ]; then
+          if [ $su -eq 1 ]; then
+            options+=("SU Installation Options")
+          elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
+            options+=("SUI Installation Options")
+          elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
+            options+=("ADB Installation Options")
+          fi
           if [ "$(getprop ro.product.manufacturer)" == "Genymobile" ] && ! "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
             options+=(Pair\ ADB)
           fi
+        elif [ $isMacOS -eq 1 ] && [ -n "$serial" ]; then
+          options+=("ADB Installation Options")
         fi
         buttons=("<Select>" "<Back>"); if menu "options" "buttons"; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
