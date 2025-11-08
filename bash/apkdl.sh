@@ -492,13 +492,14 @@ while true; do
       ext="${fileName##*.}"
       [ ! -f "$filePath" ] && dlGH
       if [ -f "$filePath" ]; then
-        if { [[ $isMacOS -eq 1 && ( ( $ext == "apk" && -n $serial ) || $ext == "dmg" ) ]]; } || [[ $isAndroid -eq 1 ]]; then
+        if { [[ $isMacOS -eq 1 && ( ( $ext == "apk" && -n $serial ) || $ext == "dmg" || $ext == "pkg" ) ]]; } || [[ $isAndroid -eq 1 ]]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
               apkInstall "$filePath"
             elif [ $isMacOS -eq 1 ]; then
               ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
+              ([ "$ext" == "dmg" ] || [ "$ext" == "pkg" ]) && open "$filePath"
             fi
           fi
         fi
