@@ -64,7 +64,7 @@ searchApp() {
       echo "$searchResultHTML" | grep -q "_cf_chl_" 2>/dev/null && cf_chl_error
       searchResultJSON=$(pup 'div.appRow json{}' <<< "$searchResultHTML" | jq -r '[.[] | .. | objects | select(.tag == "a" and .class == "fontBlack") | {title: .text, href: ("https://www.apkmirror.com" + .href)} ] | .[0:10]')
     
-      mapfile -t availableApps < <(echo "$searchResultJSON" | jq -r '[.[] | .title | sub(" [0-9]+(\\.[0-9]+)*.*$"; "")] | sub("&amp;"; "&")] | unique[]')
+      mapfile -t availableApps < <(echo "$searchResultJSON" | jq -r '[.[] | .title | sub(" [0-9]+(\\.[0-9]+)*.*$"; "")] | unique[]')
       [ $page -ge 3 ] && availableApps+=(First)
       [ $page -ge 2 ] && availableApps+=(Prev)
       [ $page -ne $lastPage ] && { availableApps+=(Next); availableApps+=(Last); }
