@@ -1,23 +1,34 @@
 #!/bin/bash
 
-current_patches_release_version=$(curl -sLX 'GET' 'https://api.revanced.app/v4/patches/version' -H 'accept: application/json' | jq -r '.version')  # Get current patches release version from ReVanced API
-patches_release_version=$(jq -r '.ReVanced' "$apkdlJson" 2>/dev/null)
+organization=${1}
+
+if [ "$organization" == "ReVanced" ]; then
+  current_patches_release_version=$(curl -sLX 'GET' 'https://api.revanced.app/v4/patches/version' -H 'accept: application/json' | jq -r '.version')  # Get current patches release version from ReVanced API
+elif [ "$organization" == "RVX" ]; then
+  current_patches_release_version=$(curl -s ${auth} "https://api.github.com/repos/anddea/revanced-patches/releases/latest" | jq -r '.tag_name')  # Get current patches release version from GitHub API
+fi
+patches_release_version=$(jq -r --arg org "$organization" '.[$org]' "$apkdlJson" 2>/dev/null)
 
 # Check if revanced.json file exists and patches_release_version match with current_patches_release_version
-if [ -f $apkdl/revanced.json ] && jq -e '.ReVanced != null' "$apkdlJson" >/dev/null 2>&1 && [ "$patches_release_version" == "$current_patches_release_version" ]; then
-  apps_json=$(cat $apkdl/revanced.json)  # Loading data from revanced.json file
+if [ -f $apkdl/$organization.json ] && jq -e --arg org "$organization" '.[$org] != null' "$apkdlJson" >/dev/null 2>&1 && [ "$patches_release_version" == "$current_patches_release_version" ]; then
+  apps_json=$(cat $apkdl/$organization.json)  # Loading data from revanced.json file
 else
-  config "ReVanced" "$current_patches_release_version"  # Store current patches release version in apkdlJson file
+  config "$organization" "$current_patches_release_version"  # Store current patches release version in apkdlJson file
   echo -e "$running Fetching fresh data from APKMirror API..."
-    
-  # Get list of patches from current patches release using ReVanced API
-  result=$(curl -sL 'https://api.revanced.app/v4/patches/list' | jq '
+  
+  if [ "$organization" == "ReVanced" ]; then
+    # Get list of patches from current patches release using ReVanced API
+    patchesJson=$(curl -sL 'https://api.revanced.app/v4/patches/list')
+  elif [ "$organization" == "RVX" ]; then
+    patchesJson=$(curl -sL 'https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/main/patches.json')
+  fi
+  result=$(jq '
   [.[] | select(.compatiblePackages != null) | .compatiblePackages | to_entries[]]
   | group_by(.key)
   | map({
     package: .[0].key,
     version: ([.[].value] | flatten | map(select(. != null)) | unique | if length > 0 then .[-1] else null end)
-  })')
+  })' <<< "$patchesJson")
     
   # Start with empty apps_json array
   apps_json="[]"
@@ -50,7 +61,7 @@ else
   done
     
   # Save apps data to $apkdl/revanced.json file
-  echo "$apps_json" > $apkdl/revanced.json
+  echo "$apps_json" > $apkdl/$organization.json
   unset pkgName version appName appLink
 fi
 

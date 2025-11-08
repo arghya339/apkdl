@@ -459,7 +459,7 @@ apks2apk() {
 }
 
 while true; do
-  options=(GitHub APKMirror Uptodown APKPure ReVanced)
+  options=(GitHub APKMirror Uptodown APKPure ReVanced RVX)
   if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
     options+=(Configuration)
   fi
@@ -621,7 +621,55 @@ while true; do
       source $apkdl/APKMdl.sh
       
       curl -sL -o "$apkdl/RVdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/RVdl.sh"
-      source $apkdl/RVdl.sh
+      source $apkdl/RVdl.sh "ReVanced"
+      [ $? -ne 0 ] && continue
+      
+      if [ -n "$version" ]; then
+        buttons=("<Auto>" "<Manual>"); confirmPrompt "Please select a method to get versionLink" "buttons" && opt=Auto || opt=Manual
+        if [ "$opt" == "Auto" ]; then
+          getVersionLink
+          [ $? -ne 0 ] && continue
+        elif [ "$opt" == "Manual" ]; then
+          getLatestUploads
+          [ $? -ne 0 ] && continue
+        fi
+      else
+        getLatestUploads
+        [ $? -ne 0 ] && continue
+      fi
+      
+      getVariant
+      [ $? -ne 0 ] && continue
+      
+      getDownloadLink
+      if [ $? -eq 0 ]; then
+        getAppDetails
+        appName=$(echo "${appName%%[:—(]*}" | xargs)
+        fileName="${appName}_v${version}-${arch}${file_ext}"
+        apkPath="$Download/$fileName"
+        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
+        [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
+        [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
+        if [ -f "$apkPath" ]; then
+          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+          if [ "$opt" == "Yes" ]; then
+            if [ $isAndroid -eq 1 ]; then
+              apkInstall "$apkPath"
+            elif [ $isMacOS -eq 1 ]; then
+              ext="${fileName##*.}"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
+            fi
+          fi
+        fi
+        echo; read -p "Press Enter to continue..."
+      fi
+      ;;
+    RVX)
+      curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
+      source $apkdl/APKMdl.sh
+      
+      curl -sL -o "$apkdl/RVdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/RVdl.sh"
+      source $apkdl/RVdl.sh "RVX"
       [ $? -ne 0 ] && continue
       
       if [ -n "$version" ]; then
