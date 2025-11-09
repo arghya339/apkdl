@@ -385,6 +385,34 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   [ $EnableRoolback -eq 1 ] && cmd+=" --enable-rollback"
 fi
 
+sign() {
+  apkPath="${1}"
+  wo_ext="${apkPath%.*}"
+  outApkPath="$wo_ext-signed.apk"
+  verify() {
+    if [ $isAndroid -eq 1 ]; then
+      $PREFIX/lib/jvm/java-21-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar verify --print-certs "${apkPath}" | grep -oP 'Signer #1 certificate DN: \K.*'
+      apksigner_exit_status=$?
+    elif [ $isMacOS -eq 1 ]; then
+      apksigner=("$HOME/Library/Android/sdk/build-tools/"*/apksigner) && apksigner="${apksigner[-1]}"
+      $apksigner verify --print-certs "${apkPath}" 2>/dev/null | grep "Signer #1 certificate DN:" | cut -d: -f2-
+      apksigner_exit_status=$?
+    fi
+  }; verify
+  if [ $apksigner_exit_status -ne 0 ]; then
+    if [ $isAndroid -eq 1 ]; then
+      [ ! -f $apkdl/ks.keystore ] && { $PREFIX/lib/jvm/java-21-openjdk/bin/keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; $PREFIX/lib/jvm/java-21-openjdk/bin/keytool -list -v -keystore $Simplify/ks.keystore -storepass 123456 | grep -oP '(?<=Owner:).*' | xargs; }
+      $PREFIX/lib/jvm/java-21-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar sign --ks $Simplify/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
+      signing_exit_status=$?
+    elif [ $isMacOS -eq 1 ]; then
+      [ ! -f $apkdl/ks.keystore ] && { keytool="/usr/local/opt/openjdk/bin/keytool"; $keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; $keytool -list -v -keystore $apkdl/ks.keystore -storepass 123456 | grep "Owner:" | cut -d: -f2- | xargs; }
+      $apksigner sign --ks $Simplify/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
+      signing_exit_status=$?
+    fi
+    [ $signing_exit_status -eq 0 ] && { rm -f "$apkPath"; mv "$outApkPath" "$apkPath"; verify; }
+  fi
+}
+
 downloadAPK() {
   while true; do
     if [ $isAndroid -eq 1 ]; then
@@ -496,9 +524,9 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              apkInstall "$filePath"
+              sign "$filePath"; apkInstall "$filePath"
             elif [ $isMacOS -eq 1 ]; then
-              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && { sign "$filePath"; adbInstall "$filePath"; }
               ([ "$ext" == "dmg" ] || [ "$ext" == "pkg" ]) && open "$filePath"
             fi
           fi
@@ -540,10 +568,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              apkInstall "$apkPath"
+              sign "$apkPath"; apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
             fi
           fi
         fi
@@ -574,10 +602,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              apkInstall "$apkPath"
+              sign "$apkPath"; apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
             fi
           fi
         fi
@@ -606,10 +634,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              apkInstall "$apkPath"
+              sign "$apkPath"; apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
             fi
           fi
         fi
@@ -654,10 +682,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              apkInstall "$apkPath"
+              sign "$apkPath"; apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
             fi
           fi
         fi
@@ -702,10 +730,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              apkInstall "$apkPath"
+              sign "$apkPath"; apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && adbInstall "$apkPath"
+              ([[ "$ext" =~ ^apk ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
             fi
           fi
         fi
