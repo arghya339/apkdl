@@ -411,6 +411,7 @@ sign() {
     fi
     [ $signing_exit_status -eq 0 ] && { rm -f "$apkPath"; mv "$outApkPath" "$apkPath"; verify; }
   fi
+  echo -e "$notice DEBUG: sign()"
 }
 
 downloadAPK() {
