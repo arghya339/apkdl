@@ -402,11 +402,11 @@ sign() {
   if [ $apksigner_exit_status -ne 0 ]; then
     if [ $isAndroid -eq 1 ]; then
       [ ! -f $apkdl/ks.keystore ] && { $PREFIX/lib/jvm/java-21-openjdk/bin/keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; $PREFIX/lib/jvm/java-21-openjdk/bin/keytool -list -v -keystore $Simplify/ks.keystore -storepass 123456 | grep -oP '(?<=Owner:).*' | xargs; }
-      $PREFIX/lib/jvm/java-21-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar sign --ks $Simplify/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
+      $PREFIX/lib/jvm/java-21-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar sign --ks $apkdl/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
       signing_exit_status=$?
     elif [ $isMacOS -eq 1 ]; then
       [ ! -f $apkdl/ks.keystore ] && { keytool="/usr/local/opt/openjdk/bin/keytool"; $keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; $keytool -list -v -keystore $apkdl/ks.keystore -storepass 123456 | grep "Owner:" | cut -d: -f2- | xargs; }
-      $apksigner sign --ks $Simplify/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
+      $apksigner sign --ks $apkdl/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
       signing_exit_status=$?
     fi
     [ $signing_exit_status -eq 0 ] && { rm -f "$apkPath"; mv "$outApkPath" "$apkPath"; verify; }
