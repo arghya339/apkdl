@@ -524,9 +524,9 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              sign "$filePath"; apkInstall "$filePath"
+              apkInstall "$filePath"
             elif [ $isMacOS -eq 1 ]; then
-              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && { sign "$filePath"; adbInstall "$filePath"; }
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
               ([ "$ext" == "dmg" ] || [ "$ext" == "pkg" ]) && open "$filePath"
             fi
           fi
@@ -568,10 +568,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              sign "$apkPath"; apkInstall "$apkPath"
+              sign "$apkPath" && apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
+              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
             fi
           fi
         fi
@@ -602,10 +602,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              sign "$apkPath"; apkInstall "$apkPath"
+              sign "$apkPath" && apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
+              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
             fi
           fi
         fi
@@ -634,10 +634,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              sign "$apkPath"; apkInstall "$apkPath"
+              sign "$apkPath" && apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
+              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
             fi
           fi
         fi
@@ -682,10 +682,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              sign "$apkPath"; apkInstall "$apkPath"
+              sign "$apkPath" && apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
+              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
             fi
           fi
         fi
@@ -730,10 +730,10 @@ while true; do
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
             if [ $isAndroid -eq 1 ]; then
-              sign "$apkPath"; apkInstall "$apkPath"
+              sign "$apkPath" && apkInstall "$apkPath"
             elif [ $isMacOS -eq 1 ]; then
               ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath"; adbInstall "$apkPath"; }
+              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
             fi
           fi
         fi
