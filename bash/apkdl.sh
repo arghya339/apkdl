@@ -416,7 +416,7 @@ sign() {
       $apksigner sign --ks $apkdl/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
       signing_exit_status=$?
     fi
-    [ $signing_exit_status -eq 0 ] && { rm -f "$apkPath"; mv "$outApkPath" "$apkPath"; verify; }
+    [ $signing_exit_status -eq 0 ] && { rm -f "$outApkPath.idsig"; rm -f "$apkPath"; mv "$outApkPath" "$apkPath"; verify; }
   fi
 }
 
