@@ -393,13 +393,15 @@ sign() {
   verify() {
     if [ $isAndroid -eq 1 ]; then
       echo -e "$running Checking $fileName Certificate.."
-      $PREFIX/lib/jvm/java-21-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar verify --print-certs "${apkPath}" | grep -oP 'Signer #1 certificate DN: \K.*'
+      certs=$($PREFIX/lib/jvm/java-21-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar verify --print-certs "${apkPath}" 2>/dev/null)
       apksigner_exit_status=$?
+      grep -oP 'Signer #1 certificate DN: \K.*' <<< "$certs"
     elif [ $isMacOS -eq 1 ]; then
       apksigner=("$HOME/Library/Android/sdk/build-tools/"*/apksigner) && apksigner="${apksigner[-1]}"
       echo -e "$running Checking $fileName Certificate.."
-      $apksigner verify --print-certs "${apkPath}" 2>/dev/null | grep "Signer #1 certificate DN:" | cut -d: -f2-
+      certs=$($apksigner verify --print-certs "${apkPath}" 2>/dev/null)
       apksigner_exit_status=$?
+      grep "Signer #1 certificate DN:" <<< "$certs" | cut -d: -f2-
     fi
   }; verify
   if [ $apksigner_exit_status -ne 0 ]; then
