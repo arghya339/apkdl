@@ -807,7 +807,7 @@ while true; do
           PreReleasePatches)
             [ $PreReleasePatches -eq 0 ] && echo "PreReleasePatches == false" || echo "PreReleasePatches == true"
             m1="Fetch Pre-Release Patches"
-            m1="Fetch Latest Release Patches"
+            m2="Fetch Latest Release Patches"
             tfConfig "PreReleasePatches" "$isPreRelease" "$m1" "$m2"
             ;;
           "SU Installation Options"|"SUI Installation Options"|"ADB Installation Options")
