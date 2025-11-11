@@ -305,9 +305,9 @@ fi
 
 if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   # Create apkdl config
-  all_key=("RipLocale" "RipDpi" "RipLib" "RmFileAfterInstallation")
+  all_key=("RipLocale" "RipDpi" "RipLib")
   all_key+=("InstallPackageFor" "KeepsData" "GrantAllRuntimePermissions" "InstalledAsTestOnly" "BypassLowTargetSdkBolck" "DisablePlayProtect" "DisableVerifyAdbInstalls" "Installer" "Reinstall" "EnableRoolback")
-  all_value=("$isRipLocale" "$isRipDpi" "$isRipLib" "$isRmFile")
+  all_value=("$isRipLocale" "$isRipDpi" "$isRipLib")
   all_value+=("$isU" "$isK" "$isG" "$isT" "$isL" "$isV" "$isA" "$isI" "$isR" "$isB")
   # Loop through all keys and set values if they don't exist
   for i in "${!all_key[@]}"; do
@@ -320,8 +320,6 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   jq -e '.RipDpi != null' "$apkdlJson" >/dev/null 2>&1 && RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)" || RipDpi=1
   # Get RipLib value from json
   jq -e '.RipLib != null' "$apkdlJson" >/dev/null 2>&1 && RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)" || RipLib=1
-  # Get RmFileAfterInstallation value from json
-  jq -e '.RmFileAfterInstallation != null' "$apkdlJson" >/dev/null 2>&1 && RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)" || RmFileAfterInstallation=1
 
   # Build locale & lcd_dpi
   if [ $isAndroid -eq 1 ]; then
@@ -387,6 +385,14 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   [ $Reinstall -eq 1 ] && cmd+=" -r"
   [ $EnableRoolback -eq 1 ] && cmd+=" --enable-rollback"
 fi
+
+all_key=("RmFileAfterInstallation")
+all_value=("$isRmFile")
+for i in "${!all_key[@]}"; do
+  ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
+done
+# Get RmFileAfterInstallation value from json
+jq -e '.RmFileAfterInstallation != null' "$apkdlJson" >/dev/null 2>&1 && RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)" || RmFileAfterInstallation=1
 
 sign() {
   apkPath="${1}"
