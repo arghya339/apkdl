@@ -18,9 +18,11 @@ else
   
   if [ "$organization" == "ReVanced" ]; then
     # Get list of patches from current patches release using ReVanced API
-    patchesJson=$(curl -sL 'https://api.revanced.app/v4/patches/list')
+    [ $PreReleasePatches -eq 0 ] && requestUrl="https://api.revanced.app/v4/patches/list" || requestUrl="https://api.revanced.app/v4/patches?prerelease=true"
+    patchesJson=$(curl -sL "$requestUrl")
   elif [ "$organization" == "RVX" ]; then
-    patchesJson=$(curl -sL 'https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/main/patches.json')
+    [ $PreReleasePatches -eq 0 ] && branch="main" || branch="dev"
+    patchesJson=$(curl -sL "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/${branch}/patches.json")
   fi
   result=$(jq '
   [.[] | select(.compatiblePackages != null) | .compatiblePackages | to_entries[]]

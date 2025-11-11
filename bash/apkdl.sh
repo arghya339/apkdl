@@ -39,6 +39,7 @@ isRipLocale=1  # Default value (true/on/1) for RipLocale, it's delete locale fro
 isRipDpi=1  # Default value (true/on/1) for RipDpi, it's delete dpi from apk file except device specific dpi by default
 isRipLib=1  # Default value (true/on/1) for RipLib, it's delete lib dir from apk file except device specific arch lib by default
 isRmFile=1  # Remove downloaded file after installation 1 (true)
+isPreRelease=0  # Default value (false/off/0) for isPreRelease, it's enabled latest release for Patches source
 isU=0  # Install Package for 0 (default-user), possible 1 (all-users)
 isK=0  # Allow Downgrade with keeps App data 0 (false) because it's required reboot after pkg install, possible 1 (true)
 isG=0  # Grant All Runtime Permissions 0 (false) due to Security Risk, possible 1
@@ -386,13 +387,15 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   [ $EnableRoolback -eq 1 ] && cmd+=" --enable-rollback"
 fi
 
-all_key=("RmFileAfterInstallation")
-all_value=("$isRmFile")
+all_key=("RmFileAfterInstallation" "PreReleasePatches")
+all_value=("$isRmFile" "$isPreRelease")
 for i in "${!all_key[@]}"; do
   ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
 done
 # Get RmFileAfterInstallation value from json
 jq -e '.RmFileAfterInstallation != null' "$apkdlJson" >/dev/null 2>&1 && RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)" || RmFileAfterInstallation=1
+# Get PreReleasePatches value from json
+jq -e '.PreReleasePatches != null' "$apkdlJson" >/dev/null 2>&1 && PreReleasePatches="$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)" || PreReleasePatches=0
 
 sign() {
   apkPath="${1}"
@@ -763,7 +766,8 @@ while true; do
         RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)"
         RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)"
         RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)"
-        options=(RipLocale RipDpi RipLib RmFileAfterInstallation)
+        PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
+        options=(RipLocale RipDpi RipLib RmFileAfterInstallation PreReleasePatches)
         if [ $isAndroid -eq 1 ]; then
           if [ $su -eq 1 ]; then
             options+=("SU Installation Options")
@@ -799,6 +803,12 @@ while true; do
             m1="Remove downloaded file after installation"
             m2="Keep downloaded file after installation"
             tfConfig "RmFileAfterInstallation" "$isRmFile" "$m1" "$m2"
+            ;;
+          PreReleasePatches)
+            [ $PreReleasePatches -eq 0 ] && echo "PreReleasePatches == false" || echo "PreReleasePatches == true"
+            m1="Fetch Pre-Release Patches"
+            m1="Fetch Latest Release Patches"
+            tfConfig "PreReleasePatches" "$isPreRelease" "$m1" "$m2"
             ;;
           "SU Installation Options"|"SUI Installation Options"|"ADB Installation Options")
             while true; do
