@@ -3,9 +3,11 @@
 organization=${1}
 
 if [ "$organization" == "ReVanced" ]; then
-  current_patches_release_version=$(curl -sLX 'GET' 'https://api.revanced.app/v4/patches/version' -H 'accept: application/json' | jq -r '.version')  # Get current patches release version from ReVanced API
+  [ $PreReleasePatches -eq 0 ] && requestUrl="https://api.revanced.app/v4/patches/version" || requestUrl="https://api.revanced.app/v4/patches/version?prerelease=true"
+  current_patches_release_version=$(curl -sLX 'GET' "$requestUrl" -H 'accept: application/json' | jq -r '.version')  # Get current patches release version from ReVanced API
 elif [ "$organization" == "RVX" ]; then
-  current_patches_release_version=$(curl -s ${auth} "https://api.github.com/repos/anddea/revanced-patches/releases/latest" | jq -r '.tag_name')  # Get current patches release version from GitHub API
+  # Get current patches release version from GitHub API
+  [ $PreReleasePatches -eq 0 ] && current_patches_release_version=$(curl -s ${auth} "https://api.github.com/repos/anddea/revanced-patches/releases/latest" | jq -r '.tag_name') || current_patches_release_version=$(curl -sL ${auth} "https://api.github.com/repos/anddea/revanced-patches/releases" | jq -r '.[0].tag_name')
 fi
 patches_release_version=$(jq -r --arg org "$organization" '.[$org]' "$apkdlJson" 2>/dev/null)
 
