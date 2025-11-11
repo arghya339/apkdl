@@ -38,6 +38,7 @@ apkdlJson="$apkdl/apkdl.json"  # Configuration file to store apkdl settings
 isRipLocale=1  # Default value (true/on/1) for RipLocale, it's delete locale from apk file except device specific locale by default
 isRipDpi=1  # Default value (true/on/1) for RipDpi, it's delete dpi from apk file except device specific dpi by default
 isRipLib=1  # Default value (true/on/1) for RipLib, it's delete lib dir from apk file except device specific arch lib by default
+isRmFile=1  # Remove downloaded file after installation 1 (true)
 isU=0  # Install Package for 0 (default-user), possible 1 (all-users)
 isK=0  # Allow Downgrade with keeps App data 0 (false) because it's required reboot after pkg install, possible 1 (true)
 isG=0  # Grant All Runtime Permissions 0 (false) due to Security Risk, possible 1
@@ -304,9 +305,9 @@ fi
 
 if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   # Create apkdl config
-  all_key=("RipLocale" "RipDpi" "RipLib")
+  all_key=("RipLocale" "RipDpi" "RipLib" "RmFileAfterInstallation")
   all_key+=("InstallPackageFor" "KeepsData" "GrantAllRuntimePermissions" "InstalledAsTestOnly" "BypassLowTargetSdkBolck" "DisablePlayProtect" "DisableVerifyAdbInstalls" "Installer" "Reinstall" "EnableRoolback")
-  all_value=("$isRipLocale" "$isRipDpi" "$isRipLib")
+  all_value=("$isRipLocale" "$isRipDpi" "$isRipLib" "$isRmFile")
   all_value+=("$isU" "$isK" "$isG" "$isT" "$isL" "$isV" "$isA" "$isI" "$isR" "$isB")
   # Loop through all keys and set values if they don't exist
   for i in "${!all_key[@]}"; do
@@ -319,6 +320,8 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   jq -e '.RipDpi != null' "$apkdlJson" >/dev/null 2>&1 && RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)" || RipDpi=1
   # Get RipLib value from json
   jq -e '.RipLib != null' "$apkdlJson" >/dev/null 2>&1 && RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)" || RipLib=1
+  # Get RmFileAfterInstallation value from json
+  jq -e '.RmFileAfterInstallation != null' "$apkdlJson" >/dev/null 2>&1 && RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)" || RmFileAfterInstallation=1
 
   # Build locale & lcd_dpi
   if [ $isAndroid -eq 1 ]; then
@@ -540,6 +543,7 @@ while true; do
         fi
       fi
       echo; read -p "Press Enter to continue..."
+      { [[ $isMacOS -eq 1 && ( "$ext" == "dmg" || "$ext" == "pkg" ) && $RmFileAfterInstallation -eq 1 ]]; } && rm -f "$filePath"
       ;;
     APKMirror)
       curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
@@ -752,7 +756,8 @@ while true; do
         RipLocale="$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)"
         RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)"
         RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)"
-        options=(RipLocale RipDpi RipLib)
+        RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)"
+        options=(RipLocale RipDpi RipLib RmFileAfterInstallation)
         if [ $isAndroid -eq 1 ]; then
           if [ $su -eq 1 ]; then
             options+=("SU Installation Options")
@@ -783,6 +788,11 @@ while true; do
             m1="Device specific arch lib will be kept in apk file"
             m2="All lib dir will be kept in apk file"
             tfConfig "RipLib" "$isRipLib" "$m1" "$m2"
+            ;;
+          RmFileAfterInstallation) [ $RmFileAfterInstallation -eq 1 ] && echo "RmFileAfterInstallation == true" || echo "RmFileAfterInstallation == false"
+            m1="Remove downloaded file after installation"
+            m2="Keep downloaded file after installation"
+            tfConfig "RmFileAfterInstallation" "$isRmFile" "$m1" "$m2"
             ;;
           "SU Installation Options"|"SUI Installation Options"|"ADB Installation Options")
             while true; do

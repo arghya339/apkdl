@@ -39,4 +39,5 @@ adbInstall() {
       adb -s $serial shell "pm rollback-app $pkgName"
     fi
   fi
+  [ $RmFileAfterInstallation -eq 1 ] && rm -f "$outputAPK"
 }
