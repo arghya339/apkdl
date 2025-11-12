@@ -769,6 +769,8 @@ while true; do
         PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
         options=(RipLocale RipDpi RipLib RmFileAfterInstallation PreReleasePatches)
         if [ $isAndroid -eq 1 ]; then
+          CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null)
+          jdkVersion="$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null)"
           if [ $su -eq 1 ]; then
             options+=("SU Installation Options")
           elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
