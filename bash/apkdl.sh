@@ -779,6 +779,7 @@ while true; do
           if [ "$(getprop ro.product.manufacturer)" == "Genymobile" ] && ! "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
             options+=(Pair\ ADB)
           fi
+          options+=("Check Termux update on startup" "Change Java version")
         elif [ $isMacOS -eq 1 ] && [ -n "$serial" ]; then
           options+=("ADB Installation Options")
         fi
@@ -913,6 +914,32 @@ while true; do
             read -r -p "HOST[:PORT] [PAIRING CODE] " input
             host_port=$(echo "$input" | awk '{print $1}'); pairing_code=$(echo "$input" | awk '{print $2}')
             ~/adb pair "$host_port" "$pairing_code"
+            ;;
+          Check\ Termux\ update\ on\ startup) [ $CheckTermuxUpdate -eq 1 ] && echo "CheckTermuxUpdate == true" || echo "CheckTermuxUpdate == false"
+            m1="Check for Termux app updates on startup"
+            m2="Never check for Termux app updates on startup"
+            tfConfig "CheckTermuxUpdate" "$isCheckTermuxUpdate" "$m1" "$m2"
+            ;;
+          Change\ Java\ version)
+            echo "openjdkVersion == $jdkVersion"
+            # Get available JDK versions
+            attempt=0
+            while true; do
+              jdkVersion=($(pkg search openjdk 2>&1 | grep -E "^openjdk-[0-9]+/" | awk -F'[-/ ]' '{print $2}'))
+              [ $attempt -eq 7 ] && { echo -e "$notice Not found any java version in search result, after 7 attempts!"; break; }
+              [ ${#jdkVersion[@]} -ne 0 ] && break
+              ((attempt++))
+              sleep 0.5  # wait 500 milliseconds
+            done
+            # Select JDK versions
+            buttons=("<Select>" "<Back>"); if menu "jdkVersion" "buttons"; then version="${jdkVersion[$selected]}"; fi
+            # Set JDK versions
+            if [ -n "$version" ]; then
+              echo -e "$info Selected: openjdk-$version"
+              config "openjdk" "$version"
+              pkgInstall "openjdk-$version"  # java install/update
+              echo -e "$good ${Green}Java version change successfully!${Reset}"
+            fi
             ;;
         esac
       done

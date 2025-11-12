@@ -1,5 +1,19 @@
 #!/usr/bin/bash
 
+  isCheckTermuxUpdate=1
+  isJdkVersion="25"
+  
+  all_key=("CheckTermuxUpdate" "openjdk")
+  all_value=("$isCheckTermuxUpdate" "$isJdkVersion")
+  for i in "${!all_key[@]}"; do
+    ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
+  done
+  
+  # Get CheckTermuxUpdate value from json
+  jq -e '.CheckTermuxUpdate != null' "$apkdlJson" >/dev/null 2>&1 && CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null) || CheckTermuxUpdate=1
+  # Get openjdk verison from json
+  jq -e '.openjdk != null' "$apkdlJson" >/dev/null 2>&1 && jdkVersion=$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null) || jdkVersion="$isJdkVersion"
+
   pkg update > /dev/null 2>&1 || apt update >/dev/null 2>&1  # It downloads latest package list with versions from Termux remote repository, then compares them to local (installed) pkg versions, and shows a list of what can be upgraded if they are different.
   outdatedPKG=$(apt list --upgradable 2>/dev/null)  # list of outdated pkg
   echo "$outdatedPKG" | grep -q "dpkg was interrupted" 2>/dev/null && { yes "N" | dpkg --configure -a; outdatedPKG=$(apt list --upgradable 2>/dev/null); }
@@ -142,7 +156,7 @@
   #pkgInstall "openssl"  # openssl install/update
   pkgInstall "jq"  # jq install/update
   pkgInstall "pup"  # pup install/update
-  pkgInstall "openjdk-21"  # java install/update
+  pkgInstall "openjdk-$jdkVersion"  # java install/update
   pkgInstall "bsdtar"  # bsdtar install/update
   pkgInstall "pv"  # pv install/update
   pkgInstall "grep"  # grep update
@@ -192,5 +206,75 @@
     else
       echo -e "$info Please manually turn on: ${Green}Display over other apps → Termux → Allow display over other apps${Reset}" && sleep 6
       am start -a android.settings.action.MANAGE_OVERLAY_PERMISSION &> /dev/null  # open manage overlay permission settings
+    fi
+  fi
+
+  if [ $CheckTermuxUpdate -eq 1 ]; then
+    if [ $Android -ge 8 ]; then
+      latestReleases=$(curl -s https://api.github.com/repos/termux/termux-app/releases/latest | jq -r '.tag_name')  # v0.118.3
+      fileName="termux-app_${latestReleases}+github-debug_$cpuAbi.apk"
+      dlUrl="https://github.com/termux/termux-app/releases/download/$latestReleases/$fileName"
+      filePath="$Download/$fileName"
+    else
+      latestReleases=$(curl -s https://api.github.com/repos/termux/termux-app/tags | jq -r '.[0].name')  # v0.119.0-beta.3
+      [ $Android -eq 7 ] && variant=7 || variant=5
+      fileName="termux-app_${latestReleases}+apt-android-$variant-github-debug_$cpuAbi.apk"
+      dlUrl="https://github.com/termux/termux-app/releases/download/$latestReleases/$fileName"
+      filePath="$Download/$fileName"
+    fi
+    if [ "$TERMUX_VERSION" != "$latestReleases" ]; then
+      echo -e "$notice Termux app is outdated!"
+      echo -e "$running Downloading Termux app update.."
+      while true; do
+        curl -L --progress-bar -C - -o "$filePath" "$dlUrl"
+        [ $? -eq 0 ] && break || { echo -e "$notice Retrying in 5 seconds.."; sleep 5; }
+      done
+      echo -e "$notice Please rerun this script again after updating the Termux app!"
+      echo -e "$running Installing app update and restarting Termux app.." && sleep 3
+      if [ $su -eq 1 ]; then
+        su -c "cp '$filePath' '/data/local/tmp/$fileName'"
+        if [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ]; then
+          su -c "setenforce 0"  # set SELinux to Permissive mode to unblock unauthorized operations
+          su -c 'pm grant com.termux android.permission.POST_NOTIFICATIONS'
+          su -c "cmd deviceidle whitelist +com.termux" >/dev/null 2>&1
+          touch "$apkdl/setenforce0"
+          su -c "pm install -i com.android.vending '/data/local/tmp/$fileName'"
+        else
+          su -c 'pm grant com.termux android.permission.POST_NOTIFICATIONS'
+          su -c "cmd deviceidle whitelist +com.termux" >/dev/null 2>&1
+          su -c "pm install -i com.android.vending '/data/local/tmp/$fileName'"
+        fi
+      else
+        if "$HOME/rish" -c "id" >/dev/null 2>&1; then
+          $HOME/rish -c 'pm grant com.termux android.permission.POST_NOTIFICATIONS'
+          $HOME/rish -c "cmd deviceidle whitelist +com.termux" >/dev/null 2>&1
+          $HOME/rish -c "cmd appops set com.termux REQUEST_INSTALL_PACKAGES allow"
+        elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
+          ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm grant com.termux android.permission.POST_NOTIFICATIONS"
+          ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "cmd deviceidle whitelist +com.termux" >/dev/null 2>&1
+          ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "cmd appops set com.termux REQUEST_INSTALL_PACKAGES allow"
+        else
+          echo -e "$info Please Disabled: ${Green}Battery optimization → Not optimized → All apps → Termux → Don't optiomize → DONE${Reset}" && sleep 6
+          am start -n com.android.settings/.Settings\$HighPowerApplicationsActivity &> /dev/null
+          echo -e "$info Please Allow: ${Green}Install unknown apps → Termux → Allow from this source${Reset}" && sleep 6
+          am start -n com.android.settings/.Settings\$ManageExternalSourcesActivity &> /dev/null
+        fi
+        apkInstall "$filePath" "com.termux/.app.TermuxActivity"
+      fi
+    else
+      if [ -f "$filePath" ]; then
+        if [ $su -eq 1 ]; then
+          if [ "$(su -c 'getenforce 2>/dev/null')" = "Permissive" ] && [ -f "$apkdl/setenforce0" ]; then
+            su -c "setenforce 1"  # set SELinux to Enforcing mode to block unauthorized operations
+            rm -f "$apkdl/setenforce0"
+          fi
+          su -c "rm -f '/data/local/tmp/$fileName'"
+        elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
+          ~/rish -c "rm -f '/data/local/tmp/$fileName'"
+        elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
+          ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "rm -f '/data/local/tmp/$fileName'"
+        fi
+        rm -f "$filePath"
+      fi
     fi
   fi
