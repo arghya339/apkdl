@@ -406,10 +406,10 @@ apkm2apk() {
     fi
     if [ $bsdtar_exit_status -ne 0 ]; then  # check if bsdtar return exit code 1 (error)
       rm -rf "$Download/${appName}_v${version}-${arch}"
-      java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+      $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
     else
       rm -f "$apkPath"
-      java -jar $APKEditorPath m -i "$Download/${appName}_v${version}-${arch}" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -rf "$Download/${appName}_v${version}-${arch}"
+      $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $APKEditorPath m -i "$Download/${appName}_v${version}-${arch}" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -rf "$Download/${appName}_v${version}-${arch}"
     fi
     termux-wake-unlock
   fi

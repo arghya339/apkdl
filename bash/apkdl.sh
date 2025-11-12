@@ -405,7 +405,7 @@ sign() {
   verify() {
     if [ $isAndroid -eq 1 ]; then
       echo -e "$running Checking $fileName Certificate.."
-      certs=$($PREFIX/lib/jvm/java-21-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar verify --print-certs "${apkPath}" 2>/dev/null)
+      certs=$($PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar verify --print-certs "${apkPath}" 2>/dev/null)
       apksigner_exit_status=$?
       grep -oP 'Signer #1 certificate DN: \K.*' <<< "$certs"
     elif [ $isMacOS -eq 1 ]; then
@@ -418,9 +418,9 @@ sign() {
   }; verify
   if [ $apksigner_exit_status -ne 0 ]; then
     if [ $isAndroid -eq 1 ]; then
-      [ ! -f $apkdl/ks.keystore ] && { echo -e "$running Create a ${Red}ks.keystore${Reset} for Signing apk.."; $PREFIX/lib/jvm/java-21-openjdk/bin/keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; echo -e "$running Checking details about keystore entries.."; $PREFIX/lib/jvm/java-21-openjdk/bin/keytool -list -v -keystore $apkdl/ks.keystore -storepass 123456 | grep -oP '(?<=Owner:).*' | xargs; }
+      [ ! -f $apkdl/ks.keystore ] && { echo -e "$running Create a ${Red}ks.keystore${Reset} for Signing apk.."; $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; echo -e "$running Checking details about keystore entries.."; $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/keytool -list -v -keystore $apkdl/ks.keystore -storepass 123456 | grep -oP '(?<=Owner:).*' | xargs; }
       echo -e "$running Signing apk.."
-      $PREFIX/lib/jvm/java-21-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar sign --ks $apkdl/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
+      $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar sign --ks $apkdl/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
       signing_exit_status=$?
     elif [ $isMacOS -eq 1 ]; then
       [ ! -f $apkdl/ks.keystore ] && { keytool="/usr/local/opt/openjdk/bin/keytool"; echo -e "$running Create a ${Red}ks.keystore${Reset} for Signing apk.."; $keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; echo -e "$running Checking details about keystore entries.."; $keytool -list -v -keystore $apkdl/ks.keystore -storepass 123456 | grep "Owner:" | cut -d: -f2- | xargs; }
@@ -496,10 +496,10 @@ apks2apk() {
     fi
     if [ $bsdtar_exit_status -ne 0 ]; then  # check if bsdtar return exit code 1 (error)
       rm -rf "$Download/${appName}_v${version}-${arch}"
-      java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+      $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
     else
       rm -f "$apkPath"
-      java -jar $APKEditorPath m -i "$Download/${appName}_v${version}-${arch}" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -rf "$Download/${appName}_v${version}-${arch}"
+      $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $APKEditorPath m -i "$Download/${appName}_v${version}-${arch}" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -rf "$Download/${appName}_v${version}-${arch}"
     fi
     termux-wake-unlock
   fi
