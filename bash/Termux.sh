@@ -222,7 +222,7 @@
       dlUrl="https://github.com/termux/termux-app/releases/download/$latestReleases/$fileName"
       filePath="$Download/$fileName"
     fi
-    if [ "$TERMUX_VERSION" != "$latestReleases" ]; then
+    if [ "$TERMUX_VERSION" != "$(echo "$latestReleases" | sed 's/^v//')" ]; then
       echo -e "$notice Termux app is outdated!"
       echo -e "$running Downloading Termux app update.."
       while true; do
