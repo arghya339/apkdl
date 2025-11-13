@@ -575,11 +575,11 @@ pat() {
 
 auth() {
   while true; do
-    if { gh auth status 2>/dev/null || jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; } || { glab auth status 2>/dev/null || jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; }; then
+    if { gh auth status >/dev/null 2>&1 || jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; } || { glab auth status >/dev/null 2>&1 || jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; }; then
       web=(); site="GitHub/ GitLab"
-      if gh auth status 2>/dev/null || jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
+      if gh auth status >/dev/null 2>&1 || jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
         web+=(GitHub); site="GitHub"
-      elif glab auth status 2>/dev/null || jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
+      elif glab auth status >/dev/null 2>&1 || jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
         web+=(GitLab); site="GitLab"
       fi
       buttons=("<Yes>" "<No>"); confirmPrompt "You already have a $site token! Do you want to delete it?" "buttons" "1" && userInput=Yes || userInput=No
@@ -591,7 +591,7 @@ auth() {
             userInput="$(echo "${web[@]}")"
           fi
           if [ "$userInput" == "GitHub" ]; then
-            if gh auth status 2>/dev/null; then
+            if gh auth status >/dev/null 2>&1; then
               gh auth logout  # Logout from gh cli
             elif jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
               jq 'del(.GH)' "$apkdlJson" > temp.json && mv temp.json "$apkdlJson"  # Delete GH key from apkdl.json
@@ -600,7 +600,7 @@ auth() {
               [ $isMacOS -eq 1 ] && open "$url"
             fi
           elif [ "$userInput" == "GitLab" ]; then
-            if glab auth status 2>/dev/null; then
+            if glab auth status >/dev/null 2>&1; then
               glab auth logout --hostname gitlab.com  # Logout from glab cli
             elif jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
               jq 'del(.GLAB)' "$apkdlJson" > temp.json && mv temp.json "$apkdlJson"  # Delete GLAB key from apkdl.json
@@ -673,13 +673,13 @@ auth() {
   done
 }
 
-if gh auth status 2>/dev/null; then
+if gh auth status >/dev/null 2>&1; then
   ghToken="$(gh auth token)"
 elif jq -e '.GH' "$apdlJson" >/dev/null 2>&1; then
   ghToken="$(jq -r '.GH' "$apkdlJson" 2>/dev/null)"
 fi
 [ -n "$ghToken" ] && ghAuth="-H \"Authorization: Bearer $ghToken\"" || ghAuth=""
-if glab auth status 2>/dev/null; then
+if glab auth status >/dev/null 2>&1; then
   glabToken="$(glab config get token --host gitlab.com)"
 elif jq -e '.GLAB' "$apdlJson" >/dev/null 2>&1; then
   glabToken="$(jq -r '.GLAB' "$apkdlJson" 2>/dev/null)"
@@ -1125,14 +1125,14 @@ while true; do
             fi
             ;;
           "Add gh/ glab PAT (increases gh/ glab api rate limit)")
-            if gh auth status 2>/dev/null; then
+            if gh auth status >/dev/null 2>&1; then
               echo -e "$info ${Green}gh_oauth_token: gho_************************************${Reset}"
             elif jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
               echo -e "$info ${Green}ghPAT: ghp_************************************${Reset}"
             else
               echo -e "$notice ${Yellow}No GitHub token found!${Reset}"
             fi
-            if glab auth status 2>/dev/null; then
+            if glab auth status >/dev/null 2>&1; then
               echo -e "$info ${Green}glab_oauth_token: **************************${Reset}"
             elif jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
               echo -e "$info ${Green}glabPAT: **************************${Reset}"
