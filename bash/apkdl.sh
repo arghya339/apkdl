@@ -613,7 +613,8 @@ auth() {
           echo -e "$good ${Green}Successfully deleted your $userInput token!${Reset}"
           ;;
       esac
-    else
+    fi
+    if
       buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to increase the GitHub/ GitLab API rate limit by adding a gh/ glab token?" "buttons" && userInput=Yes || userInput=No
       case "$userInput" in
         Yes)
