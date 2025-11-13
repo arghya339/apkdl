@@ -579,7 +579,8 @@ auth() {
       web=(); site="GitHub/ GitLab"
       if gh auth status >/dev/null 2>&1 || jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
         web+=(GitHub); site="GitHub"
-      elif glab auth status >/dev/null 2>&1 || jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
+      fi
+      if glab auth status >/dev/null 2>&1 || jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
         web+=(GitLab); site="GitLab"
       fi
       buttons=("<Yes>" "<No>"); confirmPrompt "You already have a $site token! Do you want to delete it?" "buttons" "1" && userInput=Yes || userInput=No
