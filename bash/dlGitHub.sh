@@ -8,7 +8,7 @@ searchGH() {
     page=1
     while true; do
       [ $page -eq 1 ] && searchUrl="https://api.github.com/search/repositories?q=$appName" || searchUrl="https://api.github.com/search/repositories?q=$appName&page=$page"
-      searchJSON=$(curl -sL "$searchUrl" | jq -r '.items[] | [.full_name, .description // "No description", .html_url, .downloads_url, (.releases_url | sub("{\\/id}"; "")), .created_at, .updated_at, .homepage // "No homepage", .stargazers_count, .language // "Not specified", .forks_count, .license?.name // "No license", (.topics | join(", ") // "No topics")] | @tsv')
+      searchJSON=$(curl -sL ${ghAuth} "$searchUrl" | jq -r '.items[] | [.full_name, .description // "No description", .html_url, .downloads_url, (.releases_url | sub("{\\/id}"; "")), .created_at, .updated_at, .homepage // "No homepage", .stargazers_count, .language // "Not specified", .forks_count, .license?.name // "No license", (.topics | join(", ") // "No topics")] | @tsv')
       full_names=() descriptions=() html_urls=() downloads_urls=() releases_urls=() created_ats=() updated_ats=() homepages=() stargazers_indexs=() languages=() forks_indexs=() licenses=() topics_list=()
       index=0
       while IFS=$'\t' read -r full_name description html_url downloads_url releases_url created_at updated_at homepage stargazers_index language forks_index license topics; do
@@ -72,7 +72,7 @@ searchGH() {
 }
 
 Latest() {
-  response=$(curl -sL $releasesUrl/latest)
+  response=$(curl -sL ${ghAuth} $releasesUrl/latest)
   
   html_url=$(echo "$response" | jq -r '.html_url')
   tag_name=$(echo "$response" | jq -r '.tag_name')
@@ -117,7 +117,7 @@ Latest() {
 Releases() {
   page=1
   while true; do
-    [ $page -eq 1 ] && response=$(curl -sL $releasesUrl) || response=$(curl -sL $releasesUrl?page=$page)
+    [ $page -eq 1 ] && response=$(curl -sL ${ghAuth} $releasesUrl) || response=$(curl -sL ${ghAuth} $releasesUrl?page=$page)
 
     release_names=() release_html_urls=() release_tag_names=() release_created_ats=() release_updated_ats=() release_published_ats=() release_assets_list=()
 

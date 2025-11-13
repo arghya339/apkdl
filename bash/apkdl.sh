@@ -505,6 +505,186 @@ apks2apk() {
   fi
 }
 
+pat() {
+  echo -e "${running} Creating Personal Access Token.."
+  # Create a PAT with scope `public_repo` / `read_repository`
+  [ "$userInput" == "GitHub" ] && url="https://github.com/settings/tokens/new?scopes=public_repo&description=apkdl" || url="https://gitlab.com/-/user_settings/personal_access_tokens?name=apkdl&scopes=read_repository"
+  [ $isAndroid -eq 1 ] && termux-open-url "$url"
+  [ $isMacOS -eq 1 ] && open "$url"
+  echo -n "PAT: "  # Display prompt
+  # Read characters one by one
+  while IFS= read -rsn 1 char; do
+    # Handle Enter key (newline)
+    if [[ "$char" == $'\0' || "$char" == $'\n' || "$char" == $'\r' ]]; then
+      # Only break if input is not empty, input not start with space, input doesn't contain space & pat is valid
+      if [[ -n "$input" && ! "$input" =~ ^[[:space:]] && ! "$input" =~ [[:space:]] ]]; then
+        if [ "$userInput" == "GitHub" ]; then
+          curl -sL -f -H "Authorization: Bearer ${input}" "https://api.github.com/repos/cli/cli/releases/latest" | jq -r '.tag_name'
+          auth_status=${PIPESTATUS[0]}
+        else
+          curl -sL -f -H "Authorization: Bearer ${input}" "https://gitlab.com/api/v4/user" | jq '.username'
+          auth_status=${PIPESTATUS[0]}
+        fi
+        if [ $auth_status -eq 0 ]; then
+          echo -e "\n$good ${Green}Successfully added your $userInput PAT!${Reset}"
+          echo -e "$notice ${Yellow}Your $userInput API rate limit has been increased.${Reset}"
+          break
+        else
+          echo -ne "\r\033[K"  # Clear previous prompt line
+          echo -e "$notice ${Yellow}Invalid PAT!${Reset}"  # Display messages if pat is not valid
+          input=""  # Clear input variable's value
+          echo -n "PAT: "  # Display prompt
+        fi
+      else
+        continue
+      fi
+    fi
+    # Handle backspace ($'\177')
+    if [[ "$char" == $'\177' ]]; then
+      if [ -n "$input" ]; then
+        input="${input%?}"  # Remove last char from input & store in input
+        echo -ne "\b \b"  # Move cursor back, print space, move cursor back again
+      fi
+      continue
+    fi
+    # Handle delete ($'\E[3~')
+    # /bin/bash -c 'read -r -p "Type any ESC key: " input && printf "You Entered: %q\n" "$input"'  # q=safelyQuoted
+    if [[ "$char" == $'\E' ]]; then
+      read -rsn1 -t 0.1 seq1
+      if [[ "$seq1" == '[' ]]; then
+        read -rsn2 -t 0.1 seq2
+        case "$seq2" in
+          '3~')  # Delete key
+            if [ -n "$input" ]; then
+              input="${input%?}"
+              echo -ne "\b \b"
+            fi
+            ;;
+        esac
+      fi
+      continue
+    fi
+    # Only add printable characters (excluding control characters)
+    if [[ "$char" =~ [[:print:]] ]]; then
+      input+="$char"  # Add character to input
+      echo -n "*"  # Display asterisk
+    fi
+  done
+  [ "$userInput" == "GitHub" ] && config "GH" "$input" || config "GLAB" "$input"
+}
+
+auth() {
+  while true; do
+    if { gh auth status 2>/dev/null || jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; } || { glab auth status 2>/dev/null || jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; }; then
+      web=(); site="GitHub/ GitLab"
+      if gh auth status 2>/dev/null || jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
+        web+=(GitHub); site="GitHub"
+      elif glab auth status 2>/dev/null || jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
+        web+=(GitLab); site="GitLab"
+      fi
+      buttons=("<Yes>" "<No>"); confirmPrompt "You already have a $site token! Do you want to delete it?" "buttons" "1" && userInput=Yes || userInput=No
+      case "$userInput" in
+        Yes)
+          if [ ${#web[@]} -eq 2 ]; then
+            buttons=("<GitHub>" "<GitLab>"); confirmPrompt "Select WebSite" "buttons" "1" && userInput="GitHub" || userInput="GitLab"
+          else
+            userInput="$(echo "${web[@]}")"
+          fi
+          if [ "$userInput" == "GitHub" ]; then
+            if gh auth status 2>/dev/null; then
+              gh auth logout  # Logout from gh cli
+            elif jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
+              jq 'del(.GH)' "$apkdlJson" > temp.json && mv temp.json "$apkdlJson"  # Delete GH key from apkdl.json
+              url="https://github.com/settings/tokens"
+              [ $isAndroid -eq 1 ] && termux-open-url "$url"
+              [ $isMacOS -eq 1 ] && open "$url"
+            fi
+          elif [ "$userInput" == "GitLab" ]; then
+            if glab auth status 2>/dev/null; then
+              glab auth logout --hostname gitlab.com  # Logout from glab cli
+            elif jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
+              jq 'del(.GLAB)' "$apkdlJson" > temp.json && mv temp.json "$apkdlJson"  # Delete GLAB key from apkdl.json
+              url="https://gitlab.com/-/user_settings/personal_access_tokens"
+              [ $isAndroid -eq 1 ] && termux-open-url "$url"
+              [ $isMacOS -eq 1 ] && open "$url"
+            fi
+          fi
+          echo -e "$good ${Green}Successfully deleted your $userInput token!${Reset}"
+          ;;
+        No) break ;;
+      esac
+    else
+      buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to increase the GitHub/ GitLab API rate limit by adding a gh/ glab token?" "buttons" && userInput=Yes || userInput=No
+      case "$userInput" in
+        Yes)
+          buttons=("<GitHub>" "<GitLab>"); confirmPrompt "Select WebSite" "buttons" "1" && userInput="GitHub" || userInput="GitLab"
+          case "$userInput" in
+            GitHub)
+              buttons=("<GH>" "<PAT>"); confirmPrompt "Select a method to create a GitHub access token: (GH) GitHub CLI or (PAT) Personal Access Token?" "buttons" "1" && method=GH || method=PAT
+              case "$method" in
+                [Gg]*)
+                  [ $isAndroid -eq 1 ] && pkgInstall "gh"  # gh install/update
+                  [ $isMacOS -eq 1 ] && formulaeInstall "gh"  # gh install/update
+                  echo -e "${running} Creating GitHub access token using GitHub CLI.."
+                  gh auth login  # Authenticate gh cli with GitHub account
+                  #gh api "repos/desktop/desktop/releases/latest" | cat | jq -r '.tag_name'
+                  gh api "repos/cli/cli/releases/latest" | cat | jq -r '.tag_name'
+                  if [ ${PIPESTATUS[0]} -eq 0 ]; then
+                    echo -e "$good ${Green}Successfully authenticated with GitHub CLI!${Reset}"
+                    echo -e "$notice ${Yellow}Your GitHub API rate limit has been increased.${Reset}"
+                    break
+                  else
+                    echo -e "${bad} ${Red}Failed to authenticate with GitHub CLI! Please try again.${Reset}"
+                    gh auth logout  # Logout from gh cli
+                  fi
+                  ;;
+                [Pp]*)
+                  pat  # Call pat functions to add pat
+                  break
+                  ;;
+              esac
+              ;;
+            GitLab)
+              buttons=("<GLAB>" "<PAT>"); confirmPrompt "Select a method to create a GitLab access token: (GLAB) GitLab CLI or (PAT) Personal Access Token?" "buttons" "1" && method=GLAB || method=PAT
+              case "$method" in
+                [Gg]*)
+                  [ $isAndroid -eq 1 ] && pkgInstall "glab-cli"  # glab-cli install/update
+                  [ $isMacOS -eq 1 ] && formulaeInstall "glab"  # glab install/update
+                  echo -e "${running} Creating GitLab access token using GitLab CLI.."
+                  glab auth login  # Authenticate glab cli with GitLab account
+                  glab api "projects/gitlab-org%2Fcli/releases?per_page=1" | cat | jq -r '.[0].tag_name'
+                  if [ ${PIPESTATUS[0]} -eq 0 ]; then
+                    echo -e "$good ${Green}Successfully authenticated with GitLab CLI!${Reset}"
+                    echo -e "$notice ${Yellow}Your GitLab API rate limit has been increased.${Reset}"
+                    break
+                  else
+                    echo -e "${bad} ${Red}Failed to authenticate with GitLab CLI! Please try again.${Reset}"
+                    glab auth logout --hostname gitlab.com  # Logout from glab cli
+                  fi
+                  ;;
+                [Pp]*) pat && break ;;
+              ;;
+          esac
+          ;;
+        No) break ;;
+      esac
+    fi
+  done
+}
+
+if gh auth status 2>/dev/null; then
+  ghToken="$(gh auth token)"
+elif jq -e '.GH' "$apdlJson" >/dev/null 2>&1; then
+  ghToken="$(jq -r '.GH' "$apkdlJson" 2>/dev/null)"
+fi
+[ -n "$ghToken" ] && ghAuth="-H \"Authorization: Bearer $ghToken\"" || ghAuth=""
+if glab auth status 2>/dev/null; then
+  glabToken="$(glab config get token --host gitlab.com)"
+elif jq -e '.GLAB' "$apdlJson" >/dev/null 2>&1; then
+  glabToken="$(jq -r '.GLAB' "$apkdlJson" 2>/dev/null)"
+fi
+[ -n "$glabToken" ] && glabAuth="-H \"Authorization: Bearer $glabToken\"" || glabAuth=""
+
 while true; do
   options=(GitHub APKMirror Uptodown APKPure ReVanced RVX)
   if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
@@ -767,7 +947,7 @@ while true; do
         RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)"
         RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)"
         PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
-        options=(RipLocale RipDpi RipLib RmFileAfterInstallation PreReleasePatches)
+        options=(RipLocale RipDpi RipLib RmFileAfterInstallation PreReleasePatches "Add gh/ glab PAT (increases gh/ glab api rate limit)")
         if [ $isAndroid -eq 1 ]; then
           CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null)
           jdkVersion="$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null)"
@@ -942,6 +1122,23 @@ while true; do
               pkgInstall "openjdk-$version"  # java install/update
               echo -e "$good ${Green}Java version change successfully!${Reset}"
             fi
+            ;;
+          "Add gh/ glab PAT (increases gh/ glab api rate limit)")
+            if gh auth status 2>/dev/null; then
+              echo -e "$info ${Green}gh_oauth_token: gho_************************************${Reset}"
+            elif jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
+              echo -e "$info ${Green}ghPAT: ghp_************************************${Reset}"
+            else
+              echo -e "$notice ${Yellow}No GitHub token found!${Reset}"
+            fi
+            if glab auth status 2>/dev/null; then
+              echo -e "$info ${Green}glab_oauth_token: **************************${Reset}"
+            elif jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
+              echo -e "$info ${Green}glabPAT: **************************${Reset}"
+            else
+              echo -e "$notice ${Yellow}No GitLab token found!${Reset}"
+            fi
+            auth  # Call the auth function to create GitHub/ GitLab token
             ;;
         esac
       done
