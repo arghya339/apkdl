@@ -507,8 +507,8 @@ apks2apk() {
 
 pat() {
   echo -e "${running} Creating Personal Access Token.."
-  # Create a PAT with scope `public_repo` / `read_repository`
-  [ "$userInput" == "GitHub" ] && url="https://github.com/settings/tokens/new?scopes=public_repo&description=apkdl" || url="https://gitlab.com/-/user_settings/personal_access_tokens?name=apkdl&scopes=read_repository"
+  # Create a PAT with scope `public_repo` / `read_repository` | `read_user` scope provides username for token validation
+  [ "$userInput" == "GitHub" ] && url="https://github.com/settings/tokens/new?scopes=public_repo&description=apkdl" || url="https://gitlab.com/-/user_settings/personal_access_tokens?name=apkdl&scopes=read_user,read_repository"
   [ $isAndroid -eq 1 ] && termux-open-url "$url"
   [ $isMacOS -eq 1 ] && open "$url"
   echo -n "PAT: "  # Display prompt
