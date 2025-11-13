@@ -9,7 +9,7 @@ searchGLAB() {
     page=1
     while true; do
       [ $page -eq 1 ] && searchUrl="https://gitlab.com/api/v4/projects?search=${appName}&order_by=star_count&sort=desc" || searchUrl="https://gitlab.com/api/v4/projects?search=${appName}&page=$page&order_by=star_count&sort=desc"
-      searchJSON=$(curl -sL "$searchUrl")
+      searchJSON=$(curl -sL ${glabAuth} "$searchUrl")
     
       if [ $(jq 'length' <<< "$searchJSON") -eq 0 ]; then
         echo -e "$notice No repositories found!"
@@ -71,12 +71,13 @@ searchGLAB() {
   else
     return 1
   fi
-}; searchGLAB
+}
 
 glabReleases() {
   page=1
   while true; do
-    [ $page -eq 1 ] && releasesJSON=$(curl -sL "https://gitlab.com/api/v4/projects/${owner}%2F${repo}/releases") || releasesJSON=$(curl -sL "https://gitlab.com/api/v4/projects/${owner}%2F${repo}/releases?page=$page")
+    [ $page -eq 1 ] && releasesUrl="https://gitlab.com/api/v4/projects/${owner}%2F${repo}/releases" || releasesUrl="https://gitlab.com/api/v4/projects/${owner}%2F${repo}/releases?page=$page"
+    releasesJSON=$(curl -sL ${glabAuth} "$releasesUrl")
     
     if [ "$releasesJSON" = "[]" ]; then
       echo -e "$notice No releases found!"
@@ -178,7 +179,7 @@ glabReleases() {
       return 1
     fi
   done
-}; glabReleases
+}
 
 dlGLAB() {
   while true; do
