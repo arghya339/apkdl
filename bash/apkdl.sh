@@ -663,6 +663,7 @@ auth() {
                   fi
                   ;;
                 [Pp]*) pat && break ;;
+              esac
               ;;
           esac
           ;;
