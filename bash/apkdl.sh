@@ -670,6 +670,8 @@ auth() {
           ;;
         No) break ;;
       esac
+    else
+      break
     fi
   done
 }
