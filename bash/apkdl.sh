@@ -614,7 +614,7 @@ auth() {
           ;;
       esac
     fi
-    if
+    if { ! gh auth status >/dev/null 2>&1 || ! jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; } || { ! glab auth status >/dev/null 2>&1 || ! jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; }; then
       buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to increase the GitHub/ GitLab API rate limit by adding a gh/ glab token?" "buttons" && userInput=Yes || userInput=No
       case "$userInput" in
         Yes)
