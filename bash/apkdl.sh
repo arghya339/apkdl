@@ -694,7 +694,7 @@ while true; do
   if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
     options+=(Configuration)
   fi
-  buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "10"; then selected=${options[selected]}; fi
+  buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "${#options[@]}"; then selected=${options[selected]}; fi
   case "$selected" in
     GitHub)
       curl -sL -o "$apkdl/dlGitHub.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlGitHub.sh"
@@ -999,7 +999,7 @@ while true; do
         elif [ $isMacOS -eq 1 ] && [ -n "$serial" ]; then
           options+=("ADB Installation Options")
         fi
-        buttons=("<Select>" "<Back>"); if menu "options" "buttons"; then selected="${options[$selected]}"; else break; fi
+        buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
           RipLocale) if [ $RipLocale -eq 1 ]; then echo "RipLocale == true"; else echo "RipLocale == false"; fi
             m1="Device specific locale will be kept in apk file"
