@@ -983,6 +983,8 @@ while true; do
       
       curl -sL -o "$apkdl/installedAppUpdates.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedAppUpdates.sh"
       source $apkdl/installedAppUpdates.sh
+      
+      appUpdates
       [ $? -ne 0 ] && continue
       
       getVariant
