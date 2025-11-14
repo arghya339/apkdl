@@ -80,6 +80,7 @@ comment
   
   buttons=("<Select>" "<Back>")
   if menu "apps" "buttons"; then
+    appName="${appNames[selected]}"
     versionLink="${releaseLinks[selected]}"
     echo -e "releaseLink for ${pnames[selected]}: ${Blue}$versionLink${Reset}"
     return
