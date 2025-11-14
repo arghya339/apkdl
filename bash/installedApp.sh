@@ -1,6 +1,7 @@
 #!/bin/bash
 
 packagesInfo() {
+  reqAppName=${1:-0}
   runCmd() {
     command=${1}
     if [ $isAndroid -eq 1 ]; then
@@ -24,7 +25,7 @@ packagesInfo() {
   runCmdOut=$(runCmd "pm list packages -3")
   packages=($(sed 's/package://g' <<< "$runCmdOut")) && unset runCmdOut
   
-<<comment
+if [ $reqAppName -eq 1 ]; then
   #~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell [ ! -f "/data/local/tmp/aapt2" ] && ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) push ~/aapt2 /data/local/tmp/ >/dev/null 2>&1
   if [ $isAndroid -eq 1 ]; then
     if [ $su -eq 1 ]; then
@@ -38,7 +39,7 @@ packagesInfo() {
     adb -s $serial shell [ ! -f "/data/local/tmp/aapt2" ] && adb -s $serial push ~/aapt2 /data/local/tmp/ >/dev/null 2>&1
   fi
   aapt2="/data/local/tmp/aapt2"
-comment
+fi
   
   echo -e "$running Get Installed packages info.."
   for ((i=0; i<${#packages[@]}; i++)); do
@@ -52,9 +53,11 @@ comment
     lastUpdateTimes[i]=$(echo "$appInfo" | grep "lastUpdateTime" | awk -F'=' '{print $2}')
     codePaths[i]=$(echo "$appInfo" | grep "codePath" | sed 's/.*codePath=//')
     basePaths[i]="${codePaths[$i]}/base.apk"
-    #application_labels[i]=$(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$aapt2 dump badging ${basePaths[$i]}" | grep "application-label:" | cut -d"'" -f2)
-    #runCmdOut=$(runCmd "$aapt2 dump badging ${basePaths[$i]}")
-    #application_labels[i]=$(grep "application-label:" <<< "$runCmdOut" | cut -d"'" -f2) && unset runCmdOut
+    if [ $reqAppName -eq 1 ]; then
+      #application_labels[i]=$(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$aapt2 dump badging ${basePaths[$i]}" | grep "application-label:" | cut -d"'" -f2)
+      runCmdOut=$(runCmd "$aapt2 dump badging ${basePaths[$i]}")
+      application_labels[i]=$(grep "application-label:" <<< "$runCmdOut" | cut -d"'" -f2) && unset runCmdOut
+    fi
   done
   if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
     [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
@@ -105,6 +108,27 @@ showUpdates() {
     appName="${appNames[selected]}"
     versionLink="${releaseLinks[selected]}"
     echo -e "releaseLink for ${pnames[selected]}: ${Blue}$versionLink${Reset}"
+    return
+  else
+    return 1
+  fi
+}
+
+packagesList() {
+  packagesInfo "1"
+  applications=()
+  for ((i=0; i<${#packages[@]}; i++)); do
+    applications+=("${packages[$i]} (${application_labels[$i]})")
+  done
+}
+
+packagesUninstall() {
+  buttons=("<Select>" "<Back>")
+  if menu "applications" "buttons"; then
+    package="${packages[selected]}"
+    appLabel="${application_labels[selected]}"
+    echo -e "$running Uninstalling $package"
+    runCmd "pm uninstall $package" && echo -e "$good Successfully uninstalled $appLabel." || echo -e "$notice Failed to uninstall $appLabel!"
     return
   else
     return 1
