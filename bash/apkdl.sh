@@ -1023,7 +1023,7 @@ while true; do
       [ ${#applications[@]} -eq 0 ] && packagesList
       
       packagesUninstall
-      [ $? -ne 0 ] && continue
+      [ $? -ne 0 ] && continue || { echo; read -p "Press Enter to continue..."; }
       ;;
     Configuration)
       while true; do
