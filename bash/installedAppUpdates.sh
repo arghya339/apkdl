@@ -17,7 +17,7 @@ appUpdates() {
   }
   
   if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
-    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1 } || writeSELinux=0
+    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
   fi
   echo -e "$running Get Installed packages list.."
   #packages=($(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm list packages -3" | sed 's/package://'))
