@@ -40,6 +40,7 @@ isRipDpi=1  # Default value (true/on/1) for RipDpi, it's delete dpi from apk fil
 isRipLib=1  # Default value (true/on/1) for RipLib, it's delete lib dir from apk file except device specific arch lib by default
 isRmFile=1  # Remove downloaded file after installation 1 (true)
 isPreRelease=0  # Default value (false/off/0) for isPreRelease, it's enabled latest release for Patches source
+isShowSystemApps=0
 isU=0  # Install Package for 0 (default-user), possible 1 (all-users)
 isK=0  # Allow Downgrade with keeps App data 0 (false) because it's required reboot after pkg install, possible 1 (true)
 isG=0  # Grant All Runtime Permissions 0 (false) due to Security Risk, possible 1
@@ -306,9 +307,9 @@ fi
 
 if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   # Create apkdl config
-  all_key=("RipLocale" "RipDpi" "RipLib")
+  all_key=("RipLocale" "RipDpi" "RipLib" "ShowSystemApps")
   all_key+=("InstallPackageFor" "KeepsData" "GrantAllRuntimePermissions" "InstalledAsTestOnly" "BypassLowTargetSdkBolck" "DisablePlayProtect" "DisableVerifyAdbInstalls" "Installer" "Reinstall" "EnableRoolback")
-  all_value=("$isRipLocale" "$isRipDpi" "$isRipLib")
+  all_value=("$isRipLocale" "$isRipDpi" "$isRipLib" "$isShowSystemApps")
   all_value+=("$isU" "$isK" "$isG" "$isT" "$isL" "$isV" "$isA" "$isI" "$isR" "$isB")
   # Loop through all keys and set values if they don't exist
   for i in "${!all_key[@]}"; do
@@ -321,6 +322,8 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   jq -e '.RipDpi != null' "$apkdlJson" >/dev/null 2>&1 && RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)" || RipDpi=1
   # Get RipLib value from json
   jq -e '.RipLib != null' "$apkdlJson" >/dev/null 2>&1 && RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)" || RipLib=1
+  # Get ShowSystemApps value from json
+  jq -e '.ShowSystemApps != null' "$apkdlJson" >/dev/null 2>&1 && ShowSystemApps="$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)" || ShowSystemApps="$isShowSystemApps"
 
   # Build locale & lcd_dpi
   if [ $isAndroid -eq 1 ]; then
@@ -1050,6 +1053,9 @@ while true; do
         elif [ $isMacOS -eq 1 ] && [ -n "$serial" ]; then
           options+=("ADB Installation Options")
         fi
+        if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
+          options+=(ShowSystemApps)
+        fi
         buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
           RipLocale) if [ $RipLocale -eq 1 ]; then echo "RipLocale == true"; else echo "RipLocale == false"; fi
@@ -1224,6 +1230,12 @@ while true; do
               echo -e "$notice ${Yellow}No GitLab token found!${Reset}"
             fi
             auth  # Call the auth function to create GitHub/ GitLab token
+            ;;
+          ShowSystemApps)
+            [ $ShowSystemApps -eq 0 ] && echo "ShowSystemApps == false" || echo "ShowSystemApps == true"
+            m1="Show System apps"
+            m2="Hide System apps"
+            tfConfig "ShowSystemApps" "$isShowSystemApps" "$m1" "$m2"
             ;;
         esac
       done

@@ -22,7 +22,7 @@ packagesInfo() {
   fi
   echo -e "$running Get Installed packages list.."
   #packages=($(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm list packages -3" | sed 's/package://'))
-  runCmdOut=$(runCmd "pm list packages -3")
+  [ $ShowSystemApps -eq 0 ] && runCmdOut=$(runCmd "pm list packages -3") || runCmdOut=$(runCmd "pm list packages")
   packages=($(sed 's/package://g' <<< "$runCmdOut")) && unset runCmdOut
   
 if [ $reqAppName -eq 1 ]; then
