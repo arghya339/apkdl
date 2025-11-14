@@ -29,9 +29,9 @@ if [ $reqAppName -eq 1 ]; then
   #~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell [ ! -f "/data/local/tmp/aapt2" ] && ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) push ~/aapt2 /data/local/tmp/ >/dev/null 2>&1
   if [ $isAndroid -eq 1 ]; then
     if [ $su -eq 1 ]; then
-      su -c "[ ! -f "/data/local/tmp/aapt2" ]" && su -c "cp ~/aapt2 /data/local/tmp/"
+      su -c "[ ! -f "/data/local/tmp/aapt2" ]" && su -c "cp $HOME/aapt2 /data/local/tmp/"
     elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-      ~/rish -c "[ ! -f "/data/local/tmp/aapt2" ]" && ~/rish -c "cp ~/aapt2 /data/local/tmp/"
+      ~/rish -c "[ ! -f "/data/local/tmp/aapt2" ]" && ~/rish -c "cp $HOME/aapt2 /data/local/tmp/"
     elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
       ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell [ ! -f "/data/local/tmp/aapt2" ] && ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) push ~/aapt2 /data/local/tmp/ >/dev/null 2>&1
     fi
