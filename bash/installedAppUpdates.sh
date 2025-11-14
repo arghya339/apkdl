@@ -62,6 +62,7 @@ comment
       echo -e "$good Found: $pkgName"
       releaseVersion=$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.version" <<< "$RESPONSE_JSON")
       if [ "$releaseVersion" != "$versionName" ]; then
+        echo -e "$notice $pkgName is currently outdated!"
         installVersions+=("$versionName")
         lastUpdates+=("$lastUpdateTime")
         pnames+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .pname" <<< "$RESPONSE_JSON")")
@@ -71,6 +72,8 @@ comment
         releaseVersions+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.version" <<< "$RESPONSE_JSON")")
         releasePublishDates+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.publish_date" <<< "$RESPONSE_JSON")")
         releaseWhatsNews+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.whats_new" <<< "$RESPONSE_JSON")")
+      else
+        echo -e "$good $pkgName is currently up to date."
       fi
     else
       echo -e "$notice Not Found: $pkgName"
