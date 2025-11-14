@@ -79,7 +79,7 @@ getUpdates() {
         installVersions+=("$versionName")
         lastUpdates+=("$lastUpdateTime")
         pnames+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .pname" <<< "$RESPONSE_JSON")")
-        appNames+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .app.name" <<< "$RESPONSE_JSON")")
+        appNames+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .app.name" <<< "$RESPONSE_JSON" | sed 's/&amp;/&/g')")
         releaseLinks+=("https://www.apkmirror.com$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.link" <<< "$RESPONSE_JSON")")
         developerNames+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .developer.name" <<< "$RESPONSE_JSON")")
         releaseVersions+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.version" <<< "$RESPONSE_JSON")")
