@@ -16,6 +16,10 @@ appUpdates() {
     fi
   }
   
+  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1 } || writeSELinux=0
+  fi
+  echo -e "$running Get Installed packages list.."
   #packages=($(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm list packages -3" | sed 's/package://'))
   runCmdOut=$(runCmd "pm list packages -3")
   packages=($(sed 's/package://g' <<< "$runCmdOut")) && unset runCmdOut
@@ -36,6 +40,7 @@ appUpdates() {
   aapt2="/data/local/tmp/aapt2"
 comment
   
+  echo -e "$running Get Installed packages info.."
   for ((i=0; i<${#packages[@]}; i++)); do
     #appInfo=$(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm dump "${packages[i]}" | grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath'")
     runCmdOut=$(runCmd "pm dump ${packages[$i]}")
@@ -50,6 +55,9 @@ comment
     #runCmdOut=$(runCmd "$aapt2 dump badging ${basePaths[$i]}")
     #application_labels[i]=$(grep "application-label:" <<< "$runCmdOut" | cut -d"'" -f2) && unset runCmdOut
   done
+  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+    [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
+  fi
   
   declare -a installVersions lastUpdate pnames appNames releaseLinks developerNames releaseVersions releasePublishDates releaseWhatsNews
   for ((i=0; i<${#packages[@]}; i++)); do
