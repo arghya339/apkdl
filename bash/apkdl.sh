@@ -105,8 +105,8 @@ print_apkdl() {
   printf "${Orange} _/_/_/  _/_/_/    _/    _/ ${Reset}    ${White} _/        ${Reset}${Cyan} _/_/_/  _/    ${Reset}\n"   
   printf "${Orange}        _/                  ${Reset}    ${White}           ${Reset}${Cyan}               ${Reset}\n"  
   printf "${Orange}       _/ ${Reset}${skyBlue}𝒟𝑒𝓋𝑒𝓁𝑜𝓅𝑒𝓇: @𝒶𝓇𝑔𝒽𝓎𝒶𝟥𝟥9${Reset} ${White}_/_/_/_/_/${Reset}${Cyan}               ${Reset}\n"
-  printf '\n'
-  printf '\n'
+  #printf '\n'
+  echo
 }
 
 menu() {
@@ -693,7 +693,7 @@ declare -a apps applications
 while true; do
   options=(GitHub GitLab APKMirror Uptodown APKPure ReVanced RVX)
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
-    options+=(installedAppUpdates uninstallApps)
+    options+=(appUpdates uninstallApps)
   fi
   if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
     options+=(Configuration)
@@ -978,12 +978,12 @@ while true; do
         echo; read -p "Press Enter to continue..."
       fi
       ;;
-    installedAppUpdates)
+    appUpdates)
       curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
       source $apkdl/APKMdl.sh
       
-      curl -sL -o "$apkdl/installedApp.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApp.sh"
-      source $apkdl/installedApp.sh
+      curl -sL -o "$apkdl/installedApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApps.sh"
+      source $apkdl/installedApps.sh
       
       [ ${#apps[@]} -eq 0 ] && getUpdates
 
@@ -1017,8 +1017,8 @@ while true; do
       fi
       ;;
     uninstallApps)
-      curl -sL -o "$apkdl/installedApp.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApp.sh"
-      source $apkdl/installedApp.sh
+      curl -sL -o "$apkdl/installedApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApps.sh"
+      source $apkdl/installedApps.sh
       
       [ ${#applications[@]} -eq 0 ] && packagesList
       
