@@ -691,11 +691,11 @@ fi
 
 while true; do
   options=(GitHub GitLab APKMirror Uptodown APKPure ReVanced RVX)
-  if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
-    options+=(Configuration)
-  fi
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
     options+=(installedAppUpdates)
+  fi
+  if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
+    options+=(Configuration)
   fi
   buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "${#options[@]}"; then selected=${options[selected]}; fi
   case "$selected" in
