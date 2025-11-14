@@ -331,6 +331,7 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
     [ -z $locale ] && locale=$(getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
     density=$(getprop ro.sf.lcd_density)  # Get the device screen density
   elif [ $isMacOS -eq 1 ]; then
+    cpuAbi=$(adb -s $serial shell getprop ro.product.cpu.abi)
     locale=$(adb -s $serial shell getprop persist.sys.locale | cut -d'-' -f1)  # Get System Languages
     [ -z $locale ] && locale=$(adb -s $serial shell getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
     density=$(adb -s $serial shell getprop ro.sf.lcd_density)  # Get the device screen density
