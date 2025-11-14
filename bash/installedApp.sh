@@ -1,6 +1,6 @@
 #!/bin/bash
 
-appUpdates() {
+packagesInfo() {
   runCmd() {
     command=${1}
     if [ $isAndroid -eq 1 ]; then
@@ -59,7 +59,11 @@ comment
   if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
     [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
   fi
-  
+}
+
+getUpdates() {
+  packagesInfo
+  echo -e "$running Get Installed packages updates.."
   declare -a installVersions lastUpdate pnames appNames releaseLinks developerNames releaseVersions releasePublishDates releaseWhatsNews
   for ((i=0; i<${#packages[@]}; i++)); do
     pkgName="${packages[$i]}"
@@ -93,7 +97,9 @@ comment
   for ((i=0; i<${#pnames[@]}; i++)); do
     apps+=("${appNames[i]} (${pnames[i]}) | ${installVersions[i]} (${lastUpdates[i]}) → ${releaseVersions[i]} (${releasePublishDates[i]})")
   done
-  
+}
+
+showUpdates() {
   buttons=("<Select>" "<Back>")
   if menu "apps" "buttons"; then
     appName="${appNames[selected]}"

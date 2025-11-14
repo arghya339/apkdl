@@ -689,6 +689,7 @@ elif jq -e '.GLAB' "$apdlJson" >/dev/null 2>&1; then
 fi
 [ -n "$glabToken" ] && glabAuth="-H \"Authorization: Bearer $glabToken\"" || glabAuth=""
 
+declare -a apps
 while true; do
   options=(GitHub GitLab APKMirror Uptodown APKPure ReVanced RVX)
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
@@ -981,10 +982,12 @@ while true; do
       curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
       source $apkdl/APKMdl.sh
       
-      curl -sL -o "$apkdl/installedAppUpdates.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedAppUpdates.sh"
-      source $apkdl/installedAppUpdates.sh
+      curl -sL -o "$apkdl/installedApp.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApp.sh"
+      source $apkdl/installedApp.sh
       
-      appUpdates
+      [ ${#apps[@]} -eq 0 ] && getUpdates
+
+      showUpdates
       [ $? -ne 0 ] && continue
       
       getVariant
