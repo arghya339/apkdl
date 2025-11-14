@@ -37,7 +37,7 @@ if [ $reqAppName -eq 1 ]; then
     fi
   elif [ $isMacOS -eq 1 ]; then
     [ ! -f "$apkdl/aapt2" ] && curl -sL --progress-bar -o "$apkdl/aapt2_$cpuAbi" "https://github.com/arghya339/aapt2/releases/download/all/aapt2_$cpuAbi"
-    adb -s $serial shell [ ! -f "/data/local/tmp/aapt2" ] && adb -s $serial push $apkdl/aapt2_$cpuAbi /data/local/tmp/aapt2 >/dev/null 2>&1
+    adb -s "$serial" shell "[ ! -f '/data/local/tmp/aapt2' ]" && { adb -s "$serial" push "$apkdl/aapt2_$cpuAbi" /data/local/tmp/aapt2 >/dev/null 2>&1 && adb -s "$serial" shell "chmod +x /data/local/tmp/aapt2"; }
   fi
   aapt2="/data/local/tmp/aapt2"
 fi
