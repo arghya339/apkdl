@@ -129,7 +129,17 @@ packagesUninstall() {
     package="${packages[selected]}"
     appLabel="${application_labels[selected]}"
     echo -e "$running Uninstalling $package"
-    runCmd "pm uninstall $package" && echo -e "$good Successfully uninstalled $appLabel." || echo -e "$notice Failed to uninstall $appLabel!"
+    if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+      [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
+    fi
+    if runCmd "pm uninstall $package"; then
+      echo -e "$good Successfully uninstalled $appLabel."
+    else
+      runCmd "cmd package uninstall -k $package" && echo -e "$good Successfully uninstalled $appLabel." || echo -e "$notice Failed to uninstall $appLabel!"
+    fi
+    if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+      [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
+    fi
     return
   else
     return 1
