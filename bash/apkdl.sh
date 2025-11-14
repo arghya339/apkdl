@@ -694,6 +694,9 @@ while true; do
   if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
     options+=(Configuration)
   fi
+  if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
+    options+=(installedAppUpdates)
+  fi
   buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "${#options[@]}"; then selected=${options[selected]}; fi
   case "$selected" in
     GitHub)
@@ -947,6 +950,40 @@ while true; do
         getLatestUploads
         [ $? -ne 0 ] && continue
       fi
+      
+      getVariant
+      [ $? -ne 0 ] && continue
+      
+      getDownloadLink
+      if [ $? -eq 0 ]; then
+        getAppDetails
+        appName=$(echo "${appName%%[:—(]*}" | xargs)
+        fileName="${appName}_v${version}-${arch}${file_ext}"
+        apkPath="$Download/$fileName"
+        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
+        [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
+        [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
+        if [ -f "$apkPath" ]; then
+          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+          if [ "$opt" == "Yes" ]; then
+            if [ $isAndroid -eq 1 ]; then
+              sign "$apkPath" && apkInstall "$apkPath"
+            elif [ $isMacOS -eq 1 ]; then
+              ext="${fileName##*.}"
+              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
+            fi
+          fi
+        fi
+        echo; read -p "Press Enter to continue..."
+      fi
+      ;;
+    installedAppUpdates)
+      curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
+      source $apkdl/APKMdl.sh
+      
+      curl -sL -o "$apkdl/installedAppUpdates.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedAppUpdates.sh"
+      source $apkdl/installedAppUpdates.sh
+      [ $? -ne 0 ] && continue
       
       getVariant
       [ $? -ne 0 ] && continue
