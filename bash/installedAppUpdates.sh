@@ -56,8 +56,10 @@ comment
     pkgName="${packages[$i]}"
     versionName="${versionNames[$i]}"
     lastUpdateTime="${lastUpdateTimes[$i]}"
+    echo -e "$running Processing $((i+1))/${#packages[@]}: $pkgName"
     RESPONSE_JSON=$(curl -sL --doh-url "$cloudflareDOH" $APKM_REST_API_URL -A "$USER_AGENT" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Basic $AUTH_TOKEN" -d "{\"pnames\":[\"$pkgName\"]}")
     if echo "$RESPONSE_JSON" | jq -e ".data[] | select(.pname == \"$pkgName\") | .exists == true" > /dev/null 2>&1; then
+      echo -e "$good Found: $pkgName"
       releaseVersion=$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.version" <<< "$RESPONSE_JSON")
       if [ "$releaseVersion" != "$versionName" ]; then
         installVersions+=("$versionName")
@@ -70,6 +72,8 @@ comment
         releasePublishDates+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.publish_date" <<< "$RESPONSE_JSON")")
         releaseWhatsNews+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.whats_new" <<< "$RESPONSE_JSON")")
       fi
+    else
+      echo -e "$notice Not Found: $pkgName"
     fi
   done
   
