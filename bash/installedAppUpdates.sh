@@ -42,6 +42,7 @@ comment
   
   echo -e "$running Get Installed packages info.."
   for ((i=0; i<${#packages[@]}; i++)); do
+    echo -e "$running Processing $((i+1))/${#packages[@]}: ${packages[$i]}"
     #appInfo=$(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm dump "${packages[i]}" | grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath'")
     runCmdOut=$(runCmd "pm dump ${packages[$i]}")
     appInfo=$(grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath' <<< "$runCmdOut") && unset runCmdOut
