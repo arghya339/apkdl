@@ -118,7 +118,7 @@ packagesList() {
   packagesInfo "1"
   applications=()
   for ((i=0; i<${#packages[@]}; i++)); do
-    applications+=("${packages[$i]} (${application_labels[$i]})")
+    applications+=("${application_labels[$i]} (${packages[$i]})")
   done
 }
 
