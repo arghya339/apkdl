@@ -694,25 +694,48 @@ fi
 [ -n "$glabToken" ] && glabAuth="-H \"Authorization: Bearer $glabToken\"" || glabAuth=""
 
 clearAppCaches() {
+  humanReadableForm() {
+    if [ $freeSizeB -ge 1073741824 ]; then
+      echo -e $good "Free space: $((freeSizeB / 1073741824)) GB"
+    elif [ $freeSizeB -ge 1048576 ]; then
+      echo -e "$good Free space: $((freeSizeB / 1048576)) MB"
+    elif [ $freeSizeB -ge 1024 ]; then
+      echo -e "$good Free space: $((freeSizeB / 1024)) KB"
+    else
+      echo -e "$good Free space: $freeSizeB B"
+    fi
+  }
   if [ $isAndroid -eq 1 ]; then
     #size=$(su -c "du -sh /data/data/com.termux/cache/" | cut -f1) && echo "cache size of com.termux: $size"
     #su -c "echo \"Removing cache of com.termux\"; rm -rf /data/data/com.termux/cache/* 2>/dev/null"
     
+    totalSizeB=$(su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1")
     totalSize=$(su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1") && echo "total cache size: $totalSize"
+    echo -e "$running Clear app cache.."
     su -c "for dir in /data/data/*/cache; do pkg=\$(basename \$(dirname \"\$dir\")); echo \"Removing cache of \$pkg\"; rm -rf \"\$dir\"/* 2>/dev/null; done"
+    echo -e "$good applications cache has been cleared."
+    currentTotalSizeB=$(su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1")
+    freeSizeB=$((totalSizeB - currentTotalSizeB))
+    humanReadableForm
   elif [ $isMacOS -eq 1 ]; then
     #size=$(adb -s $serial shell 'su -c "du -sh /data/data/com.termux/cache/"' | cut -f1) && echo "cache size of com.termux: $size"
     #adb -s $serial shell 'su -c "
     #  echo \"Removing cache of com.termux\"
     #  rm -rf /data/data/com.termux/cache/* 2>/dev/null"'
     
+    totalSizeB=$(adb -s $serial shell 'su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1"')
     totalSize=$(adb -s $serial shell 'su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1"') && echo "total cache size: $totalSize"
+    echo -e "$running Clear app cache.."
     adb -s $serial shell 'su -c "
       for dir in /data/data/*/cache; do
         pkg=\$(basename \$(dirname \"\$dir\"))
         echo \"Removing cache of \$pkg\"
         rm -rf \"\$dir\"/* 2>/dev/null
       done"'
+      echo -e "$good applications cache has been cleared."
+      currentTotalSizeB=$(adb -s $serial shell 'su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1"')
+      freeSizeB=$((totalSizeB - currentTotalSizeB))
+      humanReadableForm
   fi
 }
 
