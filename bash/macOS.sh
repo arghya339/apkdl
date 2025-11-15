@@ -77,5 +77,7 @@
     [ $deviceCount -gt 0 ] && echo -e "$info serial: $serial"
   }; getSerial
 
+  adb -s $serial shell 'su -c "id"' &>/dev/null && shellSU=1 || shellSU=0
+
   curl -sL -o "$apkdl/adbInstall.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/adbInstall.sh"
   source $apkdl/adbInstall.sh

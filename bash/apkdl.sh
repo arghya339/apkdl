@@ -693,9 +693,35 @@ elif jq -e '.GLAB' "$apdlJson" >/dev/null 2>&1; then
 fi
 [ -n "$glabToken" ] && glabAuth="-H \"Authorization: Bearer $glabToken\"" || glabAuth=""
 
+clearAppCaches() {
+  if [ $isAndroid -eq 1 ]; then
+    #size=$(su -c "du -sh /data/data/com.termux/cache/" | cut -f1) && echo "cache size of com.termux: $size"
+    #su -c "echo \"Removing cache of com.termux\"; rm -rf /data/data/com.termux/cache/* 2>/dev/null"
+    
+    totalSize=$(su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1") && echo "total cache size: $totalSize"
+    su -c "for dir in /data/data/*/cache; do pkg=\$(basename \$(dirname \"\$dir\")); echo \"Removing cache of \$pkg\"; rm -rf \"\$dir\"/* 2>/dev/null; done"
+  elif [ $isMacOS -eq 1 ]; then
+    #size=$(adb -s $serial shell 'su -c "du -sh /data/data/com.termux/cache/"' | cut -f1) && echo "cache size of com.termux: $size"
+    #adb -s $serial shell 'su -c "
+    #  echo \"Removing cache of com.termux\"
+    #  rm -rf /data/data/com.termux/cache/* 2>/dev/null"'
+    
+    totalSize=$(adb -s $serial shell 'su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1"') && echo "total cache size: $totalSize"
+    adb -s $serial shell 'su -c "
+      for dir in /data/data/*/cache; do
+        pkg=\$(basename \$(dirname \"\$dir\"))
+        echo \"Removing cache of \$pkg\"
+        rm -rf \"\$dir\"/* 2>/dev/null
+      done"'
+  fi
+}
+
 declare -a apps applications
 while true; do
   options=(GitHub GitLab APKMirror Uptodown APKPure ReVanced RVX)
+  if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
+    options+=(clearAppCaches)
+  fi
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
     options+=(appUpdates uninstallApps)
   fi
@@ -981,6 +1007,10 @@ while true; do
         fi
         echo; read -p "Press Enter to continue..."
       fi
+      ;;
+    clearAppCaches)
+      clearAppCaches
+      echo; read -p "Press Enter to continue..."
       ;;
     appUpdates)
       curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
