@@ -53,7 +53,7 @@ searchGH() {
                 read -r -p ">> Enter repos name: " repos
                 if [ -n "$repos" ]; then
                   releasesUrl="$(curl -fsL "https://api.github.com/repos/${users}/${repos}" | jq -r '.releases_url | sub("{\\/id}"; "")')"
-                  if [ ${PIPESTATUS[@]} -eq 0 ]; then
+                  if [ -n "$releasesUrl" ]; then
                     echo -e "$info Releases URL: ${Blue}$releasesUrl${Reset}"
                     return
                     break
