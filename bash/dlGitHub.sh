@@ -39,7 +39,7 @@ searchGH() {
       buttons=("<Select>" "<Back>")
       if menu "availableRepo" "buttons" "10"; then
         selected=$selected;
-        if { [ $page -eq 1 ] && [ $selected -eq $((${#availableRepo[@]}-2)) ] } || { [ $page -ne 1 ] && [ $selected -eq $((${#availableRepo[@]}-3)) ] }; then
+        if { [ $page -eq 1 ] && [ $selected -eq $((${#availableRepo[@]}-2)) ]; } || { [ $page -ne 1 ] && [ $selected -eq $((${#availableRepo[@]}-3)) ]; }; then
           read -r -p ">> Enter users name: " users
           if [ -n "$users" ]; then
             curl -fsL ${ghAuth} "https://api.github.com/users/${users}" >/dev/null 2>&1
