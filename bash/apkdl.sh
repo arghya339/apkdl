@@ -307,21 +307,14 @@ fi
 
 if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   # Create apkdl config
-  all_key=("RipLocale" "RipDpi" "RipLib" "ShowSystemApps")
+  all_key=("ShowSystemApps")
   all_key+=("InstallPackageFor" "KeepsData" "GrantAllRuntimePermissions" "InstalledAsTestOnly" "BypassLowTargetSdkBolck" "DisablePlayProtect" "DisableVerifyAdbInstalls" "Installer" "Reinstall" "EnableRoolback")
-  all_value=("$isRipLocale" "$isRipDpi" "$isRipLib" "$isShowSystemApps")
+  all_value=("$isShowSystemApps")
   all_value+=("$isU" "$isK" "$isG" "$isT" "$isL" "$isV" "$isA" "$isI" "$isR" "$isB")
   # Loop through all keys and set values if they don't exist
   for i in "${!all_key[@]}"; do
     ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
   done
-
-  # Get RipLocale value from json
-  jq -e '.RipLocale != null' "$apkdlJson" >/dev/null 2>&1 && RipLocale="$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)" || RipLocale=1
-  # Get RipDpi value from json
-  jq -e '.RipDpi != null' "$apkdlJson" >/dev/null 2>&1 && RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)" || RipDpi=1
-  # Get RipLib value from json
-  jq -e '.RipLib != null' "$apkdlJson" >/dev/null 2>&1 && RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)" || RipLib=1
   # Get ShowSystemApps value from json
   jq -e '.ShowSystemApps != null' "$apkdlJson" >/dev/null 2>&1 && ShowSystemApps="$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)" || ShowSystemApps="$isShowSystemApps"
 
@@ -380,6 +373,22 @@ if [ $isMacOS -eq 1 ]; then
   jq -e '.DENSITY != null' "$apkdlJson" >/dev/null 2>&1 && density="$(jq -r '.DENSITY' "$apkdlJson" 2>/dev/null)" || density=
 fi
 
+all_key=("RipLocale" "RipDpi" "RipLib" "RmFileAfterInstallation" "PreReleasePatches")
+all_value=("$isRipLocale" "$isRipDpi" "$isRipLib" "$isRmFile" "$isPreRelease")
+for i in "${!all_key[@]}"; do
+  ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
+done
+# Get RipLocale value from json
+jq -e '.RipLocale != null' "$apkdlJson" >/dev/null 2>&1 && RipLocale="$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)" || RipLocale=1
+# Get RipDpi value from json
+jq -e '.RipDpi != null' "$apkdlJson" >/dev/null 2>&1 && RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)" || RipDpi=1
+# Get RipLib value from json
+jq -e '.RipLib != null' "$apkdlJson" >/dev/null 2>&1 && RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)" || RipLib=1
+# Get RmFileAfterInstallation value from json
+jq -e '.RmFileAfterInstallation != null' "$apkdlJson" >/dev/null 2>&1 && RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)" || RmFileAfterInstallation=1
+# Get PreReleasePatches value from json
+jq -e '.PreReleasePatches != null' "$apkdlJson" >/dev/null 2>&1 && PreReleasePatches="$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)" || PreReleasePatches=0
+
 if { [ $isMacOS -eq 1 ] && [ -n "$locale" ] && [ -n "$density" ]; } || [ $isAndroid -eq 1 ]; then
   if [ $RipLocale -eq 0 ]; then
     locale="[a-z][a-z]"
@@ -405,16 +414,6 @@ if { [ $isMacOS -eq 1 ] && [ -n "$locale" ] && [ -n "$density" ]; } || [ $isAndr
     lcd_dpi="*dpi"
   fi
 fi
-
-all_key=("RmFileAfterInstallation" "PreReleasePatches")
-all_value=("$isRmFile" "$isPreRelease")
-for i in "${!all_key[@]}"; do
-  ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
-done
-# Get RmFileAfterInstallation value from json
-jq -e '.RmFileAfterInstallation != null' "$apkdlJson" >/dev/null 2>&1 && RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)" || RmFileAfterInstallation=1
-# Get PreReleasePatches value from json
-jq -e '.PreReleasePatches != null' "$apkdlJson" >/dev/null 2>&1 && PreReleasePatches="$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)" || PreReleasePatches=0
 
 sign() {
   apkPath="${1}"
