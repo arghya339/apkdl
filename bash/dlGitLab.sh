@@ -1,14 +1,14 @@
 #!/bin/bash
 
 searchGLAB() {
-  while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
-  appName=$(echo $appName | sed 's/ /+/g')
-  appName=$(echo $appName | sed 's|/|%2F|g')
+  while true; do read -r -p ">> Enter repoName: " repoName; [[ "$repoName" =~ ^[Qq] ]] && repoName=; break; [ -n "$repoName" ] && break || echo -e "$notice Please enter a valid repoName!"; done
+  repoName=$(echo $repoName | sed 's/ /+/g')
+  repoName=$(echo $repoName | sed 's|/|%2F|g')
   
-  if [ -n "$appName" ]; then
+  if [ -n "$repoName" ]; then
     page=1
     while true; do
-      [ $page -eq 1 ] && searchUrl="https://gitlab.com/api/v4/projects?search=${appName}&order_by=star_count&sort=desc" || searchUrl="https://gitlab.com/api/v4/projects?search=${appName}&page=$page&order_by=star_count&sort=desc"
+      [ $page -eq 1 ] && searchUrl="https://gitlab.com/api/v4/projects?search=${repoName}&order_by=star_count&sort=desc" || searchUrl="https://gitlab.com/api/v4/projects?search=${repoName}&page=$page&order_by=star_count&sort=desc"
       searchJSON=$(curl -sL ${glabAuth} "$searchUrl")
     
       if [ $(jq 'length' <<< "$searchJSON") -eq 0 ]; then

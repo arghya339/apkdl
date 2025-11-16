@@ -1,13 +1,13 @@
 #!/bin/bash
 
 searchGH() {
-  while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
-  appName=$(echo $appName  | sed 's/ /%20/g')
+  while true; do read -r -p ">> Enter repoName: " repoName; [[ "$repoName" =~ ^[Qq] ]] && repoName=; break; [ -n "$repoName" ] && break || echo -e "$notice Please enter a valid repoName!"; done
+  repoName=$(echo $repoName  | sed 's/ /%20/g')
   
-  if [ -n "$appName" ]; then
+  if [ -n "$repoName" ]; then
     page=1
     while true; do
-      [ $page -eq 1 ] && searchUrl="https://api.github.com/search/repositories?q=$appName" || searchUrl="https://api.github.com/search/repositories?q=$appName&page=$page"
+      [ $page -eq 1 ] && searchUrl="https://api.github.com/search/repositories?q=$repoName" || searchUrl="https://api.github.com/search/repositories?q=$repoName&page=$page"
       searchJSON=$(curl -sL ${ghAuth} "$searchUrl" | jq -r '.items[] | [.full_name, .description // "No description", .html_url, .downloads_url, (.releases_url | sub("{\\/id}"; "")), .created_at, .updated_at, .homepage // "No homepage", .stargazers_count, .language // "Not specified", .forks_count, .license?.name // "No license", (.topics | join(", ") // "No topics")] | @tsv')
       full_names=() descriptions=() html_urls=() downloads_urls=() releases_urls=() created_ats=() updated_ats=() homepages=() stargazers_indexs=() languages=() forks_indexs=() licenses=() topics_list=()
       index=0
@@ -44,7 +44,7 @@ searchGH() {
           if [ -n "$users" ]; then
             curl -fsL ${ghAuth} "https://api.github.com/users/${users}" >/dev/null 2>&1
             if [ $? -eq 0 ]; then
-              releasesUrl="$(curl -fsL "https://api.github.com/repos/${users}/${appName}" | jq -r '.releases_url | sub("{\\/id}"; "")')"
+              releasesUrl="$(curl -fsL "https://api.github.com/repos/${users}/${repoName}" | jq -r '.releases_url | sub("{\\/id}"; "")')"
               if [ -n "$releasesUrl" ]; then
                 echo -e "$info Releases URL: ${Blue}$releasesUrl${Reset}"
                 return
