@@ -33,12 +33,36 @@ searchGH() {
       for ((i=0; i<index; i++)); do
         availableRepo+=("${full_names[$i]} - ${descriptions[$i]}")
       done
+      availableRepo+=("Search by users")
       [ $page -ne 1 ] && availableRepo+=(Previous)
       availableRepo+=(Next)
       buttons=("<Select>" "<Back>")
       if menu "availableRepo" "buttons" "10"; then
         selected=$selected;
-        if [ $page -ne 1 ] && [ $selected -eq $((${#availableRepo[@]}-2)) ]; then
+        if { [ $page -eq 1 ] && [ $selected -eq $((${#availableRepo[@]}-2)) ] } || { [ $page -ne 1 ] && [ $selected -eq $((${#availableRepo[@]}-3)) ] }; then
+          read -r -p ">> Enter users name: " users
+          if [ -n "$users" ]; then
+            curl -fsL ${ghAuth} "https://api.github.com/users/${users}" >/dev/null 2>&1
+            if [ $? -eq 0 ]; then
+              releasesUrl="$(curl -fsL "https://api.github.com/repos/${users}/${appName}" | jq -r '.releases_url | sub("{\\/id}"; "")')"
+              if [ ${PIPESTATUS[@]} -eq 0 ]; then
+                echo -e "$info Releases URL: ${Blue}$releasesUrl${Reset}"
+                return
+                break
+              else
+                read -r -p ">> Enter repos name: " repos
+                if [ -n "$repos" ]; then
+                  releasesUrl="$(curl -fsL "https://api.github.com/repos/${users}/${repos}" | jq -r '.releases_url | sub("{\\/id}"; "")')"
+                  if [ ${PIPESTATUS[@]} -eq 0 ]; then
+                    echo -e "$info Releases URL: ${Blue}$releasesUrl${Reset}"
+                    return
+                    break
+                  fi
+                fi
+              fi
+            fi
+          fi
+        elif [ $page -ne 1 ] && [ $selected -eq $((${#availableRepo[@]}-2)) ]; then
           ((page--))
           continue
         elif [ $selected -eq $((${#availableRepo[@]}-1)) ]; then
@@ -49,7 +73,7 @@ searchGH() {
           echo -e "$info Repository Details for ${full_names[$selected]}:"
           echo -e "$info Description: ${descriptions[$selected]}"
           echo -e "$info URL: ${Blue}${html_urls[$selected]}${Reset}"
-          echo -e "$info Releases URL: ${Blue}${releases_urls[$selected]}${Reset}"
+          echo -e "$info Releases URL: ${Blue}$releasesUrl${Reset}"
           echo -e "$info Created: ${created_ats[$selected]}"
           echo -e "$info Updated: ${updated_ats[$selected]}"
           echo -e "$info Homepage: ${Blue}${homepages[$selected]}${Reset}"
