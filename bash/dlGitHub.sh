@@ -62,6 +62,7 @@ searchGH() {
               fi
             fi
           fi
+          page="$page"
           continue
         elif [ $page -ne 1 ] && [ $selected -eq $((${#availableRepo[@]}-2)) ]; then
           ((page--))
