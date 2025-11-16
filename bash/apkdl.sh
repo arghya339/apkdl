@@ -760,8 +760,8 @@ while true; do
       searchGH
       [ $? -ne 0 ] && continue
 
-      latestReleasesStatus=$(curl -sL "$releasesUrl/latest" | jq -r '.status')
-      if [ "$latestReleasesStatus" -eq "404" ]; then
+      curl -fsL ${ghAuth} "$releasesUrl/latest" >/dev/null 2>&1
+      if [ $? -ne 0 ]; then
         Releases
         [ $? -ne 0 ] && continue
       else
