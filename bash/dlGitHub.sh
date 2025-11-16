@@ -58,12 +58,12 @@ searchGH() {
           echo -e "$info Language: ${languages[$selected]}"
           echo -e "$info License: ${licenses[$selected]}"
           echo -e "$info Topics: ${topics_list[$selected]}"
-          break
           return
+          break
         fi
       else
-        break
         return 1
+        break
       fi
     done
   else
