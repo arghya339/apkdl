@@ -45,7 +45,7 @@ searchGH() {
             curl -fsL ${ghAuth} "https://api.github.com/users/${users}" >/dev/null 2>&1
             if [ $? -eq 0 ]; then
               releasesUrl="$(curl -fsL "https://api.github.com/repos/${users}/${appName}" | jq -r '.releases_url | sub("{\\/id}"; "")')"
-              if [ ${PIPESTATUS[@]} -eq 0 ]; then
+              if [ -n "$releasesUrl" ]; then
                 echo -e "$info Releases URL: ${Blue}$releasesUrl${Reset}"
                 return
                 break
