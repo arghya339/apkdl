@@ -57,6 +57,8 @@ searchGH() {
                     echo -e "$info Releases URL: ${Blue}$releasesUrl${Reset}"
                     return
                     break
+                  else
+                    releasesUrl=""
                   fi
                 fi
               fi
