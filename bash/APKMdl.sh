@@ -393,7 +393,24 @@ apkm2apk() {
     done
   fi
   if [ $isMacOS -eq 1 ]; then
-    java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+    if [ -n "$cpuAbi" ]; then
+      if [ $RipLib -eq 1 ]; then
+        pv "$apkPath" | tar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "base.apk" "split_config.${cpuAbi//-/_}.apk" "split_config.${locale}.apk" "split_config.${lcd_dpi}.apk"
+        tar_exit_status=$?
+      elif [ $RipLib -eq 0 ]; then
+        pv "$apkPath" | tar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "base.apk" "split_config.arm64_v8a.apk" "split_config.armeabi_v7a.apk" "split_config.x86_64.apk" "split_config.x86.apk" "split_config.${locale}.apk" "split_config.${lcd_dpi}.apk"
+        tar_exit_status=$?
+      fi
+      if [ $tar_exit_status -ne 0 ]; then  # check if tar return exit code 1 (error)
+        rm -rf "$Download/${appName}_v${version}-${arch}"
+        java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+      else
+        rm -f "$apkPath"
+        java -jar $APKEditorPath m -i "$Download/${appName}_v${version}-${arch}" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -rf "$Download/${appName}_v${version}-${arch}"
+      fi
+    else
+      java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+    fi
   elif [ $isAndroid -eq 1 ]; then
     mkdir -p "$Download/${appName}_v${version}-${arch}"
     termux-wake-lock

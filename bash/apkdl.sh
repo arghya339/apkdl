@@ -335,29 +335,12 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
     locale=$(adb -s $serial shell getprop persist.sys.locale | cut -d'-' -f1)  # Get System Languages
     [ -z $locale ] && locale=$(adb -s $serial shell getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
     density=$(adb -s $serial shell getprop ro.sf.lcd_density)  # Get the device screen density
-  fi
-  if [ $RipLocale -eq 0 ]; then
-    locale="[a-z][a-z]"
-  fi
-  if [ $RipDpi -eq 1 ]; then
-    # Check and categorize the density
-    if [ "$density" -le "120" ]; then
-      lcd_dpi="ldpi"  # Low Density
-    elif [ "$density" -le "160" ]; then
-      lcd_dpi="mdpi"  # Medium Density
-    elif [ "$density" -le "240" ]; then
-      lcd_dpi="hdpi"  # High Density
-    elif [ "$density" -le "320" ]; then
-      lcd_dpi="xhdpi"  # Extra High Density
-    elif [ "$density" -le "480" ]; then
-      lcd_dpi="xxhdpi"  # Extra Extra High Density
-    elif [ "$density" -gt "480" ] || [ "$density" -ge "640" ]; then
-      lcd_dpi="xxxhdpi"  # Extra Extra Extra High Density
-    else
-      lcd_dpi="*dpi"
-    fi
-  elif [ $RipDpi -eq 0 ]; then
-    lcd_dpi="*dpi"
+    
+    all_key=("ABI" "LOCALE" "DENSITY")
+    all_value=("$cpuAbi" "$locale" "$density")
+    for i in "${!all_key[@]}"; do
+      ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
+    done
   fi
 
   POST_INSTALL="$apkdl/POST_INSTALL"; mkdir -p "$POST_INSTALL"
@@ -389,6 +372,38 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
   esac
   [ $Reinstall -eq 1 ] && cmd+=" -r"
   [ $EnableRoolback -eq 1 ] && cmd+=" --enable-rollback"
+fi
+
+if [ $isMacOS -eq 1 ]; then
+  jq -e '.ABI != null' "$apkdlJson" >/dev/null 2>&1 && cpuAbi="$(jq -r '.ABI' "$apkdlJson" 2>/dev/null)" || cpuAbi=
+  jq -e '.LOCALE != null' "$apkdlJson" >/dev/null 2>&1 && locale="$(jq -r '.LOCALE' "$apkdlJson" 2>/dev/null)" || locale=
+  jq -e '.DENSITY != null' "$apkdlJson" >/dev/null 2>&1 && density="$(jq -r '.DENSITY' "$apkdlJson" 2>/dev/null)" || density=
+fi
+
+if { [ $isMacOS -eq 1 ] && [ -n "$locale" ] && [ -n "$density" ]; } || [ $isAndroid -eq 1 ]; then
+  if [ $RipLocale -eq 0 ]; then
+    locale="[a-z][a-z]"
+  fi
+  if [ $RipDpi -eq 1 ]; then
+    # Check and categorize the density
+    if [ "$density" -le "120" ]; then
+      lcd_dpi="ldpi"  # Low Density
+    elif [ "$density" -le "160" ]; then
+      lcd_dpi="mdpi"  # Medium Density
+    elif [ "$density" -le "240" ]; then
+      lcd_dpi="hdpi"  # High Density
+    elif [ "$density" -le "320" ]; then
+      lcd_dpi="xhdpi"  # Extra High Density
+    elif [ "$density" -le "480" ]; then
+      lcd_dpi="xxhdpi"  # Extra Extra High Density
+    elif [ "$density" -gt "480" ] || [ "$density" -ge "640" ]; then
+      lcd_dpi="xxxhdpi"  # Extra Extra Extra High Density
+    else
+      lcd_dpi="*dpi"
+    fi
+  elif [ $RipDpi -eq 0 ]; then
+    lcd_dpi="*dpi"
+  fi
 fi
 
 all_key=("RmFileAfterInstallation" "PreReleasePatches")
@@ -487,14 +502,31 @@ apks2apk() {
   fi
   
   if [ $isMacOS -eq 1 ]; then
-    java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+    if [ -n "$cpuAbi" ]; then
+      if [ $RipLib -eq 1 ]; then
+        pv "$apkPath" | tar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.${cpuAbi//-/_}.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
+        tar_exit_status=$?
+      elif [ $RipLib -eq 0 ]; then
+        pv "$apkPath" | tar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.arm64_v8a.apk" "config.armeabi_v7a.apk" "config.x86_64.apk" "config.x86.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
+        tar_exit_status=$?
+      fi
+      if [ $tar_exit_status -ne 0 ]; then  # check if tar return exit code 1 (error)
+        rm -rf "$Download/${appName}_v${version}-${arch}"
+        java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+      else
+        rm -f "$apkPath"
+        java -jar $APKEditorPath m -i "$Download/${appName}_v${version}-${arch}" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -rf "$Download/${appName}_v${version}-${arch}"
+      fi
+    else
+      java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
+    fi
   elif [ $isAndroid -eq 1 ]; then
     mkdir -p "$Download/${appName}_v${version}-${arch}"
     termux-wake-lock
     if [ $RipLib -eq 1 ]; then
       pv "$apkPath" | bsdtar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.${cpuAbi//-/_}.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
       bsdtar_exit_status=$?
-    elif [ $RipLib -eq 1 ]; then
+    elif [ $RipLib -eq 0 ]; then
       pv "$apkPath" | bsdtar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.arm64_v8a.apk" "config.armeabi_v7a.apk" "config.x86_64.apk" "config.x86.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
       bsdtar_exit_status=$?
     fi
