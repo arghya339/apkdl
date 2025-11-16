@@ -329,11 +329,9 @@ if ([ $isMacOS -eq 1 ] && [ -n "$serial" ]) || [ $isAndroid -eq 1 ]; then
     [ -z $locale ] && locale=$(adb -s $serial shell getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
     density=$(adb -s $serial shell getprop ro.sf.lcd_density)  # Get the device screen density
     
-    all_key=("ABI" "LOCALE" "DENSITY")
-    all_value=("$cpuAbi" "$locale" "$density")
-    for i in "${!all_key[@]}"; do
-      ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
-    done
+    config "ABI" "$cpuAbi"
+    config "LOCALE" "$locale"
+    config "DENSITY" "$density"
   fi
 
   POST_INSTALL="$apkdl/POST_INSTALL"; mkdir -p "$POST_INSTALL"
