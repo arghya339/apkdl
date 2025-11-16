@@ -1122,7 +1122,10 @@ while true; do
         RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)"
         PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
         ShowSystemApps="$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)"
-        options=(RipLocale RipDpi RipLib RmFileAfterInstallation PreReleasePatches "Add gh/ glab PAT (increases gh/ glab api rate limit)")
+        options=(RmFileAfterInstallation PreReleasePatches "Add gh/ glab PAT (increases gh/ glab api rate limit)")
+        if [ $isAndroid -eq 1 ] || { [ $isMacOS -eq 1 ] && [ -n "$cpuAbi" ]; }; then
+          options+=(RipLocale RipDpi RipLib)
+        fi
         if [ $isAndroid -eq 1 ]; then
           CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null)
           jdkVersion="$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null)"
