@@ -726,35 +726,35 @@ fi
 clearAppCaches() {
   humanReadableForm() {
     if [ $freeSizeB -ge 1073741824 ]; then
-      echo -e $good "Free space: $((freeSizeB / 1073741824)) GB"
+      echo -e $good "Free space: $(awk -v freeSizeB=$freeSizeB 'BEGIN {printf "%.1f", freeSizeB/1073741824}')G"
     elif [ $freeSizeB -ge 1048576 ]; then
-      echo -e "$good Free space: $((freeSizeB / 1048576)) MB"
+      echo -e "$good Free space: $(awk -v freeSizeB=$freeSizeB 'BEGIN {printf "%.1f", freeSizeB/1048576}')M"
     elif [ $freeSizeB -ge 1024 ]; then
-      echo -e "$good Free space: $((freeSizeB / 1024)) KB"
+      echo -e "$good Free space: $(awk -v freeSizeB=$freeSizeB 'BEGIN {printf "%.1f", freeSizeB/1024}')K"
     else
-      echo -e "$good Free space: $freeSizeB B"
+      echo -e "$good Free space: ${freeSizeB}B"
     fi
   }
   if [ $isAndroid -eq 1 ]; then
-    #size=$(su -c "du -sh /data/data/com.termux/cache/" | cut -f1) && echo "cache size of com.termux: $size"
+    #size=$(su -c "du -bsh /data/data/com.termux/cache/" | cut -f1) && echo "cache size of com.termux: $size"
     #su -c "echo \"Removing cache of com.termux\"; rm -rf /data/data/com.termux/cache/* 2>/dev/null"
     
-    totalSizeB=$(su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1")
-    totalSize=$(su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1") && echo -e "$info total cache size: $totalSize"
+    totalSizeB=$(su -c "du -bsc /data/data/*/cache 2>/dev/null | grep total | cut -f1")
+    totalSize=$(su -c "du -bsch /data/data/*/cache 2>/dev/null | grep total | cut -f1") && echo -e "$info total cache size: $totalSize"
     echo -e "$running Clear app cache.."
     su -c "for dir in /data/data/*/cache; do pkg=\$(basename \$(dirname \"\$dir\")); echo \"Removing cache of \$pkg\"; rm -rf \"\$dir\"/* 2>/dev/null; done"
     echo -e "$good applications cache has been cleared."
-    currentTotalSizeB=$(su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1")
+    currentTotalSizeB=$(su -c "du -bsc /data/data/*/cache 2>/dev/null | grep total | cut -f1")
     freeSizeB=$((totalSizeB - currentTotalSizeB))
     humanReadableForm
   elif [ $isMacOS -eq 1 ]; then
-    #size=$(adb -s $serial shell 'su -c "du -sh /data/data/com.termux/cache/"' | cut -f1) && echo "cache size of com.termux: $size"
+    #size=$(adb -s $serial shell 'su -c "du -bsh /data/data/com.termux/cache/"' | cut -f1) && echo "cache size of com.termux: $size"
     #adb -s $serial shell 'su -c "
     #  echo \"Removing cache of com.termux\"
     #  rm -rf /data/data/com.termux/cache/* 2>/dev/null"'
     
-    totalSizeB=$(adb -s $serial shell 'su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1"')
-    totalSize=$(adb -s $serial shell 'su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1"') && echo -e "$info total cache size: $totalSize"
+    totalSizeB=$(adb -s $serial shell 'su -c "du -bsc /data/data/*/cache 2>/dev/null | grep total | cut -f1"')
+    totalSize=$(adb -s $serial shell 'su -c "du -bsch /data/data/*/cache 2>/dev/null | grep total | cut -f1"') && echo -e "$info total cache size: $totalSize"
     echo -e "$running Clear app cache.."
     adb -s $serial shell 'su -c "
       for dir in /data/data/*/cache; do
@@ -763,7 +763,7 @@ clearAppCaches() {
         rm -rf \"\$dir\"/* 2>/dev/null
       done"'
       echo -e "$good applications cache has been cleared."
-      currentTotalSizeB=$(adb -s $serial shell 'su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1"')
+      currentTotalSizeB=$(adb -s $serial shell 'su -c "du -bsc /data/data/*/cache 2>/dev/null | grep total | cut -f1"')
       freeSizeB=$((totalSizeB - currentTotalSizeB))
       humanReadableForm
   fi
