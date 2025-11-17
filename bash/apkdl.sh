@@ -725,6 +725,7 @@ fi
 
 clearAppCaches() {
   humanReadableForm() {
+    freeSizeB=${freeSizeB#-}
     if [ $freeSizeB -ge 1073741824 ]; then
       echo -e $good "Free space: $(awk -v freeSizeB=$freeSizeB 'BEGIN {printf "%.1f", freeSizeB/1073741824}')G"
     elif [ $freeSizeB -ge 1048576 ]; then
@@ -744,6 +745,7 @@ clearAppCaches() {
     echo -e "$running Clear app cache.."
     su -c "for dir in /data/data/*/cache; do pkg=\$(basename \$(dirname \"\$dir\")); echo \"Removing cache of \$pkg\"; rm -rf \"\$dir\"/* 2>/dev/null; done"
     echo -e "$good applications cache has been cleared."
+    sleep 0.5
     currentTotalSizeB=$(su -c "du -bsc /data/data/*/cache 2>/dev/null | grep total | cut -f1")
     freeSizeB=$((totalSizeB - currentTotalSizeB))
     humanReadableForm
@@ -763,6 +765,7 @@ clearAppCaches() {
         rm -rf \"\$dir\"/* 2>/dev/null
       done"'
       echo -e "$good applications cache has been cleared."
+      sleep 0.5
       currentTotalSizeB=$(adb -s $serial shell 'su -c "du -bsc /data/data/*/cache 2>/dev/null | grep total | cut -f1"')
       freeSizeB=$((totalSizeB - currentTotalSizeB))
       humanReadableForm
