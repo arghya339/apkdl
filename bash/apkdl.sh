@@ -739,7 +739,7 @@ clearAppCaches() {
     #su -c "echo \"Removing cache of com.termux\"; rm -rf /data/data/com.termux/cache/* 2>/dev/null"
     
     totalSizeB=$(su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1")
-    totalSize=$(su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1") && echo "total cache size: $totalSize"
+    totalSize=$(su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1") && echo -e "$info total cache size: $totalSize"
     echo -e "$running Clear app cache.."
     su -c "for dir in /data/data/*/cache; do pkg=\$(basename \$(dirname \"\$dir\")); echo \"Removing cache of \$pkg\"; rm -rf \"\$dir\"/* 2>/dev/null; done"
     echo -e "$good applications cache has been cleared."
@@ -753,7 +753,7 @@ clearAppCaches() {
     #  rm -rf /data/data/com.termux/cache/* 2>/dev/null"'
     
     totalSizeB=$(adb -s $serial shell 'su -c "du -sc /data/data/*/cache 2>/dev/null | grep total | cut -f1"')
-    totalSize=$(adb -s $serial shell 'su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1"') && echo "total cache size: $totalSize"
+    totalSize=$(adb -s $serial shell 'su -c "du -sch /data/data/*/cache 2>/dev/null | grep total | cut -f1"') && echo -e "$info total cache size: $totalSize"
     echo -e "$running Clear app cache.."
     adb -s $serial shell 'su -c "
       for dir in /data/data/*/cache; do
