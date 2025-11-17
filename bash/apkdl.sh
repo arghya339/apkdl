@@ -500,6 +500,7 @@ apks2apk() {
   
   if [ $isMacOS -eq 1 ]; then
     if [ -n "$cpuAbi" ]; then
+      mkdir -p "$Download/${appName}_v${version}-${arch}"
       if [ $RipLib -eq 1 ]; then
         pv "$apkPath" | tar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.${cpuAbi//-/_}.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
         tar_exit_status=$?
