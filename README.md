@@ -9,10 +9,15 @@ apk downloader
 ## Purpose
 - This script automates process of downloading apk file using shell script.
 
-## Supported website
+## Supported source
+- [PlayStore](https://play.google.com/store/apps/)
+- [github.com](https://github.com/)
+- [gitlab.com](https://gitlab.com/)
 - [apkmirror.com](https://apkmirror.com/)
 - [uptodown.com](https://en.uptodown.com/)
 - [apkpure.com](https://apkpure.com/)
+- [ReVanced](https://revanced.app/)
+- [RVX](https://github.com/inotia00/revanced-patches/)
 
 ## Prerequisites
 - macOS/ Android device with working internet connection.
