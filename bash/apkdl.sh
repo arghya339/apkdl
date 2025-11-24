@@ -56,9 +56,11 @@ isB=0  # Enable Version Roolback 0, possible 1
 config() {
   local key="$1"
   local value="$2"
+  local jsonFile="$3"
+  [ -z "$jsonFile" ] && jsonFile="$apkdlJson"
   
-  [ ! -f "$apkdlJson" ] && jq -n "{}" > "$apkdlJson"
-  jq --arg key "$key" --arg value "$value" '.[$key] = $value' "$apkdlJson" > temp.json && mv temp.json "$apkdlJson"
+  [ ! -f "$jsonFile" ] && jq -n "{}" > "$jsonFile"
+  jq --arg key "$key" --arg value "$value" '.[$key] = $value' "$jsonFile" > temp.json && mv temp.json "$jsonFile"
 }
 
 # Detect platform and set defaults
@@ -774,7 +776,7 @@ clearAppCaches() {
 
 declare -a apps applications
 while true; do
-  options=(GitHub GitLab APKMirror Uptodown APKPure ReVanced RVX)
+  options=(PlayStore GitHub GitLab APKMirror Uptodown APKPure ReVanced RVX)
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
     options+=(clearAppCaches)
   fi
@@ -786,6 +788,14 @@ while true; do
   fi
   buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "${#options[@]}"; then selected=${options[selected]}; fi
   case "$selected" in
+    PlayStore)
+      curl -sL -o "$apkdl/play.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/play.sh"
+      source $apkdl/play.sh
+      
+      gPlayApiSearchApps
+      [ $? -eq 0 ] && gPlayApiAppDetails && gPlayApiDownloadApp
+      echo; read -p "Press Enter to continue..."
+      ;;
     GitHub)
       curl -sL -o "$apkdl/dlGitHub.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlGitHub.sh"
       source $apkdl/dlGitHub.sh

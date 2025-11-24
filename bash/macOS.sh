@@ -37,6 +37,7 @@
   formulaeInstall "jq"  # jq install/update
   formulaeInstall "pv"  # pv install/update
   formulaeInstall "pup"  # pup install/update
+  formulaeInstall "protobuf"  # protoc install/update
   formulaeInstall "android-platform-tools"  # android-platform-tools install/update
   formulaeInstall "openjdk"  # java install/update
   grep -q 'export PATH="/usr/local/opt/openjdk/bin:$PATH"' ~/.zshrc 2>/dev/null || echo 'export PATH="/usr/local/opt/openjdk/bin:$PATH"' >> ~/.zshrc
