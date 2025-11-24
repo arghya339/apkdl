@@ -245,8 +245,8 @@ gPlayApiAppDetails() {
 }
 
 genManifestJson() {
-  [ -f manifest.json ] && rm -f manifest.json
-  [ -f icon.png ] && rm -f icon.png
+  [ -f $HOME/manifest.json ] && rm -f $HOME/manifest.json
+  [ -f $HOME/icon.png ] && rm -f $HOME/icon.png
   locales_name=${Locales//_/-}
   targetSDK=35
   case "$minAndroid" in
@@ -264,7 +264,7 @@ genManifestJson() {
     "Android 15 and up") minSDK=35 ;;
     "Android 16 and up") minSDK=36 ;;
   esac
-  curl -sL $appIconUrl -H "User-Agent: $userAgentString" -o icon.png  # dlAppIcon
+  curl -sL $appIconUrl -H "User-Agent: $userAgentString" -o $HOME/icon.png  # dlAppIcon
   cat > manifest.json << EOF
 {
   "xapk_version":2,
@@ -339,7 +339,7 @@ gPlayApiDownloadApp() {
     echo -e "$running Downloading ${Red}${filenames[i]}${Reset} from ${Blue}${urls[i]}${Reset} fileSize ${Cyan}$(humanReadableForm ${sizes[i]})${Reset}"
     while true; do
       if [ $(( ${sizes[i]} / 1048576 )) -le 25 ]; then
-        curl --progress-bar -L -C -  "${urls[i]}" --doh-url "$cloudflareDOH" -H "User-Agent: $userAgentString" --cookie "ANDROIDSECURE=${cookie}" -o "${filenames[i]}"
+        curl --progress-bar -L -C -  "${urls[i]}" --doh-url "$cloudflareDOH" -H "User-Agent: $userAgentString" --cookie "ANDROIDSECURE=${cookie}" -o "$HOME/${filenames[i]}"
         [ $? -eq 0 ] && break || sleep 5
       else
         if [ $isAndroid -eq 1 ]; then
@@ -362,29 +362,31 @@ gPlayApiDownloadApp() {
     fi
   done
   
-  mkdir -p "${appName}_v${versionName}-${versionCode}"
+  mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}"
   if [ -n "$GAME" ]; then
     # Create XAPK
     genManifestJson
-    mkdir -p "${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}"
-    mv ${filenames[0]} "${appName}_v${versionName}-${versionCode}/${packageName}.apk"
-    mv ${filenames[1]} "${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}/main.${versionCode}.${packageName}.obb"
-    mv manifest.json "${appName}_v${versionName}-${versionCode}/manifest.json"
-    mv icon.png "${appName}_v${versionName}-${versionCode}/icon.png"
+    mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}"
+    mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/${packageName}.apk"
+    mv $HOME/${filenames[1]} "$HOME/${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}/main.${versionCode}.${packageName}.obb"
+    mv $HOME/manifest.json "$HOME/${appName}_v${versionName}-${versionCode}/manifest.json"
+    mv $HOME/icon.png "$HOME/${appName}_v${versionName}-${versionCode}/icon.png"
     echo -e "$running Creating XAPK archive.."
-    #bsdtar --format=zip -c -f "${appName}_v${versionName}-${versionCode}.xapk" -C "${appName}_v${versionName}-${versionCode}" .  # zip compression without progress-bar
-    #uncompressedSize=$(find "${appName}_v${versionName}-${versionCode}" -type f -exec stat -f%z {} + | awk '{sum+=$1} END {print sum}')
-    #bsdtar --format=zip -c -f - -C "${appName}_v${versionName}-${versionCode}" . | pv -s "${uncompressedSize}" > "${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but wrong percentage (compressesSize < uncompressedSize)
-    bsdtar --format=zip -c -f - -C "${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but no progress-bar percentage
+    #bsdtar --format=zip -c -f "$HOME/${appName}_v${versionName}-${versionCode}.xapk" -C "$HOME/${appName}_v${versionName}-${versionCode}" .  # zip compression without progress-bar
+    #uncompressedSize=$(find "$HOME/${appName}_v${versionName}-${versionCode}" -type f -exec stat -f%z {} + | awk '{sum+=$1} END {print sum}')
+    #bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -s "${uncompressedSize}" > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but wrong percentage (compressesSize < uncompressedSize)
+    bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but no progress-bar percentage
+    mv "$HOME/${appName}_v${versionName}-${versionCode}.xapk" "$Download/${appName}_v${versionName}-${versionCode}.xapk"
   else
     # Create APKS
-    mv ${filenames[0]} "${appName}_v${versionName}-${versionCode}/base.$ext"
+    mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/base.$ext"
     for ((i=1; i<${#Files[@]}; i++)); do
-      mv ${filenames[i]} "${appName}_v${versionName}-${versionCode}/${Files[i]}.$ext"
+      mv $HOME/${filenames[i]} "$HOME/${appName}_v${versionName}-${versionCode}/${Files[i]}.$ext"
     done
     echo -e "$running Creating APKS archive.."
-    bsdtar --format=zip -c -f - -C "${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "${appName}_v${versionName}-${versionCode}.apks"
+    bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.apks"
+    mv "$HOME/${appName}_v${versionName}-${versionCode}.apks" "$Download/${appName}_v${versionName}-${versionCode}.apks"
   fi
-  rm -rf "${appName}_v${versionName}-${versionCode}"
+  rm -rf "$HOME/${appName}_v${versionName}-${versionCode}"
 }
 ###############################################################################################################################################################################################################
