@@ -3,11 +3,11 @@
 runDroidCmd() {
   cmd=${1}
   if [ $su -eq 1 ]; then
-    su -c "$command"
+    su -c "$cmd"
   elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-    ~/rish -c "$command"
+    ~/rish -c "$cmd"
   elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-    ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$command"
+    ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$cmd"
   fi
 }
 
