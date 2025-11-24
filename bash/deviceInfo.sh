@@ -54,7 +54,6 @@ getDeviceInfo() {
   BuildRADIO=$(getprop gsm.version.baseband)
   BuildBOOTLOADER=$(getprop ro.bootloader)
   ScreenDensity=$(getprop ro.sf.lcd_density)  # Equivalent to metrics.densityDpi
-  runCmdOut=$(runCmd "pm list packages -3")
   BuildBRAND=$(getprop ro.product.brand)
   BuildID=$(getprop ro.build.id)
   Platforms=$(getprop ro.product.cpu.abilist)  # Equivalent to Build.SUPPORTED_ABIS
