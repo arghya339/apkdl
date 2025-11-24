@@ -9,7 +9,13 @@ if [ ! -f $deviceInfoJson ]; then
     curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/adbDeviceInfo.sh -o $apkdl/adbDeviceInfo.sh
     source $apkdl/adbDeviceInfo.sh
   fi
+  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
+  fi
   { [ $isAndroid -eq 1 ] || [[ $isMacOS -eq 1 && -n "$serial" ]]; } && getDeviceInfo
+  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+    [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
+  fi
   all_key=("Build.RADIO" "Build.BOOTLOADER" "Screen.Density" "GL.Extensions" "HasFiveWayNavigation" "Build.BRAND" "Build.ID" "Client" "Platforms" "TouchScreen" "Build.FINGERPRINT" "Vending.version" "Screen.Width" "Build.HARDWARE")
   all_value=("$BuildRADIO" "$BuildBOOTLOADER" "$ScreenDensity" "$GLExtensions" "false" "$BuildBRAND" "$BuildID" "android-google" "$Platforms" "$TouchScreen" "$BuildFINGERPRINT" "$Vendingversion" "$ScreenWidth" "$BuildHARDWARE")
   all_key+=("Build.VERSION.RELEASE" "Build.VERSION.SDK_INT" "Build.MODEL" "Locales" "SharedLibraries" "GL.Version" "GSF.version" "Roaming" "Screen.Height" "TimeZone" "Vending.versionString" "HasHardKeyboard" "Features" "Navigation")
