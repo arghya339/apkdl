@@ -170,7 +170,7 @@ gPlayApiAppDetails() {
   offeredBy=$(awk -F'"' '/ *6: "/ {print $2; exit}' <<< "$details")  # offeredBy
   #awk -F'"' '/ *7: "/ {print $2; exit}' <<< "$details"  # Description
   offerType=$(awk '/^      8 {/ {f=1} f && /8: / {print $2; exit}' <<< "$details")  # offerType: 1=free
-  appIconUrl=$(perl -0777 -ne 'print $1 if /10\s*\{\s*1:\s*4.*?5:\s*"([^"]+)"/s' <<< "$details")  # appIcon Url
+  appIconUrl=$(awk '/10 \{/{in_block=1; is_icon=0} in_block && /1:[[:space:]]*4/{is_icon=1} in_block && is_icon && /5:[[:space:]]*"/{gsub(/.*5:[[:space:]]*"|"[[:space:]]*$/, ""); print; exit}' <<< "$details")  # appIcon Url
   versionCode=$(awk '/13 {/{found=1} found && /3: [0-9]+/{print $2; exit}' <<< "$details")  # versionCode
   versionName=$(awk -F'"' '/ *4: "/ {print $2; exit}' <<< "$details")  # versionName
   #awk -F'"' '/ *10: "/ {print $2}' <<< "$details"  # permission
