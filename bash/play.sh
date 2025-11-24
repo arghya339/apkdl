@@ -327,8 +327,8 @@ gPlayApiDownloadApp() {
       urls+=($(awk -v s="${filesSize[c]}" '$2==s {k=$1; gsub(/:/,"",k); t=k+1} t && $1==t":" {split($0,p,"\""); print p[2]; exit}' delivery.txt))  # obb dlUrl
       Base64SHA+=("$(grep -A 10 "${filesSize[c]}" delivery.txt | grep -m 1 "8: " | cut -d'"' -f2)=")  # obb base64-encoded shasum1
     else
-      sizes+=($(perl -ne 'if (/1: "'"${Files[c]}"'"/) { $f=1 } elsif ($f && /2: (\d+)/) { print "$1\n"; exit }' delivery.txt))  # apk fileSize
-      urls+=($(perl -ne 'if (/1: "'"${Files[c]}"'"/) { $found=1 } elsif ($found && /5: "(https:[^"]+)"/) { print "$1\n"; exit }' delivery.txt))  # apk dlUrl
+      sizes+=($(awk -v target="${Files[c]}" '$0 ~ "1: \"" target "\"" {found=1} found && /2:/{print $2; exit}' delivery.txt))  # apk fileSize
+      urls+=($(awk -v target="${Files[c]}" '$0 ~ "1: \"" target "\"" {found=1} found && /5: "https/ {split($0, a, "\""); print a[2]; exit}' delivery.txt))  # apk dlUrl
       Base64SHA+=("$(grep -A 5 "1: \"${Files[c]}\"" delivery.txt | grep -m 1 "4: " | cut -d'"' -f2)=")  # apk base64-encoded shasum1
     fi
   done
