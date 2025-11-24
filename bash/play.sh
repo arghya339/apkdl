@@ -352,8 +352,12 @@ gPlayApiDownloadApp() {
         [ $aria2ExitStatus -eq 0 ] && { echo; break; } || sleep 5
       fi
     done
-    remoteFileSHA=$(echo -n "${Base64SHA[i]}" | base64 -d | xxd -p)  # convert Base64 SHA-1 to Hex SHA-1
-    downloadedFileSHA=$(shasum -a 1 "${filenames[i]}" | cut -d' ' -f1)  # downloaded file hex sha1
+    remoteFileSHA=$(echo -n "${Base64SHA[i]}" | tr '_-' '/+' | base64 -d | xxd -p)  # convert Base64 SHA-1 to Hex SHA-1
+    if [ $isAndroid -eq 1 ]; then
+      downloadedFileSHA=$(sha1sum "${filenames[i]}" | cut -d' ' -f1)
+    elif [ $isMacOS -eq 1 ]; then
+      downloadedFileSHA=$(shasum -a 1 "${filenames[i]}" | cut -d' ' -f1)  # downloaded file hex sha1
+    fi
     if [ "$remoteFileSHA" == "$downloadedFileSHA" ]; then
       echo -e "$good Downloaded file appears in the original state."
     else

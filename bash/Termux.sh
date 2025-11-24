@@ -165,6 +165,7 @@
   pkgInstall "findutils"  # find utils update
   pkgInstall "glow"  # glow install/update
   pkgInstall "protobuf-static"  # protoc install/update
+  pkgInstall "xxd"  # xxd install/update
 
   curl -sL -o "$apkdl/apkInstall.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/apkInstall.sh"
   source $apkdl/apkInstall.sh
