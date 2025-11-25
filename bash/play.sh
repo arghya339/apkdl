@@ -336,7 +336,9 @@ gPlayApiDownloadApp() {
   
   # DOWNLOADING FILES
   [ -n "$GAME" ] && apk_ext="xapk" || apk_ext="apks"
-  if [ ! -f "$Download/${appName}_v${versionName}-${versionCode}.$apk_ext" ]; then
+  fileName="${appName}_v${versionName}-${versionCode}.$apk_ext"
+  filePath="$Download/$fileName"
+  if [ ! -f "$filePath" ]; then
     for ((i=0; i<${#Files[@]}; i++)); do
       echo -e "$running Downloading ${Red}${filenames[i]}${Reset} from ${Blue}${urls[i]}${Reset} fileSize ${Cyan}$(humanReadableForm ${sizes[i]})${Reset}"
       while true; do
@@ -383,8 +385,6 @@ gPlayApiDownloadApp() {
       #bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -s "${uncompressedSize}" > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but wrong percentage (compressesSize < uncompressedSize)
       bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but no progress-bar percentage
       mv "$HOME/${appName}_v${versionName}-${versionCode}.xapk" "$Download/${appName}_v${versionName}-${versionCode}.xapk"
-      filePath="$Download/${appName}_v${versionName}-${versionCode}.xapk"
-      fileName="$(basename "$filePath")"
     else
       # Create APKS
       mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/base.$ext"
@@ -394,8 +394,6 @@ gPlayApiDownloadApp() {
       echo -e "$running Creating APKS archive.."
       bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.apks"
       mv "$HOME/${appName}_v${versionName}-${versionCode}.apks" "$Download/${appName}_v${versionName}-${versionCode}.apks"
-      filePath="$Download/${appName}_v${versionName}-${versionCode}.apks"
-      fileName="$(basename "$filePath")"
     fi
     rm -rf "$HOME/${appName}_v${versionName}-${versionCode}"
   else
