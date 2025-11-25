@@ -62,6 +62,7 @@ oauth() {
       gsfId=$(printf "%016x\n" $(adb -s $serial shell 'su -c "/data/local/tmp/sqlite /data/data/com.google.android.gsf/databases/gservices.db \"select * from main where name = '\''android_id'\'';\""' | awk -F'|' '{print $2}'))
     elif [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
       su -c "$PREFIX/bin/curl -sL -C - -o /data/local/tmp/sqlite https://github.com/arghya339/sqlite3-android/releases/download/all/sqlite-$cpuAbi"
+      su -c "[ ! -x /data/local/tmp/sqlite ]" && su -c "chmod +x /data/local/tmp/sqlite"
       gsfId=$(printf "%016x\n" $(su -c "/data/local/tmp/sqlite /data/data/com.google.android.gsf/databases/gservices.db \"select * from main where name = 'android_id';\"" | awk -F'|' '{print $2}'))
     fi
     { [ "$gsfId" == "0000000000000000" ] || [ -z "$gsfId" ]; } && gsfId=$(jq -r '.gsfId' <<< "$auth")
