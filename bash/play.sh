@@ -404,9 +404,9 @@ gPlayApiDownloadApp() {
 APKS2APK() {
   dlAPKEditor
   if [ $isMacOS -eq 1 ]; then
-    java -jar $APKEditorPath m -i "$filePath" "${filePath%.*}.apk"
+    java -jar $APKEditorPath m -i "$filePath" -o "${filePath%.*}.apk"
   elif [ $isAndroid -eq 1 ]; then
-    $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $APKEditorPath m -i "$filePath" "${filePath%.*}.apk"
+    $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $APKEditorPath m -i "$filePath" -o "${filePath%.*}.apk"
   fi
 }
 ###############################################################################################################################################################################################################
