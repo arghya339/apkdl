@@ -408,5 +408,6 @@ APKS2APK() {
   elif [ $isAndroid -eq 1 ]; then
     $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $APKEditorPath m -i "$filePath" -o "${filePath%.*}.apk"
   fi
+  rm -f "$filePath"
 }
 ###############################################################################################################################################################################################################
