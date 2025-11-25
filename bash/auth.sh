@@ -55,9 +55,16 @@ oauth() {
   elif [ -n "$(jq -r '.authtoken' <<< "$auth")" ]; then
     # echo "$auth" | jq .  # keep for debugging
     authToken=$(jq -r '.authToken' <<< "$auth")
-    
-    gsfId=$(printf "%016x\n" $(adb shell 'su -c "/data/local/tmp/sqlite-arm64-v8a /data/data/com.google.android.gsf/databases/gservices.db \"select * from main where name = '\''android_id'\'';\""' | awk -F'|' '{print $2}'))
-    [ "$gsfId" == "0000000000000000" ] && gsfId=$(jq -r '.gsfId' <<< "$auth")
+    if [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; then
+      curl -sL -C - -o $apkdl/sqlite-$cpuAbi https://github.com/arghya339/sqlite3-android/releases/download/all/sqlite-$cpuAbi
+      adb -s $serial push $apkdl/sqlite-$cpuAbi /data/local/tmp/sqlite >/dev/null 2>&1
+      adb -s $serial shell [ ! -x /data/local/tmp/sqlite ] && adb -s $serial shell chmod +x /data/local/tmp/sqlite
+      gsfId=$(printf "%016x\n" $(adb -s $serial shell 'su -c "/data/local/tmp/sqlite /data/data/com.google.android.gsf/databases/gservices.db \"select * from main where name = '\''android_id'\'';\""' | awk -F'|' '{print $2}'))
+    elif [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+      su -c "$PREFIX/bin/curl -sL -C - -o /data/local/tmp/sqlite https://github.com/arghya339/sqlite3-android/releases/download/all/sqlite-$cpuAbi"
+      gsfId=$(printf "%016x\n" $(su -c "/data/local/tmp/sqlite /data/data/com.google.android.gsf/databases/gservices.db \"select * from main where name = 'android_id';\"" | awk -F'|' '{print $2}'))
+    fi
+    { [ "$gsfId" == "0000000000000000" ] || [ -n "$gsfId" ]; } && gsfId=$(jq -r '.gsfId' <<< "$auth")
     email=$(jq -r '.email' <<< "$auth")
     userAgentString=$(jq -r '.deviceInfoProvider.userAgentString' <<< "$auth")
     config "time" "$(date +%s)" "$authJson"
