@@ -30,10 +30,14 @@ adbInstall() {
       apks=($(bsdtar -tf "$outputAPK" --include='*.apk' | awk -F/ '{print $NF}' | sort -u))
       mkdir -p "$wo_ext"
       pv "$outputAPK" | bsdtar -xf - -C "$wo_ext"
-      pkgName=$(cat "$wo_ext/manifest.json" | jq -r '.package_name')
-      appName=$(cat "$wo_ext/manifest.json" | jq -r '.name')
-      versionCode=$(cat "$wo_ext/manifest.json" | jq -r '.version_code')
-      [ "$apk_ext" == "apks" ] outputAPK="base.apk" || outputAPK="$pkgName.$versionCode.apk"
+      if [ $isXAPK -eq 1 ]; then
+        pkgName=$(cat "$wo_ext/manifest.json" | jq -r '.package_name')
+        appName=$(cat "$wo_ext/manifest.json" | jq -r '.name')
+        versionCode=$(cat "$wo_ext/manifest.json" | jq -r '.version_code')
+        outputAPK="$wo_ext/$pkgName.apk"
+      else
+        outputAPK="$wo_ext/base.apk"
+      fi
     fi
   fi
   app_info=$($aapt2 dump badging "$outputAPK" 2>/dev/null)
@@ -53,13 +57,13 @@ adbInstall() {
     if [ $cpuAbi == "arm64-v8a" ]; then arch="arm64_v8a"; elif [ $cpuAbi == "armeabi-v7a" ]; then arch="armeabi_v7a"; else arch="$cpuAbi"; fi
     for apk in "${apks[@]}"; do
       case "$apk" in
-        base.apk|"$pkgName".*.apk)
+        base.apk|"$pkgName".apk)
           split_identifier="base.apk"
           ;;
-        config."$arch"*.apk)
+        config."$arch".apk)
           split_identifier="config.arch"
           ;;
-        config.*dpi*.apk)
+        config.*dpi.apk)
           split_identifier="config.dpi"
           ;;
         *)
