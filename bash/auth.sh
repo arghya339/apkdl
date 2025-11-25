@@ -64,7 +64,7 @@ oauth() {
       su -c "$PREFIX/bin/curl -sL -C - -o /data/local/tmp/sqlite https://github.com/arghya339/sqlite3-android/releases/download/all/sqlite-$cpuAbi"
       gsfId=$(printf "%016x\n" $(su -c "/data/local/tmp/sqlite /data/data/com.google.android.gsf/databases/gservices.db \"select * from main where name = 'android_id';\"" | awk -F'|' '{print $2}'))
     fi
-    { [ "$gsfId" == "0000000000000000" ] || [ -n "$gsfId" ]; } && gsfId=$(jq -r '.gsfId' <<< "$auth")
+    { [ "$gsfId" == "0000000000000000" ] || [ -z "$gsfId" ]; } && gsfId=$(jq -r '.gsfId' <<< "$auth")
     email=$(jq -r '.email' <<< "$auth")
     userAgentString=$(jq -r '.deviceInfoProvider.userAgentString' <<< "$auth")
     config "time" "$(date +%s)" "$authJson"
