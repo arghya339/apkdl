@@ -476,7 +476,7 @@ downloadAPK() {
   fi
 }
 
-apks2apk() {
+dlAPKEditor() {
   owner="ReAndroid"; repo="APKEditor"
   ghApiResponseJson=$(curl -sL ${auth} "https://api.github.com/repos/$owner/$repo/releases/latest")
   tag_name=$(jq -r '.tag_name | sub("^V"; "")' <<< "$ghApiResponseJson")  # 1.4.5
@@ -499,7 +499,10 @@ apks2apk() {
       [ $? -eq 0 ] && break || sleep 5
     done
   fi
-  
+}
+
+apks2apk() {
+  dlAPKEditor
   if [ $isMacOS -eq 1 ]; then
     if [ -n "$cpuAbi" ]; then
       mkdir -p "$Download/${appName}_v${version}-${arch}"
@@ -794,6 +797,15 @@ while true; do
       
       gPlayApiSearchApps
       [ $? -eq 0 ] && gPlayApiAppDetails && gPlayApiDownloadApp
+      if [ $? -eq 0 ]; then
+        buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+        if [ "$opt" == "Yes" ]; then
+          [ -n "$serial" ] && adbInstall "$filePath"
+          [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+        else
+          [ "$apk_ext" == "apks" ] && APKS2APK && sign "${filePath%.*}.apk"
+        fi
+      fi
       echo; read -p "Press Enter to continue..."
       ;;
     GitHub)

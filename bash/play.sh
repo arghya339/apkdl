@@ -381,6 +381,9 @@ gPlayApiDownloadApp() {
     #bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -s "${uncompressedSize}" > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but wrong percentage (compressesSize < uncompressedSize)
     bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but no progress-bar percentage
     mv "$HOME/${appName}_v${versionName}-${versionCode}.xapk" "$Download/${appName}_v${versionName}-${versionCode}.xapk"
+    filePath="$Download/${appName}_v${versionName}-${versionCode}.xapk"
+    fileName="$(basename "$filePath")"
+    apk_ext="xapk"
   else
     # Create APKS
     mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/base.$ext"
@@ -390,7 +393,19 @@ gPlayApiDownloadApp() {
     echo -e "$running Creating APKS archive.."
     bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.apks"
     mv "$HOME/${appName}_v${versionName}-${versionCode}.apks" "$Download/${appName}_v${versionName}-${versionCode}.apks"
+    filePath="$Download/${appName}_v${versionName}-${versionCode}.apks"
+    fileName="$(basename "$filePath")"
+    apk_ext="apks"
   fi
   rm -rf "$HOME/${appName}_v${versionName}-${versionCode}"
+}
+
+APKS2APK() {
+  dlAPKEditor
+  if [ $isMacOS -eq 1 ]; then
+    java -jar $APKEditorPath m -i "$filePath" "${filePath%.*}.apk"
+  elif [ $isAndroid -eq 1 ]; then
+    $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $APKEditorPath m -i "$filePath" "${filePath%.*}.apk"
+  fi
 }
 ###############################################################################################################################################################################################################

@@ -370,28 +370,7 @@ getAppDetails() {
 }
 
 apkm2apk() {
-  owner="ReAndroid"; repo="APKEditor"
-  ghApiResponseJson=$(curl -sL ${auth} "https://api.github.com/repos/$owner/$repo/releases/latest")
-  tag_name=$(jq -r '.tag_name | sub("^V"; "")' <<< "$ghApiResponseJson")  # 1.4.5
-  APKEditor="APKEditor-$tag_name.jar"
-  APKEditorPath="$apkdl/$APKEditor"
-  findAPKEditorPath=$(find "$apkdl" -maxdepth 1 -type f -name "APKEditor-*.jar" -print -quit)
-  if [ -f "$findAPKEditorPath" ]; then
-    findAPKEditor=$(basename "$findAPKEditorPath" 2>/dev/null)
-    if [ "$APKEditor" != "$findAPKEditor" ]; then
-      echo -e "$notice diffs: $APKEditor ~ $findAPKEditor"
-      rm -f "$findAPKEditorPath"
-      while true; do
-        curl -L --progress-bar -o $APKEditorPath -C - https://github.com/REAndroid/APKEditor/releases/download/V$tag_name/APKEditor-$tag_name.jar
-        [ $? -eq 0 ] && break || sleep 5
-      done
-    fi
-  else
-    while true; do
-      curl -L --progress-bar -o $APKEditorPath -C - https://github.com/REAndroid/APKEditor/releases/download/V$tag_name/APKEditor-$tag_name.jar
-      [ $? -eq 0 ] && break || sleep 5
-    done
-  fi
+  dlAPKEditor
   if [ $isMacOS -eq 1 ]; then
     if [ -n "$cpuAbi" ]; then
       mkdir -p "$Download/${appName}_v${version}-${arch}"
