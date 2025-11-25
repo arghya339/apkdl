@@ -91,6 +91,8 @@ adbInstall() {
     if [ $isGame -eq 1 ]; then
       adb -s $serial shell mkdir -p /sdcard/Android/obb/$pkgName
       adb -s $serial push "$outputOBB" /sdcard/$obbInstallPath >/dev/null 2>&1
+      rm -rf "$wo_ext"
+      outputAPK="$wo_ext.$apk_ext"
     fi
   fi
   [ $DisablePlayProtect -eq 1 ] && adb -s $serial shell "settings put global package_verifier_user_consent 1"  # Enabled Play Protect
