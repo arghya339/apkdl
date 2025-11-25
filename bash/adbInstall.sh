@@ -70,7 +70,7 @@ adbInstall() {
           split_identifier="config.$(awk -F'.' '{print $2}' <<< "$apk")"
           ;;
       esac
-      adb -s $serial push "$output_dir/$apk" "/data/local/tmp/"
+      adb -s $serial push "$wo_ext/$apk" "/data/local/tmp/"
       adb -s "$serial" shell pm install-write "$sessionId" "$split_identifier" "/data/local/tmp/$apk"
       adb -s "$serial" shell rm -f "/data/local/tmp/$apk"
     done
