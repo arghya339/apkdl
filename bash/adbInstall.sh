@@ -16,7 +16,7 @@ adbInstall() {
     isXAPK=1; isAPK=0; isAPKS=0
   fi
   if [ $isAPK -eq 0 ]; then
-    bsdtar -tf "$outputAPK" --include='*.obb' && isGame=1 || isGame=0  # Check if APK contains OBB files (common in games)
+    bsdtar -tf "$outputAPK" --include='*.obb' >/dev/null 2>&1 && isGame=1 || isGame=0  # Check if APK contains OBB files (common in games)
     if [ $isGame -eq 1 ]; then
       mkdir -p "$wo_ext"
       pv "$outputAPK" | bsdtar -xf - -C "$wo_ext"
