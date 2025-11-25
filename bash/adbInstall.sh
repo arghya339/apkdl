@@ -80,6 +80,8 @@ adbInstall() {
     else
       echo "$output"
     fi
+    rm -rf "$wo_ext"
+    outputAPK="$wo_ext.$apk_ext"
   else
     adb -s $serial push "$outputAPK" "/data/local/tmp/$outputFileName" 2>/dev/null
     output=$(adb -s $serial shell pm install ${cmd} "\"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"

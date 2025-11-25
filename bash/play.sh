@@ -335,69 +335,72 @@ gPlayApiDownloadApp() {
   rm -f delivery.txt
   
   # DOWNLOADING FILES
-  for ((i=0; i<${#Files[@]}; i++)); do
-    echo -e "$running Downloading ${Red}${filenames[i]}${Reset} from ${Blue}${urls[i]}${Reset} fileSize ${Cyan}$(humanReadableForm ${sizes[i]})${Reset}"
-    while true; do
-      if [ $(( ${sizes[i]} / 1048576 )) -le 25 ]; then
-        curl --progress-bar -L -C -  "${urls[i]}" --doh-url "$cloudflareDOH" -H "User-Agent: $userAgentString" --cookie "ANDROIDSECURE=${cookie}" -o "$HOME/${filenames[i]}"
-        [ $? -eq 0 ] && break || sleep 5
-      else
-        if [ $isAndroid -eq 1 ]; then
-          aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$HOME" -o "${filenames[i]}" -U "User-Agent: $userAgentString" --header="Cookie: ANDROIDSECURE=${cookie}" --async-dns=true  --async-dns-server="$cloudflareIP" "${urls[i]}"
-          aria2ExitStatus=$?
-        elif [ $isMacOS -eq 1 ]; then
-          aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$HOME" -o "${filenames[i]}" -U "User-Agent: $userAgentString" --header="Cookie: ANDROIDSECURE=${cookie}" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true  --async-dns-server="$cloudflareIP" "${urls[i]}"
-          aria2ExitStatus=$?
+  [ -n "$GAME" ] && apk_ext="xapk" || apk_ext="apks"
+  if [ ! -f "$Download/${appName}_v${versionName}-${versionCode}.$apk_ext" ]; then
+    for ((i=0; i<${#Files[@]}; i++)); do
+      echo -e "$running Downloading ${Red}${filenames[i]}${Reset} from ${Blue}${urls[i]}${Reset} fileSize ${Cyan}$(humanReadableForm ${sizes[i]})${Reset}"
+      while true; do
+        if [ $(( ${sizes[i]} / 1048576 )) -le 25 ]; then
+          curl --progress-bar -L -C -  "${urls[i]}" --doh-url "$cloudflareDOH" -H "User-Agent: $userAgentString" --cookie "ANDROIDSECURE=${cookie}" -o "$HOME/${filenames[i]}"
+          [ $? -eq 0 ] && break || sleep 5
+        else
+          if [ $isAndroid -eq 1 ]; then
+            aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$HOME" -o "${filenames[i]}" -U "User-Agent: $userAgentString" --header="Cookie: ANDROIDSECURE=${cookie}" --async-dns=true  --async-dns-server="$cloudflareIP" "${urls[i]}"
+            aria2ExitStatus=$?
+          elif [ $isMacOS -eq 1 ]; then
+            aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$HOME" -o "${filenames[i]}" -U "User-Agent: $userAgentString" --header="Cookie: ANDROIDSECURE=${cookie}" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true  --async-dns-server="$cloudflareIP" "${urls[i]}"
+            aria2ExitStatus=$?
+          fi
+          [ $aria2ExitStatus -eq 0 ] && { echo; break; } || sleep 5
         fi
-        [ $aria2ExitStatus -eq 0 ] && { echo; break; } || sleep 5
+      done
+      remoteFileSHA=$(echo -n "${Base64SHA[i]}" | tr '_-' '/+' | base64 -d | xxd -p)  # convert Base64 SHA-1 to Hex SHA-1
+      if [ $isAndroid -eq 1 ]; then
+        downloadedFileSHA=$(sha1sum "${filenames[i]}" | cut -d' ' -f1)
+      elif [ $isMacOS -eq 1 ]; then
+        downloadedFileSHA=$(shasum -a 1 "${filenames[i]}" | cut -d' ' -f1)  # downloaded file hex sha1
+      fi
+      if [ "$remoteFileSHA" == "$downloadedFileSHA" ]; then
+        echo -e "$good Downloaded file appears in the original state."
+      else
+        echo -e "$notice Look like downloaded file appears corrupted!"
+        echo -e "$notice SHA1 SUM Diffs - Expected: ${Cyan}$remoteFileSHA${Reset} ~ Result: ${Cyan}$downloadedFileSHA${Reset}"
       fi
     done
-    remoteFileSHA=$(echo -n "${Base64SHA[i]}" | tr '_-' '/+' | base64 -d | xxd -p)  # convert Base64 SHA-1 to Hex SHA-1
-    if [ $isAndroid -eq 1 ]; then
-      downloadedFileSHA=$(sha1sum "${filenames[i]}" | cut -d' ' -f1)
-    elif [ $isMacOS -eq 1 ]; then
-      downloadedFileSHA=$(shasum -a 1 "${filenames[i]}" | cut -d' ' -f1)  # downloaded file hex sha1
-    fi
-    if [ "$remoteFileSHA" == "$downloadedFileSHA" ]; then
-      echo -e "$good Downloaded file appears in the original state."
-    else
-      echo -e "$notice Look like downloaded file appears corrupted!"
-      echo -e "$notice SHA1 SUM Diffs - Expected: ${Cyan}$remoteFileSHA${Reset} ~ Result: ${Cyan}$downloadedFileSHA${Reset}"
-    fi
-  done
   
-  mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}"
-  if [ -n "$GAME" ]; then
-    # Create XAPK
-    genManifestJson
-    mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}"
-    mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/${packageName}.apk"
-    mv $HOME/${filenames[1]} "$HOME/${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}/main.${versionCode}.${packageName}.obb"
-    mv $HOME/manifest.json "$HOME/${appName}_v${versionName}-${versionCode}/manifest.json"
-    mv $HOME/icon.png "$HOME/${appName}_v${versionName}-${versionCode}/icon.png"
-    echo -e "$running Creating XAPK archive.."
-    #bsdtar --format=zip -c -f "$HOME/${appName}_v${versionName}-${versionCode}.xapk" -C "$HOME/${appName}_v${versionName}-${versionCode}" .  # zip compression without progress-bar
-    #uncompressedSize=$(find "$HOME/${appName}_v${versionName}-${versionCode}" -type f -exec stat -f%z {} + | awk '{sum+=$1} END {print sum}')
-    #bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -s "${uncompressedSize}" > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but wrong percentage (compressesSize < uncompressedSize)
-    bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but no progress-bar percentage
-    mv "$HOME/${appName}_v${versionName}-${versionCode}.xapk" "$Download/${appName}_v${versionName}-${versionCode}.xapk"
-    filePath="$Download/${appName}_v${versionName}-${versionCode}.xapk"
-    fileName="$(basename "$filePath")"
-    apk_ext="xapk"
+    mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}"
+    if [ -n "$GAME" ]; then
+      # Create XAPK
+      genManifestJson
+      mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}"
+      mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/${packageName}.apk"
+      mv $HOME/${filenames[1]} "$HOME/${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}/main.${versionCode}.${packageName}.obb"
+      mv $HOME/manifest.json "$HOME/${appName}_v${versionName}-${versionCode}/manifest.json"
+      mv $HOME/icon.png "$HOME/${appName}_v${versionName}-${versionCode}/icon.png"
+      echo -e "$running Creating XAPK archive.."
+      #bsdtar --format=zip -c -f "$HOME/${appName}_v${versionName}-${versionCode}.xapk" -C "$HOME/${appName}_v${versionName}-${versionCode}" .  # zip compression without progress-bar
+      #uncompressedSize=$(find "$HOME/${appName}_v${versionName}-${versionCode}" -type f -exec stat -f%z {} + | awk '{sum+=$1} END {print sum}')
+      #bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -s "${uncompressedSize}" > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but wrong percentage (compressesSize < uncompressedSize)
+      bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but no progress-bar percentage
+      mv "$HOME/${appName}_v${versionName}-${versionCode}.xapk" "$Download/${appName}_v${versionName}-${versionCode}.xapk"
+      filePath="$Download/${appName}_v${versionName}-${versionCode}.xapk"
+      fileName="$(basename "$filePath")"
+    else
+      # Create APKS
+      mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/base.$ext"
+      for ((i=1; i<${#Files[@]}; i++)); do
+        mv $HOME/${filenames[i]} "$HOME/${appName}_v${versionName}-${versionCode}/${Files[i]}.$ext"
+      done
+      echo -e "$running Creating APKS archive.."
+      bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.apks"
+      mv "$HOME/${appName}_v${versionName}-${versionCode}.apks" "$Download/${appName}_v${versionName}-${versionCode}.apks"
+      filePath="$Download/${appName}_v${versionName}-${versionCode}.apks"
+      fileName="$(basename "$filePath")"
+    fi
+    rm -rf "$HOME/${appName}_v${versionName}-${versionCode}"
   else
-    # Create APKS
-    mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/base.$ext"
-    for ((i=1; i<${#Files[@]}; i++)); do
-      mv $HOME/${filenames[i]} "$HOME/${appName}_v${versionName}-${versionCode}/${Files[i]}.$ext"
-    done
-    echo -e "$running Creating APKS archive.."
-    bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.apks"
-    mv "$HOME/${appName}_v${versionName}-${versionCode}.apks" "$Download/${appName}_v${versionName}-${versionCode}.apks"
-    filePath="$Download/${appName}_v${versionName}-${versionCode}.apks"
-    fileName="$(basename "$filePath")"
-    apk_ext="apks"
+    echo -e "$notice Download skipped! ${appName}_v${versionName}-${versionCode}.$apk_ext already exists in $Download."
   fi
-  rm -rf "$HOME/${appName}_v${versionName}-${versionCode}"
 }
 
 APKS2APK() {
