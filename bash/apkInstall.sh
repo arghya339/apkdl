@@ -18,7 +18,6 @@ apkInstall() {
       ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$icmd"
     fi
   }
-  
   local outputFileName=$(basename "$outputAPK")
   app_info=$($HOME/aapt2 dump badging "$outputAPK" 2>/dev/null)
   pkgName=$(awk -F"'" '/package/ {print $2}' <<< "$app_info" | head -1)
@@ -29,10 +28,6 @@ apkInstall() {
   if [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
     iCmdOut=$(iCmd "pm resolve-activity --brief $pkgName")
     local activityClass=$(tail -n 1 <<< "$iCmdOut") && unset iCmdOut
-  else
-    local activityClass="$activity"
-  fi
-  if [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
     iCmd "cp '$outputAPK' '/data/local/tmp/$outputFileName'"
     [ $DisablePlayProtect -eq 1 ] && iCmd "settings put global package_verifier_user_consent -1"  # Disabled Play Protect
     if [ $DisableVerifyAdbInstalls -eq 1 ]; then
@@ -65,6 +60,7 @@ apkInstall() {
       fi
     fi
   else
+    local activityClass="$activity"
     if [ $Android -le 6 ]; then
       am start -a android.intent.action.VIEW -t application/vnd.android.package-archive -d "file://$outputAPK" > /dev/null 2>&1  # Activity Manager
       sleep 15 && am start -n "$activityClass" &> /dev/null  # launch app after update
