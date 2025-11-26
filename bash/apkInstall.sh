@@ -9,13 +9,13 @@ apkInstall() {
   local outputAPK=${1}
   local activity=$2  # for non-rooted user to launch app after installtion
   iCmd() {
-    cmd=${1}
+    icmd=${1}
     if [ $su -eq 1 ]; then
-      su -c "$cmd"
+      su -c "$icmd"
     elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-      ~/rish -c "$cmd"
+      ~/rish -c "$icmd"
     elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-      ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$cmd"
+      ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$icmd"
     fi
   }
   
