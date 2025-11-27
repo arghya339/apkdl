@@ -399,6 +399,8 @@ if { [ $isMacOS -eq 1 ] && [ -n "$locale" ] && [ -n "$density" ]; } || [ $isAndr
       lcd_dpi="ldpi"  # Low Density
     elif [ "$density" -le "160" ]; then
       lcd_dpi="mdpi"  # Medium Density
+    elif [ "$density" -le "213" ]; then
+      lcd_dpi="tvdpi"  # TV Density
     elif [ "$density" -le "240" ]; then
       lcd_dpi="hdpi"  # High Density
     elif [ "$density" -le "320" ]; then
