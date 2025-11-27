@@ -51,7 +51,7 @@ apkInstall() {
     fi
     iCmd "rm -f '/data/local/tmp/$outputFileName'"
     if [ $EnableRoolback -eq 1 ]; then
-      read -r -p "Is the $appName app working correctly? [Y/n]: " response
+      buttons=("<Yes>" "<No>"); confirmPrompt "Is $appName app working correctly?" "buttons" && response=Yes || response=No
       if [[ "$response" == [Yy]* ]]; then
         echo "Great! The $appName app is working properly."
       else

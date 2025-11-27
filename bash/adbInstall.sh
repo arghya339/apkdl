@@ -110,7 +110,7 @@ adbInstall() {
   am start -n "$activityClass" &> /dev/null  # launch app after update
   [ $? != 0 ] && adb -s $serial shell "monkey -p $pkgName -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
   if [ $EnableRoolback -eq 1 ]; then
-    read -r -p "Is the $appName app working correctly? [Y/n]: " response
+    buttons=("<Yes>" "<No>"); confirmPrompt "Is $appName app working correctly?" "buttons" && response=Yes || response=No
     if [[ "$response" == [Nn]* ]]; then
       echo -e "$running Roolback to previous version.."
       adb -s $serial shell "pm rollback-app $pkgName"
