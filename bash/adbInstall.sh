@@ -34,7 +34,7 @@ adbInstall() {
         versionCode=$(cat "$wo_ext/manifest.json" | jq -r '.version_code')
         outputAPK="$wo_ext/$pkgName.apk"
       else
-        outputAPK="$wo_ext/base.apk"
+        outputAPK="$wo_ext/split/base-master.apk"
       fi
     fi
   fi
@@ -55,20 +55,24 @@ adbInstall() {
     if [ $cpuAbi == "arm64-v8a" ]; then arch="arm64_v8a"; elif [ $cpuAbi == "armeabi-v7a" ]; then arch="armeabi_v7a"; else arch="$cpuAbi"; fi
     for apk in "${apks[@]}"; do
       case "$apk" in
-        base.apk|"$pkgName".apk)
+        base-master.apk|"$pkgName".apk|base.apk)
           split_identifier="base.apk"
           ;;
-        config."$arch".apk)
+        base-"$arch".apk|config."$arch".apk|split_config."$arch".apk)
           split_identifier="config.arch"
           ;;
-        config.*dpi.apk)
+        base-*dpi.apk|config.*dpi.apk|split_config.*dpi.apk)
           split_identifier="config.dpi"
           ;;
         *)
-          split_identifier="config.$(awk -F'.' '{print $2}' <<< "$apk")"
+          case $apk in
+            base-[a-z][a-z].apk) split_identifier="config.$(awk -F'-' '{print $2}' <<< "$apk")" ;;  # apks
+            config.[a-z][a-z].apk) split_identifier="config.$(awk -F'.' '{print $2}' <<< "$apk")" ;;  # xapk
+            split_config.[a-z][a-z].apk) split_identifier="config.$(awk -F'.' '{print $2}' <<< "$apk")" ;;  # apkm
+          esac
           ;;
       esac
-      adb -s $serial push "$wo_ext/$apk" "/data/local/tmp/"
+      adb -s $serial push "$wo_ext/split/$apk" "/data/local/tmp/"
       adb -s "$serial" shell pm install-write "$sessionId" "$split_identifier" "/data/local/tmp/$apk"
       adb -s "$serial" shell rm -f "/data/local/tmp/$apk"
     done
