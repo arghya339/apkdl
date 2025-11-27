@@ -145,7 +145,7 @@
   #pkgInstall "openssl"  # openssl install/update
   pkgInstall "jq"  # jq install/update
   pkgInstall "pup"  # pup install/update
-  [ -f "$apkdlJson" ] && pkgInstall "openjdk-$jdkVersion" || pkgInstall "openjdk-$isJdkVersion" # java install/update
+  [ -f "$apkdlJson" ] && { jdkVersion=$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null); pkgInstall "openjdk-$jdkVersion"; } || pkgInstall "openjdk-$isJdkVersion" # java install/update
   pkgInstall "bsdtar"  # bsdtar install/update
   pkgInstall "pv"  # pv install/update
   pkgInstall "grep"  # grep update
