@@ -82,12 +82,10 @@ fi
 
 cloudflareDOH="https://cloudflare-dns.com/dns-query"
 cloudflareIP="1.1.1.1,1.0.0.1"
-crVersion=$(curl -sL "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1" | jq -r '.[0].version')
 
 if [ $isMacOS -eq 1 ]; then
   Download="$HOME/Downloads"
   [ $(uname -m) == "x86_64" ] && Arch=amd64 || Arch=arm64
-  USER_AGENT="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$crVersion Mobile Safari/537.36"
 elif [ $isAndroid -eq 1 ]; then
   Download="/sdcard/Download"
   cpuAbi=$(getprop ro.product.cpu.abi)
@@ -95,7 +93,6 @@ elif [ $isAndroid -eq 1 ]; then
   Model=$(getprop ro.product.model)
   Build=$(getprop ro.build.id)
   K="$Model Build/$Build"
-  USER_AGENT="Mozilla/5.0 (Linux; Android $Android; $K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${crVersion} Mobile Safari/537.36"
 fi
 
 # --- Construct apkdl shape using string concatenation (ANSI Lean Font) ---
@@ -305,6 +302,13 @@ if [ $isMacOS -eq 1 ]; then
 elif [ $isAndroid -eq 1 ]; then
   curl -sL -o "$apkdl/Termux.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/Termux.sh"
   source $apkdl/Termux.sh
+fi
+
+crVersion=$(curl -sL "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1" | jq -r '.[0].version')
+if [ $isMacOS -eq 1 ]; then
+  USER_AGENT="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$crVersion Mobile Safari/537.36"
+elif [ $isAndroid -eq 1 ]; then
+  USER_AGENT="Mozilla/5.0 (Linux; Android $Android; $K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${crVersion} Mobile Safari/537.36"
 fi
 
 if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
