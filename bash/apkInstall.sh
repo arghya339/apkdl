@@ -17,6 +17,37 @@ apkInstall() {
     fi
   }
   local outputFileName=$(basename "$outputAPK")
+  output_dir=$(dirname "$outputAPK")
+  wo_ext="${outputAPK%.*}"
+  apk_ext="${outputFileName##*.}"
+  if [ "$apk_ext" == "apk" ]; then
+    isAPK=1; isAPKS=0; isXAPK=0
+  elif [ "$apk_ext" == "apks" ]; then
+    isAPKS=1; isAPK=0; isXAPK=0
+  elif [ "$apk_ext" == "xapk" ]; then
+    isXAPK=1; isAPK=0; isAPKS=0
+  fi
+  if [ $isAPK -eq 0 ]; then
+    bsdtar -tf "$outputAPK" --include='*.obb' >/dev/null 2>&1 && isGame=1 || isGame=0  # Check if APK contains OBB files (common in games)
+    mkdir -p "$wo_ext"
+    pv "$outputAPK" | bsdtar -xf - -C "$wo_ext"
+    if [ $isXAPK -eq 1 ]; then
+      pkgName=$(cat "$wo_ext/manifest.json" | jq -r '.package_name')
+      appName=$(cat "$wo_ext/manifest.json" | jq -r '.name')
+      versionCode=$(cat "$wo_ext/manifest.json" | jq -r '.version_code')
+      outputAPK="$wo_ext/$pkgName.apk"  # base.apk path
+      outputFileName="$pkgName.apk"
+    fi
+    if [ $isGame -eq 1 ]; then
+      obbInstallPath=$(cat "$wo_ext/manifest.json" | jq -r '.expansions.[].install_path')  # Android/obb/com.example.package/main.1234.com.example.obb
+      outputOBB="$wo_ext/$obbInstallPath"  # obb file path
+    else
+      apks=($(bsdtar -tf "$outputAPK" --include='*.apk' | awk -F/ '{print $NF}' | sort -u))
+      if [ $isAPKS -eq 1 ]; then
+        outputAPK="$wo_ext/splits/base-master.apk"
+      fi
+    fi
+  fi
   app_info=$($HOME/aapt2 dump badging "$outputAPK" 2>/dev/null)
   pkgName=$(awk -F"'" '/package/ {print $2}' <<< "$app_info" | head -1)
   appName=$(awk -F"'" '/application-label:/ {print $2}' <<< "$app_info")
@@ -26,12 +57,57 @@ apkInstall() {
   if [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
     iCmdOut=$(iCmd "pm resolve-activity --brief $pkgName")
     local activityClass=$(tail -n 1 <<< "$iCmdOut") && unset iCmdOut
-    iCmd "cp '$outputAPK' '/data/local/tmp/$outputFileName'"
     [ $DisablePlayProtect -eq 1 ] && iCmd "settings put global package_verifier_user_consent -1"  # Disabled Play Protect
     if [ $DisableVerifyAdbInstalls -eq 1 ]; then
       [ $Android -le 10 ] && iCmd "settings put global package_verifier_enable 0" || iCmd "settings put global verifier_verify_adb_installs 0"  # Disable Verify Adb Installs
     fi
-    output=$(iCmd "pm install ${cmd} \"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
+    if [ $isAPKS -eq 1 ] || { [ $isXAPK -eq 1 ] && [ $isGame -eq 0 ]; }; then
+      iCmdOut=$(iCmd "pm install-create ${cmd}") && unset iCmdOut
+      sessionId=$(grep -oE '[0-9]+' <<< "$iCmdOut")
+      [ -z $sessionId ] && { iCmdOut=$(iCmd "dumpsys package installer"); sessionId=$(grep "Active Session" <<< "$iCmdOut" | grep -oE '[0-9]+'); unset iCmdOut; }
+      if [ $cpuAbi == "arm64-v8a" ]; then arch="arm64_v8a"; elif [ $cpuAbi == "armeabi-v7a" ]; then arch="armeabi_v7a"; else arch="$cpuAbi"; fi
+      for apk in "${apks[@]}"; do
+        case "$apk" in
+          base-master.apk|"$pkgName".apk|base.apk)
+            split_identifier="base.apk"
+            ;;
+          base-"$arch".apk|config."$arch".apk|split_config."$arch".apk)
+            split_identifier="config.arch"
+            ;;
+          base-*dpi.apk|config.*dpi.apk|split_config.*dpi.apk)
+            split_identifier="config.dpi"
+            ;;
+          *)
+            case $apk in
+              base-[a-z][a-z].apk) split_identifier="config.$(awk -F'-' '{print $2}' <<< "$apk")" ;;  # apks
+              config.[a-z][a-z].apk) split_identifier="config.$(awk -F'.' '{print $2}' <<< "$apk")" ;;  # xapk
+              split_config.[a-z][a-z].apk) split_identifier="config.$(awk -F'.' '{print $2}' <<< "$apk")" ;;  # apkm
+            esac
+            ;;
+        esac
+        iCmd "cp \"$wo_ext/splits/$apk\" \"/data/local/tmp/\""
+        iCmd "pm install-write $sessionId $split_identifier \"/data/local/tmp/$apk\""
+        iCmd "rm -f \"/data/local/tmp/$apk\""
+      done
+      if ! output=$(iCmd "pm install-commit $sessionId" 2>&1); then
+        echo "$output"
+        iCmd "pm install-abandon $sessionId" >/dev/null 2>&1
+      else
+        echo "$output"
+      fi
+      rm -rf "$wo_ext"
+      outputAPK="$wo_ext.$apk_ext"
+    else
+      iCmd "cp '$outputAPK' '/data/local/tmp/$outputFileName'"
+      output=$(iCmd "pm install ${cmd} \"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
+      iCmd "rm -f '/data/local/tmp/$outputFileName'"
+      if [ $isGame -eq 1 ]; then
+        iCmd "mkdir -p /sdcard/Android/obb/$pkgName"
+        iCmd cp "$outputOBB /sdcard/$obbInstallPath"
+        rm -rf "$wo_ext"
+        outputAPK="$wo_ext.$apk_ext"
+      fi
+    fi
     [ $DisablePlayProtect -eq 1 ] && iCmd "settings put global package_verifier_user_consent 1"  # Enabled Play Protect
     if [ $DisableVerifyAdbInstalls -eq 1 ]; then
       [ $Android -le 10 ] && iCmd "settings put global package_verifier_enable 1" || iCmd "settings put global verifier_verify_adb_installs 1"  # Enabled Verify Adb Installs
@@ -47,7 +123,6 @@ apkInstall() {
     if [ $? != 0 ]; then
       iCmd "monkey -p $pkgName -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
     fi
-    iCmd "rm -f '/data/local/tmp/$outputFileName'"
     if [ $EnableRoolback -eq 1 ]; then
       buttons=("<Yes>" "<No>"); confirmPrompt "Is $appName app working correctly?" "buttons" && response=Yes || response=No
       if [[ "$response" == [Yy]* ]]; then

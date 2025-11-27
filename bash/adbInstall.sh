@@ -15,25 +15,21 @@ adbInstall() {
   fi
   if [ $isAPK -eq 0 ]; then
     bsdtar -tf "$outputAPK" --include='*.obb' >/dev/null 2>&1 && isGame=1 || isGame=0  # Check if APK contains OBB files (common in games)
-    if [ $isGame -eq 1 ]; then
-      mkdir -p "$wo_ext"
-      pv "$outputAPK" | bsdtar -xf - -C "$wo_ext"
+    mkdir -p "$wo_ext"
+    pv "$outputAPK" | bsdtar -xf - -C "$wo_ext"
+    if [ $isXAPK -eq 1 ]; then
       pkgName=$(cat "$wo_ext/manifest.json" | jq -r '.package_name')
       appName=$(cat "$wo_ext/manifest.json" | jq -r '.name')
+      versionCode=$(cat "$wo_ext/manifest.json" | jq -r '.version_code')
       outputAPK="$wo_ext/$pkgName.apk"  # base.apk path
       outputFileName="$pkgName.apk"
+    fi
+    if [ $isGame -eq 1 ]; then
       obbInstallPath=$(cat "$wo_ext/manifest.json" | jq -r '.expansions.[].install_path')  # Android/obb/com.example.package/main.1234.com.example.obb
       outputOBB="$wo_ext/$obbInstallPath"  # obb file path
     else
       apks=($(bsdtar -tf "$outputAPK" --include='*.apk' | awk -F/ '{print $NF}' | sort -u))
-      mkdir -p "$wo_ext"
-      pv "$outputAPK" | bsdtar -xf - -C "$wo_ext"
-      if [ $isXAPK -eq 1 ]; then
-        pkgName=$(cat "$wo_ext/manifest.json" | jq -r '.package_name')
-        appName=$(cat "$wo_ext/manifest.json" | jq -r '.name')
-        versionCode=$(cat "$wo_ext/manifest.json" | jq -r '.version_code')
-        outputAPK="$wo_ext/$pkgName.apk"
-      else
+      if [ $isAPKS -eq 1 ]; then
         outputAPK="$wo_ext/splits/base-master.apk"
       fi
     fi
