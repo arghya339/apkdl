@@ -374,7 +374,7 @@ gPlayApiDownloadApp() {
   
     app_info=$($aapt2 dump badging "$HOME/${filenames[0]}" 2>/dev/null)
     minSdkVersion=$(awk -F"'" '/minSdkVersion/ {print $2}' <<< $app_info)
-    targetSdkVersion=$(awk -F"'" '/targetSdkVersion/ {print $2}' <<< $app_info)
+    targetSdkVersion=$(awk -F"'" '/^targetSdkVersion/ {print $2}' <<< $app_info)
 
     mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}"
     if [ -n "$GAME" ]; then
