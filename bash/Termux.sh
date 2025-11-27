@@ -3,17 +3,6 @@
   isCheckTermuxUpdate=1
   isJdkVersion="25"
   
-  all_key=("CheckTermuxUpdate" "openjdk")
-  all_value=("$isCheckTermuxUpdate" "$isJdkVersion")
-  for i in "${!all_key[@]}"; do
-    ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
-  done
-  
-  # Get CheckTermuxUpdate value from json
-  jq -e '.CheckTermuxUpdate != null' "$apkdlJson" >/dev/null 2>&1 && CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null) || CheckTermuxUpdate=1
-  # Get openjdk verison from json
-  jq -e '.openjdk != null' "$apkdlJson" >/dev/null 2>&1 && jdkVersion=$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null) || jdkVersion="$isJdkVersion"
-
   pkg update > /dev/null 2>&1 || apt update >/dev/null 2>&1  # It downloads latest package list with versions from Termux remote repository, then compares them to local (installed) pkg versions, and shows a list of what can be upgraded if they are different.
   outdatedPKG=$(apt list --upgradable 2>/dev/null)  # list of outdated pkg
   echo "$outdatedPKG" | grep -q "dpkg was interrupted" 2>/dev/null && { yes "N" | dpkg --configure -a; outdatedPKG=$(apt list --upgradable 2>/dev/null); }
@@ -156,7 +145,7 @@
   #pkgInstall "openssl"  # openssl install/update
   pkgInstall "jq"  # jq install/update
   pkgInstall "pup"  # pup install/update
-  pkgInstall "openjdk-$jdkVersion"  # java install/update
+  [ -f "$apkdlJson" ] && pkgInstall "openjdk-$jdkVersion" || pkgInstall "openjdk-$isJdkVersion" # java install/update
   pkgInstall "bsdtar"  # bsdtar install/update
   pkgInstall "pv"  # pv install/update
   pkgInstall "grep"  # grep update
@@ -166,7 +155,17 @@
   pkgInstall "glow"  # glow install/update
   pkgInstall "protobuf-static"  # protoc install/update
   pkgInstall "xxd"  # xxd install/update
-
+  
+  all_key=("CheckTermuxUpdate" "openjdk")
+  all_value=("$isCheckTermuxUpdate" "$isJdkVersion")
+  for i in "${!all_key[@]}"; do
+    ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
+  done
+  # Get CheckTermuxUpdate value from json
+  jq -e '.CheckTermuxUpdate != null' "$apkdlJson" >/dev/null 2>&1 && CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null) || CheckTermuxUpdate=1
+  # Get openjdk verison from json
+  jq -e '.openjdk != null' "$apkdlJson" >/dev/null 2>&1 && jdkVersion=$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null) || jdkVersion="$isJdkVersion"
+  
   aapt2="$HOME/aapt2"
   [ ! -f "$aapt2" ] && { curl -sL "https://github.com/arghya339/aapt2/releases/download/all/aapt2_$cpuAbi" --progress-bar -o "$aapt2" && chmod +x "$aapt2"; }
 
