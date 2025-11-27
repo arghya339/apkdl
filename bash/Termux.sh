@@ -183,7 +183,7 @@
         [ $? -eq 0 ] && break || sleep 5
       done
       apkPath=$(find "$Download" -type f -name "termux-widget-app_v*+github.debug.apk" -print -quit)  # find downloaded Termux:Widget app package
-      [ -f "$apkPath" ] && apkInstall.sh "$apkPath" ""  # Install Termux:Widget app using apkInstall.sh
+      [ -f "$apkPath" ] && apkInstall "$apkPath" ""  # Install Termux:Widget app using apkInstall.sh
     fi
     # Create apkdl shortcut
     if am start -n com.termux.widget/com.termux.widget.TermuxLaunchShortcutActivity > /dev/null 2>&1; then
