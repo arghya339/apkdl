@@ -103,8 +103,7 @@ apkInstall() {
       iCmd "rm -f '/data/local/tmp/$outputFileName'"
       if [ $isGame -eq 1 ]; then
         iCmd "mkdir -p /sdcard/Android/obb/$pkgName"
-        iCmd "cp $outputOBB /sdcard/$obbInstallPath"
-        rm -rf "$wo_ext"
+        iCmd "cp \"$outputOBB\" /sdcard/$obbInstallPath" && rm -rf "$wo_ext"
         outputAPK="$wo_ext.$apk_ext"
       fi
     fi
