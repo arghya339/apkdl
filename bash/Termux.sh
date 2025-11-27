@@ -159,7 +159,7 @@
   all_key=("CheckTermuxUpdate" "openjdk")
   all_value=("$isCheckTermuxUpdate" "$isJdkVersion")
   for i in "${!all_key[@]}"; do
-    ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
+    ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null 2>&1 && config "${all_key[i]}" "${all_value[i]}"
   done
   # Get CheckTermuxUpdate value from json
   jq -e '.CheckTermuxUpdate != null' "$apkdlJson" >/dev/null 2>&1 && CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null) || CheckTermuxUpdate=1
