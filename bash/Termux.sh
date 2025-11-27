@@ -167,6 +167,9 @@
   pkgInstall "protobuf-static"  # protoc install/update
   pkgInstall "xxd"  # xxd install/update
 
+  aapt2="$HOME/aapt2"
+  [ ! -f "$aapt2" ] && { curl -sL "https://github.com/arghya339/aapt2/releases/download/all/aapt2_$cpuAbi" --progress-bar -o "$aapt2" && chmod +x "$aapt2"; }
+
   curl -sL -o "$apkdl/apkInstall.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/apkInstall.sh"
   source $apkdl/apkInstall.sh
   

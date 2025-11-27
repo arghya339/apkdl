@@ -2,8 +2,6 @@
 
 Android=$(getprop ro.build.version.release | cut -d. -f1)
 
-[ ! -f "$HOME/aapt2" ] && { curl -sL "https://github.com/arghya339/aapt2/releases/download/all/aapt2_$cpuAbi" --progress-bar -o "$HOME/aapt2" && chmod +x "$HOME/aapt2"; }
-
 # Install final apk
 apkInstall() {
   local outputAPK=${1}

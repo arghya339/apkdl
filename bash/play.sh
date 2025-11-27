@@ -248,6 +248,7 @@ genManifestJson() {
   [ -f $HOME/manifest.json ] && rm -f $HOME/manifest.json
   [ -f $HOME/icon.png ] && rm -f $HOME/icon.png
   locales_name=${Locales//_/-}
+<<comment
   targetSDK=35
   case "$minAndroid" in
     "Android 5.0 and up") minSDK=21 ;;
@@ -264,6 +265,7 @@ genManifestJson() {
     "Android 15 and up") minSDK=35 ;;
     "Android 16 and up") minSDK=36 ;;
   esac
+comment
   curl -sL $appIconUrl -H "User-Agent: $userAgentString" -o $HOME/icon.png  # dlAppIcon
   cat > manifest.json << EOF
 {
@@ -273,8 +275,8 @@ genManifestJson() {
   "locales_name":{"$locales_name":"${appName}"},
   "version_code":"$versionCode",
   "version_name":"$versionName",
-  "min_sdk_version":"$minSDK",
-  "target_sdk_version":"$targetSDK",
+  "min_sdk_version":"$minSdkVersion",
+  "target_sdk_version":"$targetSdkVersion",
   "permissions":[${permissions}],
   "total_size":$downloadSize,
   "icon":"icon.png",
@@ -370,6 +372,10 @@ gPlayApiDownloadApp() {
       fi
     done
   
+    app_info=$($aapt2 dump badging "$HOME/${filenames[0]}" 2>/dev/null)
+    minSdkVersion=$(awk -F"'" '/minSdkVersion/ {print $2}' <<< $app_info)
+    targetSdkVersion=$(awk -F"'" '/targetSdkVersion/ {print $2}' <<< $app_info)
+
     mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}"
     if [ -n "$GAME" ]; then
       # Create XAPK
@@ -385,15 +391,21 @@ gPlayApiDownloadApp() {
       #bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -s "${uncompressedSize}" > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but wrong percentage (compressesSize < uncompressedSize)
       bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.xapk"  # zip compression with progress-bar but no progress-bar percentage
       mv "$HOME/${appName}_v${versionName}-${versionCode}.xapk" "$Download/${appName}_v${versionName}-${versionCode}.xapk"
-    else
+    elif [ ${#Files[@]} -ge 2 ]; then
       # Create APKS
-      mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/base.$ext"
+      curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/genTocPb.sh -o "$apkdl/genTocPb.sh"
+      source $apkdl/genTocPb.sh
+      mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}/splits"
+      mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/splits/base-master.$ext"
       for ((i=1; i<${#Files[@]}; i++)); do
-        mv $HOME/${filenames[i]} "$HOME/${appName}_v${versionName}-${versionCode}/${Files[i]}.$ext"
+        mv $HOME/${filenames[i]} "$HOME/${appName}_v${versionName}-${versionCode}/splits/base-$(cut -d'.' -f2 <<< ${Files[i]}).$ext"
       done
+      mv $HOME/toc.pb "$HOME/${appName}_v${versionName}-${versionCode}/toc.pb"
       echo -e "$running Creating APKS archive.."
       bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.apks"
       mv "$HOME/${appName}_v${versionName}-${versionCode}.apks" "$Download/${appName}_v${versionName}-${versionCode}.apks"
+    else
+      mv $HOME/${filenames[0]} "$Download/${appName}_v${versionName}-${versionCode}.$ext"
     fi
     rm -rf "$HOME/${appName}_v${versionName}-${versionCode}"
   else

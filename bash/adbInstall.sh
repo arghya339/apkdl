@@ -1,7 +1,5 @@
 #!/bin/bash
 
-aapt2=("$HOME/Library/Android/sdk/build-tools/"*/aapt2) && aapt2="${aapt2[-1]}"
-
 adbInstall() {
   local outputAPK="${1}"
   local outputFileName="$(basename "$outputAPK")"
