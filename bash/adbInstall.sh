@@ -34,7 +34,7 @@ adbInstall() {
         versionCode=$(cat "$wo_ext/manifest.json" | jq -r '.version_code')
         outputAPK="$wo_ext/$pkgName.apk"
       else
-        outputAPK="$wo_ext/split/base-master.apk"
+        outputAPK="$wo_ext/splits/base-master.apk"
       fi
     fi
   fi
@@ -72,7 +72,7 @@ adbInstall() {
           esac
           ;;
       esac
-      adb -s $serial push "$wo_ext/split/$apk" "/data/local/tmp/"
+      adb -s $serial push "$wo_ext/splits/$apk" "/data/local/tmp/"
       adb -s "$serial" shell pm install-write "$sessionId" "$split_identifier" "/data/local/tmp/$apk"
       adb -s "$serial" shell rm -f "/data/local/tmp/$apk"
     done
