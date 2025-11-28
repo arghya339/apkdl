@@ -69,7 +69,7 @@ humanReadableForm() {
 }
 
 detailsList() {
-  rawProto="$1"
+  local rawProto="${1}"
   
   pkgs=($(grep -o 'doc=[^"&]*' <<< "$rawProto" | cut -d= -f2 | awk '!seen[$0]++'))
   declare -a names offeredBys offerTypes versionCodes versionNames downloadSizes downloads lastUpdates categorys containsAds dlCountsShorts starRatings contentRatings shortDescriptions
