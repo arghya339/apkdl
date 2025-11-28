@@ -68,6 +68,43 @@ humanReadableForm() {
   fi
 }
 
+detailsList() {
+  rawProto="$1"
+  
+  pkgs=($(grep -o 'doc=[^"&]*' <<< "$rawProto" | cut -d= -f2 | awk '!seen[$0]++'))
+  declare -a names offeredBys offerTypes versionCodes versionNames downloadSizes downloads lastUpdates categorys containsAds dlCountsShorts starRatings contentRatings shortDescriptions
+  for ((i=0; i<${#pkgs[@]}; i++)); do
+    name=$(grep -A 10 "${pkgs[i]}" <<< "$rawProto" | grep -m 1 '5: "' | cut -d'"' -f2)
+    [ -n "$name" ] && names+=("$name") || names+=("N/A")
+    offeredBy=$(grep -A 10 "${pkgs[i]}" <<< "$rawProto" | grep -m 1 '6: "' | cut -d'"' -f2)
+    [ -n "$offeredBy" ] && offeredBys+=("$offeredBy") || offeredBys+=("N/A")
+    offerType=$(grep -A 20 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '8 {' | grep -m 1 '8:' | tr -d ' ' | cut -d':' -f2)
+    [ -n "$offerType" ] && offerTypes+=($offerType) || offerTypes+=("N/A")
+    versionCode=$(grep -A 200 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '13 {' | grep -A 2 '1 {' | grep -m 1 '3:' | tr -d ' ' | cut -d':' -f2)
+    [ -n "$versionCode" ] && versionCodes+=("$versionCode") || versionCodes+=("N/A")
+    versionName=$(grep -A 300 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '13 {' | grep -m 1 '4: "' | cut -d'"' -f2)
+    [ -n "$versionName" ] && versionNames+=("$versionName") || versionNames+=("N/A")
+    downloadSize=$(grep -A 500 "${pkgs[i]}" <<< "$rawProto" | grep -A 20 '13 {' | grep -m 1 '9:' | tr -d ' ' | cut -d':' -f2)
+    [ -n "$downloadSize" ] && downloadSizes+=("$downloadSize") || downloadSizes+=("N/A")
+    download=$(grep -A 500 "${pkgs[i]}" <<< "$rawProto" | grep -m 1 "downloads" | cut -d'"' -f2)
+    [ -n "$download" ] && downloads+=("$download") || downloads+=("N/A")
+    lastUpdate=$(grep -A 600 "${pkgs[i]}" <<< "$rawProto" | grep -A 50 '13 {' | grep -m 1 '16: "' | cut -d'"' -f2)
+    [ -n "$lastUpdate" ] && lastUpdates+=("$lastUpdate") || lastUpdates+=("N/A")
+    category=$(grep -A 800 "${pkgs[i]}" <<< "$rawProto" | grep -A 100 '13 {' | grep -m 1 '48: "' | cut -d'"' -f2)
+    [ -n "$category" ] && categorys+=("$category") || categorys+=("N/A")
+    containAds=$(grep -A 800 "${pkgs[i]}" <<< "$rawProto" | sed '/14 {/q' | grep '30: "' | cut -d'"' -f2)
+    [ -n "$containAds" ] && containsAds+=("$containAds") || containsAds+=("N/A")
+    dlCountShort=$(grep -A 800 "${pkgs[i]}" <<< "$rawProto" | sed '/14 {/q' | grep '61: "' | cut -d'"' -f2)
+    [ -n "$dlCountShort" ] && dlCountsShort+=("$dlCountShort") || dlCountsShort+=("N/A")
+    starRating=$(grep -A 1000 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '14 {' | grep -m 1 '17: "' | cut -d'"' -f2)
+    [ -n "$starRating" ] && starRatings+=("$starRating") || starRatings+=("N/A")
+    contentRating=$(grep -A 1200 "${pkgs[i]}" <<< "$rawProto" | grep -A 20 '15 {' | grep -A 5 '29 {' | grep -m 1 '1: "' | cut -d'"' -f2)
+    [ -n "$contentRating" ] && contentRatings+=("$contentRating") || contentRatings+=("N/A")
+    shortDescription=$(grep -A 1500 "${pkgs[i]}" <<< "$rawProto" | grep -m 1 '27: "' | cut -d'"' -f2)
+    [ -n "$shortDescription" ] && shortDescriptions+=("$shortDescription") || shortDescriptions+=("N/A")
+  done
+}
+
 # src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/helpers/SearchHelper.kt
 gPlayApiSearchApps() {
   while true; do read -r -p ">> Enter appName: " inputAppName; [[ "$inputAppName" =~ ^[Qq] ]] && inputAppName=; break; [ -n "$inputAppName" ] && break || echo -e "$notice Please enter a valid appName!"; done
@@ -78,40 +115,8 @@ gPlayApiSearchApps() {
     searchAppsUrl=("$searchUrl?q=${query}&c=3&ksm=1")
     while true; do
       curl -sL "${searchAppsUrl[$((page-1))]}" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "search.protobuf"
-      protoc --decode_raw < search.protobuf > search.txt && rm -f search.protobuf
-      pkgs=($(grep -o 'doc=[^"&]*' search.txt | cut -d= -f2 | awk '!seen[$0]++'))
-  
-      declare -a names offeredBys offerTypes versionCodes versionNames downloadSizes downloads lastUpdates categorys containsAds dlCountsShorts starRatings contentRatings shortDescriptions
-      for ((i=0; i<${#pkgs[@]}; i++)); do
-        name=$(grep -A 10 "${pkgs[i]}" search.txt | grep -m 1 '5: "' | cut -d'"' -f2)
-        [ -n "$name" ] && names+=("$name") || names+=("N/A")
-        offeredBy=$(grep -A 10 "${pkgs[i]}" search.txt | grep -m 1 '6: "' | cut -d'"' -f2)
-        [ -n "$offeredBy" ] && offeredBys+=("$offeredBy") || offeredBys+=("N/A")
-        offerType=$(grep -A 20 "${pkgs[i]}" search.txt | grep -A 5 '8 {' | grep -m 1 '8:' | tr -d ' ' | cut -d':' -f2)
-        [ -n "$offerType" ] && offerTypes+=($offerType) || offerTypes+=("N/A")
-        versionCode=$(grep -A 200 "${pkgs[i]}" search.txt | grep -A 5 '13 {' | grep -A 2 '1 {' | grep -m 1 '3:' | tr -d ' ' | cut -d':' -f2)
-        [ -n "$versionCode" ] && versionCodes+=("$versionCode") || versionCodes+=("N/A")
-        versionName=$(grep -A 300 "${pkgs[i]}" search.txt | grep -A 5 '13 {' | grep -m 1 '4: "' | cut -d'"' -f2)
-        [ -n "$versionName" ] && versionNames+=("$versionName") || versionNames+=("N/A")
-        downloadSize=$(grep -A 500 "${pkgs[i]}" search.txt | grep -A 20 '13 {' | grep -m 1 '9:' | tr -d ' ' | cut -d':' -f2)
-        [ -n "$downloadSize" ] && downloadSizes+=("$downloadSize") || downloadSizes+=("N/A")
-        download=$(grep -A 500 "${pkgs[i]}" search.txt | grep -m 1 "downloads" | cut -d'"' -f2)
-        [ -n "$download" ] && downloads+=("$download") || downloads+=("N/A")
-        lastUpdate=$(grep -A 600 "${pkgs[i]}" search.txt | grep -A 50 '13 {' | grep -m 1 '16: "' | cut -d'"' -f2)
-        [ -n "$lastUpdate" ] && lastUpdates+=("$lastUpdate") || lastUpdates+=("N/A")
-        category=$(grep -A 800 "${pkgs[i]}" search.txt | grep -A 100 '13 {' | grep -m 1 '48: "' | cut -d'"' -f2)
-        [ -n "$category" ] && categorys+=("$category") || categorys+=("N/A")
-        containAds=$(grep -A 800 "${pkgs[i]}" search.txt | sed '/14 {/q' | grep '30: "' | cut -d'"' -f2)
-        [ -n "$containAds" ] && containsAds+=("$containAds") || containsAds+=("N/A")
-        dlCountShort=$(grep -A 800 "${pkgs[i]}" search.txt | sed '/14 {/q' | grep '61: "' | cut -d'"' -f2)
-        [ -n "$dlCountShort" ] && dlCountsShort+=("$dlCountShort") || dlCountsShort+=("N/A")
-        starRating=$(grep -A 1000 "${pkgs[i]}" search.txt | grep -A 5 '14 {' | grep -m 1 '17: "' | cut -d'"' -f2)
-        [ -n "$starRating" ] && starRatings+=("$starRating") || starRatings+=("N/A")
-        contentRating=$(grep -A 1200 "${pkgs[i]}" search.txt | grep -A 20 '15 {' | grep -A 5 '29 {' | grep -m 1 '1: "' | cut -d'"' -f2)
-        [ -n "$contentRating" ] && contentRatings+=("$contentRating") || contentRatings+=("N/A")
-        shortDescription=$(grep -A 1500 "${pkgs[i]}" search.txt | grep -m 1 '27: "' | cut -d'"' -f2)
-        [ -n "$shortDescription" ] && shortDescriptions+=("$shortDescription") || shortDescriptions+=("N/A")
-      done
+      search=$(protoc --decode_raw < search.protobuf) && rm -f search.protobuf
+      detailsList "$search"
       declare -a appInfo offerTypesS containsAdsS
       for ((i=0; i<${#pkgs[@]}; i++)); do
         [ ${offerTypes[i]} -eq 1 ] && offerTypesS+=(Free) || offerTypesS+=(Paid)
