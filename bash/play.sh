@@ -266,6 +266,7 @@ gPlayApiAppsUpdates() {
   gPlayApiAppsDetails "${packages[@]}"
   declare -g -a installedVersions installedVersionCodes lastUpdates
   for i in ${!pkgs[@]}; do
+    installedVersion=""; versionCode=""; lastUpdateTime=""
     for ((j=0; j<${#pkgnames[@]}; j++)); do
       if [ "${pkgs[i]}" == "${pkgnames[j]}" ]; then
         installedVersion="${iVersionNames[j]}"
