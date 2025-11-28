@@ -70,9 +70,9 @@ humanReadableForm() {
 
 detailsList() {
   local rawProto="${1}"
-  
+  declare -g -a pkgs  # declares empty global array
   pkgs=($(grep -o 'doc=[^"&]*' <<< "$rawProto" | cut -d= -f2 | awk '!seen[$0]++'))
-  declare -a names offeredBys offerTypes versionCodes versionNames downloadSizes downloads lastUpdates categorys containsAds dlCountsShorts starRatings contentRatings shortDescriptions
+  declare -g -a names offeredBys offerTypes versionCodes versionNames downloadSizes downloads lastUpdates categorys containsAds dlCountsShorts starRatings contentRatings shortDescriptions
   for ((i=0; i<${#pkgs[@]}; i++)); do
     name=$(grep -A 10 "${pkgs[i]}" <<< "$rawProto" | grep -m 1 '5: "' | cut -d'"' -f2)
     [ -n "$name" ] && names+=("$name") || names+=("N/A")
@@ -115,7 +115,7 @@ gPlayApiSearchApps() {
     searchAppsUrl=("$searchUrl?q=${query}&c=3&ksm=1")
     while true; do
       curl -sL "${searchAppsUrl[$((page-1))]}" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "search.protobuf"
-      protoc --decode_raw < search.protobuf > search.txt && search=$(cat search.txt) && rm -f search.protobuf #search.txt
+      search=$(protoc --decode_raw < search.protobuf) && rm -f search.protobuf
       detailsList "$search"
       declare -a appInfo offerTypesS containsAdsS
       for ((i=0; i<${#pkgs[@]}; i++)); do
