@@ -250,6 +250,7 @@ gPlayApiAppDetails() {
 
 gPlayApiAppsDetails() {
   pkgnames=("$@")  # collect all arguments as pkgnames array
+  echo -e "$running Get Installed packages updates.."
   curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/genProtoBin.sh -o "$apkdl/genProtoBin.sh"
   source $apkdl/genProtoBin.sh
   genBulkDetailsProtoBin
@@ -257,6 +258,7 @@ gPlayApiAppsDetails() {
   rm -f bulkDetails.bin
   bulkDetails=$(protoc --decode_raw < bulkDetails.protobuf) && rm -f bulkDetails.protobuf  # Decode Response
   detailsList "$bulkDetails"
+  echo -e "$info total-apps: ${#pkgnames[@]}\n$good found: ${#pkgs[@]}\n$notice not-found: $(( ${#pkgnames[@]} - ${#pkgs[@]}))"
 }
 
 gPlayApiAppsUpdates() {
