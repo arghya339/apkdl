@@ -68,38 +68,47 @@ fi
 getUpdates() {
   packagesInfo
   echo -e "$running Get Installed packages updates.."
-  declare -a installVersions lastUpdate pnames appNames releaseLinks developerNames releaseVersions releasePublishDates releaseWhatsNews
-  for ((i=0; i<${#packages[@]}; i++)); do
-    pkgName="${packages[$i]}"
-    versionName="${versionNames[$i]}"
-    lastUpdateTime="${lastUpdateTimes[$i]}"
-    echo -e "$running Processing $((i+1))/${#packages[@]}: $pkgName"
-    RESPONSE_JSON=$(curl -sL --doh-url "$cloudflareDOH" $APKM_REST_API_URL -A "$USER_AGENT" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Basic $AUTH_TOKEN" -d "{\"pnames\":[\"$pkgName\"]}")
-    if echo "$RESPONSE_JSON" | jq -e ".data[] | select(.pname == \"$pkgName\") | .exists == true" > /dev/null 2>&1; then
-      echo -e "$good Found: $pkgName"
-      releaseVersion=$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.version" <<< "$RESPONSE_JSON")
-      if [ "$releaseVersion" != "$versionName" ]; then
-        echo -e "$notice $pkgName is currently outdated!"
-        installVersions+=("$versionName")
-        lastUpdates+=("$lastUpdateTime")
-        pnames+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .pname" <<< "$RESPONSE_JSON")")
-        appNames+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .app.name" <<< "$RESPONSE_JSON" | sed 's/&amp;/&/g')")
-        releaseLinks+=("https://www.apkmirror.com$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.link" <<< "$RESPONSE_JSON")")
-        developerNames+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .developer.name" <<< "$RESPONSE_JSON")")
-        releaseVersions+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.version" <<< "$RESPONSE_JSON")")
-        releasePublishDates+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.publish_date" <<< "$RESPONSE_JSON")")
-        releaseWhatsNews+=("$(jq -r ".data[] | select(.pname == \"$pkgName\") | .release.whats_new" <<< "$RESPONSE_JSON")")
-      else
-        echo -e "$good $pkgName is currently up to date."
+  
+  pkgs=$(sed 's/ /", "/g; s/^/"/; s/$/"/' <<< "${packages[@]}")
+  RESPONSE_JSON=$(curl -sL --doh-url "$cloudflareDOH" $APKM_REST_API_URL -A "$USER_AGENT" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Basic $AUTH_TOKEN" -d "{\"pnames\":[$pkgs]}")
+  
+  exists_pnames=($(jq -r '.data[] | select(.exists == true) | .pname' <<< "$RESPONSE_JSON"))
+  not_exists_pnames=($(jq -r '.data[] | select(.exists == false) | .pname' <<< "$RESPONSE_JSON"))
+  echo -e "$info total-apps: ${#packages[@]}\n$good found: ${#exists_pnames[@]}\n$notice not-found: ${#not_exists_pnames[@]}"
+  
+  declare -a installVersions lastUpdates
+  for exists_pname in ${exists_pnames[@]}; do
+    for ((i=0; i<${#packages[@]}; i++)); do
+      if [ "$exists_pname" == "${packages[i]}" ]; then
+        versionName="${versionNames[i]}"
+        lastUpdateTime="${lastUpdateTimes[i]}"
+        break
       fi
+    done
+    installVersions+=("$versionName")
+    lastUpdates+=("$lastUpdateTime")
+  done
+  
+  declare -a appNames releaseLinks developerNames releaseVersions releasePublishDates releaseWhatsNews
+  for i in ${!exists_pnames[@]}; do
+    echo -e "$running Processing $((i+1))/${#exists_pnames[@]}: ${exists_pnames[i]}"
+    releaseVersion=$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .release.version" <<< "$RESPONSE_JSON")
+    if [ "$releaseVersion" != "${installVersions[i]}" ]; then
+      appNames[i]="$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .app.name" <<< "$RESPONSE_JSON")"
+      releaseLinks[i]="https://apkmirror.com$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .release.link" <<< "$RESPONSE_JSON")"
+      developerNames+=("$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .developer.name" <<< "$RESPONSE_JSON")")
+      releaseVersions+=("$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .release.version" <<< "$RESPONSE_JSON")")
+      releasePublishDates+=("$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .release.publish_date" <<< "$RESPONSE_JSON")")
+      releaseWhatsNews+=("$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .release.whats_new" <<< "$RESPONSE_JSON")")
+      echo -e "$notice ${appNames[i]} is currently outdated!"
     else
-      echo -e "$notice Not Found: $pkgName"
+      echo -e "$good ${exists_pnames[i]} is currently up to date."
     fi
   done
   
   apps=()
-  for ((i=0; i<${#pnames[@]}; i++)); do
-    apps+=("${appNames[i]} (${pnames[i]}) | ${installVersions[i]} (${lastUpdates[i]}) → ${releaseVersions[i]} (${releasePublishDates[i]})")
+  for ((i=0; i<${#exists_pnames[@]}; i++)); do
+    apps+=("${appNames[i]} (${exists_pnames[i]}) | ${installVersions[i]} (${lastUpdates[i]}) → ${releaseVersions[i]} (${releasePublishDates[i]})")
   done
 }
 
