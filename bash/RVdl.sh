@@ -33,38 +33,37 @@ else
     package: .[0].key,
     version: ([.[].value] | flatten | map(select(. != null)) | unique | if length > 0 then .[-1] else null end)
   })' <<< "$patchesJson")
-    
-  # Start with empty apps_json array
-  apps_json="[]"
   total_apps=$(echo "$result" | jq length)
-    
-  # Process each package to get APKMirror apps data
-  for ((i=0; i<total_apps; i++)); do
-    pkgName=$(echo "$result" | jq -r ".[$i].package")
-    version=$(echo "$result" | jq -r ".[$i].version")
-        
-    echo -e "$running Processing $((i+1))/$total_apps: $pkgName"
-        
-    RESPONSE_JSON=$(curl -sL --doh-url "$cloudflareDOH" $APKM_REST_API_URL -A "$USER_AGENT" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Basic $AUTH_TOKEN" -d "{\"pnames\":[\"$pkgName\"]}")
-        
-    if echo "$RESPONSE_JSON" | jq -e ".data[] | select(.pname == \"$pkgName\") | .exists == true" > /dev/null 2>&1; then
-      appName=$(jq -r ".data[] | select(.pname == \"$pkgName\") | .app.name" <<< "$RESPONSE_JSON")
-      appName="${appName//amp;/}"
-      #appName=$(echo "${appName%%[:—(]*}" | xargs)
-      appLink="https://www.apkmirror.com$(jq -r ".data[] | select(.pname == \"$pkgName\") | .app.link" <<< "$RESPONSE_JSON")"
-            
-      # Add valid app to apps_json
-      new_app=$(jq -n --arg pkg "$pkgName" --arg ver "$version" --arg name "$appName" --arg link "$appLink" '{package: $pkg, version: $ver, name: $name, link: $link}')
-            
-      apps_json=$(echo "$apps_json" | jq ". += [$new_app]")
-      echo -e "$good Found: $appName"
-    else
-      echo -e "$notice Not Found: $pkgName"
-      continue
-    fi
+  pkgName=($(echo "$result" | jq -r ".[].package"))
+  
+  pkgNames=$(sed 's/ /", "/g; s/^/"/; s/$/"/' <<< "${pkgName[@]}")
+  RESPONSE_JSON=$(curl -sL --doh-url "$cloudflareDOH" $APKM_REST_API_URL -A "$USER_AGENT" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Basic $AUTH_TOKEN" -d "{\"pnames\":[$pkgNames]}")
+  
+  exists_pname=($(jq -r '.data[] | select(.exists == true) | .pname' <<< "$RESPONSE_JSON"))
+  not_exists_pname=($(jq -r '.data[] | select(.exists == false) | .pname' <<< "$RESPONSE_JSON"))
+  echo -e "$info total_apps: $total_apps\n$good found: ${#exists_pname[@]}\n$notice not-found: ${#not_exists_pname[@]}"
+  
+  declare -a appName appLink version
+  for i in ${!exists_pname[@]}; do
+    appName[i]="$(jq -r ".data[] | select(.pname == \"${exists_pname[i]}\") | .app.name" <<< "$RESPONSE_JSON")"
+    version[i]="$(echo "$result" | jq -r ".[] | select(.package == \"${exists_pname[i]}\") | .version")"
+    appLink[i]="https://apkmirror.com$(jq -r ".data[] | select(.pname == \"${exists_pname[i]}\") | .app.link" <<< "$RESPONSE_JSON")"
   done
-    
-  # Save apps data to $apkdl/revanced.json file
+  
+  # Initialize empty JSON array
+  apps_json="[]"
+  for i in ${!exists_pname[@]}; do
+    # Process each existing package
+    pkgName="${exists_pname[i]}"
+    appName="${appName[i]}"
+    version="${version[i]}"
+    appLink="${appLink[i]}"
+    # Create new app object
+    new_app=$(jq -n --arg pkg "$pkgName" --arg ver "$version" --arg name "$appName" --arg link "$appLink" '{package: $pkg, version: $ver, name: $name, link: $link}')
+    # Add to main array
+    apps_json=$(echo "$apps_json" | jq ". += [$new_app]")
+  done
+  # Save apps data to $apkdl/$org.json file
   echo "$apps_json" > $apkdl/$organization.json
   unset pkgName version appName appLink
 fi
