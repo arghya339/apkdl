@@ -128,8 +128,7 @@ gPlayApiSearchApps() {
       elif [ $page -ne 1 ]; then
         appInfo+=(Prev)
       fi
-      nextPage=$(awk -F'"' '/getCluster\?enpt=/ {print $2}' search.txt)  # nextPage start with getCluster?enpt=
-      rm -f search.txt
+      nextPage=$(awk -F'"' '/getCluster\?enpt=/ {print $2}' <<< "$search")  # nextPage start with getCluster?enpt=
       if [ -n "$nextPage" ]; then
         nextPageUrl="$searchUrl/$nextPage"
         curl -sL "$nextPageUrl" "${Headers[@]}" -H "Accept: application/x-protobuf" -o nextPage.protobuf
