@@ -41,6 +41,7 @@ isRipLib=1  # Default value (true/on/1) for RipLib, it's delete lib dir from apk
 isRmFile=1  # Remove downloaded file after installation 1 (true)
 isPreRelease=0  # Default value (false/off/0) for isPreRelease, it's enabled latest release for Patches source
 isShowSystemApps=0
+isAppUpdatesSource="PlayStore"
 isU=0  # Install Package for 0 (default-user), possible 1 (all-users)
 isK=0  # Allow Downgrade with keeps App data 0 (false) because it's required reboot after pkg install, possible 1 (true)
 isG=0  # Grant All Runtime Permissions 0 (false) due to Security Risk, possible 1
@@ -377,8 +378,8 @@ if [ $isMacOS -eq 1 ]; then
   jq -e '.DENSITY != null' "$apkdlJson" >/dev/null 2>&1 && density="$(jq -r '.DENSITY' "$apkdlJson" 2>/dev/null)" || density=
 fi
 
-all_key=("RipLocale" "RipDpi" "RipLib" "RmFileAfterInstallation" "PreReleasePatches")
-all_value=("$isRipLocale" "$isRipDpi" "$isRipLib" "$isRmFile" "$isPreRelease")
+all_key=("RipLocale" "RipDpi" "RipLib" "RmFileAfterInstallation" "PreReleasePatches" "AppUpdatesSource")
+all_value=("$isRipLocale" "$isRipDpi" "$isRipLib" "$isRmFile" "$isPreRelease" "$isAppUpdatesSource")
 for i in "${!all_key[@]}"; do
   ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
 done
@@ -392,6 +393,8 @@ jq -e '.RipLib != null' "$apkdlJson" >/dev/null 2>&1 && RipLib="$(jq -r '.RipLib
 jq -e '.RmFileAfterInstallation != null' "$apkdlJson" >/dev/null 2>&1 && RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)" || RmFileAfterInstallation=1
 # Get PreReleasePatches value from json
 jq -e '.PreReleasePatches != null' "$apkdlJson" >/dev/null 2>&1 && PreReleasePatches="$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)" || PreReleasePatches=0
+# Get AppUpdatesSource value from json
+jq -e '.AppUpdatesSource != null' "$apkdlJson" >/dev/null 2>&1 && AppUpdatesSource="$(jq -r '.AppUpdatesSource' "$apkdlJson" 2>/dev/null)" || AppUpdatesSource="$isAppUpdatesSource"
 
 if { [ $isMacOS -eq 1 ] && [ -n "$locale" ] && [ -n "$density" ]; } || [ $isAndroid -eq 1 ]; then
   if [ $RipLocale -eq 0 ]; then
@@ -1097,41 +1100,56 @@ while true; do
       echo; read -p "Press Enter to continue..."
       ;;
     appUpdates)
-      curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
-      source $apkdl/APKMdl.sh
-      
       curl -sL -o "$apkdl/installedApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApps.sh"
       source $apkdl/installedApps.sh
       
-      [ ${#apps[@]} -eq 0 ] && getUpdates
+      if [ "$AppUpdatesSource" == "PlayStore" ]; then
+        curl -sL -o "$apkdl/play.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/play.sh"
+        source $apkdl/play.sh
 
-      showUpdates
-      [ $? -ne 0 ] && continue
+        [ ${#apps[@]} -eq 0 ] && gPlayApiAppsUpdates
+
+        gPlayApiShowUpdates
+        [ $? -ne 0 ] && continue
+
+        gPlayApiDownloadApp
+        if [ $? -eq 0 ]; then
+          echo; read -p "Press Enter to continue..."
+        fi
+      else
+        curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
+        source $apkdl/APKMdl.sh
+        
+        [ ${#apps[@]} -eq 0 ] && getUpdates
+
+        showUpdates
+        [ $? -ne 0 ] && continue
       
-      getVariant
-      [ $? -ne 0 ] && continue
+        getVariant
+        [ $? -ne 0 ] && continue
       
-      getDownloadLink
-      if [ $? -eq 0 ]; then
-        getAppDetails
-        appName=$(echo "${appName%%[:—(]*}" | xargs)
-        fileName="${appName}_v${version}-${arch}${file_ext}"
-        apkPath="$Download/$fileName"
-        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
-        [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
-        [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
-        if [ -f "$apkPath" ]; then
-          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
-          if [ "$opt" == "Yes" ]; then
-            if [ $isAndroid -eq 1 ]; then
-              sign "$apkPath" && apkInstall "$apkPath"
-            elif [ $isMacOS -eq 1 ]; then
-              ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
+        getDownloadLink
+        if [ $? -eq 0 ]; then
+          getAppDetails
+          appName=$(echo "${appName%%[:—(]*}" | xargs)
+          fileName="${appName}_v${version}-${arch}${file_ext}"
+          apkPath="$Download/$fileName"
+          [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
+          [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
+          [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
+          if [ -f "$apkPath" ]; then
+            buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+            if [ "$opt" == "Yes" ]; then
+              if [ $isAndroid -eq 1 ]; then
+                sign "$apkPath" && apkInstall "$apkPath"
+              elif [ $isMacOS -eq 1 ]; then
+                ext="${fileName##*.}"
+                ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
+              fi
             fi
           fi
+          echo; read -p "Press Enter to continue..."
         fi
-        echo; read -p "Press Enter to continue..."
       fi
       ;;
     uninstallApps)
@@ -1151,7 +1169,8 @@ while true; do
         RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)"
         PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
         ShowSystemApps="$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)"
-        options=(RmFileAfterInstallation PreReleasePatches "Add gh/ glab PAT (increases gh/ glab api rate limit)")
+        AppUpdatesSource="(jq -r '.AppUpdatesSource' "$apkdlJson" 2>/dev/null)"
+        options=(RmFileAfterInstallation PreReleasePatches "Add gh/ glab PAT (increases gh/ glab api rate limit)" AppUpdatesSource)
         if [ $isAndroid -eq 1 ] || { [ $isMacOS -eq 1 ] && [ -n "$cpuAbi" ]; }; then
           options+=(RipLocale RipDpi RipLib)
         fi
@@ -1349,6 +1368,17 @@ while true; do
               echo -e "$notice ${Yellow}No GitLab token found!${Reset}"
             fi
             auth  # Call the auth function to create GitHub/ GitLab token
+            ;;
+          AppUpdatesSource)
+            [ "$AppUpdatesSource" == "PlayStore" ] && echo "AppUpdatesSource == PlayStore" || echo "AppUpdatesSource == APKMirror"
+            buttons=("<PlayStore>" "<APKMirror>"); confirmPrompt "AppUpdatesSource" "buttons" && source="PlayStore" || source="APKMirror"
+            if [ -n "$source" ]; then
+              case "$source" in
+                PlayStore) config "AppUpdatesSource" "PlayStore" && echo -e "$good ${Green}AppUpdatesSource as PlayStore set successfully!${Reset}" ;;
+                APKMirror) config "AppUpdatesSource" "APKMirror" && echo -e "$good ${Green}AppUpdatesSource as APKMirror set successfully!${Reset}" ;;
+              esac
+              sleep 2
+            fi
             ;;
           ShowSystemApps)
             [ $ShowSystemApps -eq 0 ] && echo "ShowSystemApps == false" || echo "ShowSystemApps == true"

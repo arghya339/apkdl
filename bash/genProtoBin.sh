@@ -1,6 +1,28 @@
 #!/bin/bash
 
 # https://github.com/protocolbuffers/protobuf?tab=readme-ov-file#protobuf-compiler-installation
+
+# Generate Binary Protobuf message Body for BulkDetails Request
+genBulkDetailsProtoBin() {
+  # Create protobuf SCHEMA file (defines blueprint/STRUCTURE)
+  cat > bulkDetails.proto << 'EOF'
+syntax = "proto3";
+
+message BulkRequest {  // ← TYPE define
+  repeated string packages = 1;  // ← Field number 1
+}
+EOF
+  
+  # Create Input Data File that matches schema
+  {
+    for pkgname in "${pkgnames[@]}"; do
+      echo "packages: \"$pkgname\""
+    done
+  } > bulkDetails.txt
+  # protoc (Protocol Buffers Compiler) validates data against schema & generate (bin) binary protobuf file
+  protoc --proto_path=. --encode=BulkRequest bulkDetails.proto < bulkDetails.txt > bulkDetails.bin && rm -f bulkDetails.txt bulkDetails.proto
+}
+
 # Generate Binary Protobuf Body for AcquireRequest
 genAcquireProtoBin() {
   # Create proto file with optional fields

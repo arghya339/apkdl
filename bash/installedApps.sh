@@ -48,10 +48,10 @@ fi
     #appInfo=$(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm dump "${packages[i]}" | grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath'")
     runCmdOut=$(runCmd "pm dump ${packages[$i]}")
     appInfo=$(grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath' <<< "$runCmdOut") && unset runCmdOut
-    versionNames[i]=$(echo "$appInfo" | grep "versionName" | awk -F'=' '{print $2}')
-    versionCodes[i]=$(echo "$appInfo" | grep "versionCode" | awk -F'=' '{print $2}' | awk '{print $1}')
+    iVersionNames[i]=$(echo "$appInfo" | grep "versionName" | awk -F'=' '{print $2}')
+    iVersionCodes[i]=$(echo "$appInfo" | grep "versionCode" | awk -F'=' '{print $2}' | awk '{print $1}')
     firstInstallTimes[i]=$(echo "$appInfo" | grep "firstInstallTime" | awk -F'=' '{print $2}')
-    lastUpdateTimes[i]=$(echo "$appInfo" | grep "lastUpdateTime" | awk -F'=' '{print $2}')
+    iLastUpdateTimes[i]=$(echo "$appInfo" | grep "lastUpdateTime" | awk -F'=' '{print $2}')
     codePaths[i]=$(echo "$appInfo" | grep "codePath" | sed 's/.*codePath=//')
     basePaths[i]="${codePaths[$i]}/base.apk"
     if [ $reqAppName -eq 1 ]; then
@@ -76,20 +76,20 @@ getUpdates() {
   not_exists_pnames=($(jq -r '.data[] | select(.exists == false) | .pname' <<< "$RESPONSE_JSON"))
   echo -e "$info total-apps: ${#packages[@]}\n$good found: ${#exists_pnames[@]}\n$notice not-found: ${#not_exists_pnames[@]}"
   
-  declare -a installVersion lastUpdate pnames installVersions lastUpdates appNames releaseLinks developerNames releaseVersions releasePublishDates releaseWhatsNews
+  declare -a pnames installedVersions lastUpdates appNames releaseLinks developerNames releaseVersions releasePublishDates releaseWhatsNews
   for i in ${!exists_pnames[@]}; do
     echo -e "$running Processing $((i+1))/${#exists_pnames[@]}: ${exists_pnames[i]}"
     for ((j=0; j<${#packages[@]}; j++)); do
       if [ "${exists_pnames[i]}" == "${packages[j]}" ]; then
-        installVersion="${versionNames[j]}"
-        lastUpdate="${lastUpdateTimes[j]}"
+        installedVersion="${iVersionNames[j]}"
+        lastUpdate="${iLastUpdateTimes[j]}"
         break
       fi
     done
     releaseVersion=$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .release.version" <<< "$RESPONSE_JSON")
-    if [ "$releaseVersion" != "$installVersion" ]; then
+    if [ "$releaseVersion" != "$installedVersion" ]; then
       pnames+=("${exists_pnames[i]}")
-      installVersions+=("$installVersion")
+      installedVersions+=("$installedVersion")
       lastUpdates+=("$lastUpdate")
       appNames+=("$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .app.name" <<< "$RESPONSE_JSON")")
       releaseLinks+=("https://apkmirror.com$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .release.link" <<< "$RESPONSE_JSON")")
@@ -105,7 +105,7 @@ getUpdates() {
   
   apps=()
   for ((i=0; i<${#pnames[@]}; i++)); do
-    apps+=("${appNames[i]} (${pnames[i]}) | ${installVersions[i]} (${lastUpdates[i]}) → ${releaseVersions[i]} (${releasePublishDates[i]})")
+    apps+=("${appNames[i]} (${pnames[i]}) | ${installedVersions[i]} (${lastUpdates[i]}) → ${releaseVersions[i]} (${releasePublishDates[i]})")
   done
 }
 

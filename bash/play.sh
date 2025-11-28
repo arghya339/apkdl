@@ -248,6 +248,56 @@ gPlayApiAppDetails() {
   echo -e "$info appUrl: ${Blue}$appUrl${Reset}"
 }
 
+gPlayApiAppsDetails() {
+  pkgnames=("$@")  # collect all arguments as pkgnames array
+  curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/genProtoBin.sh -o "$apkdl/genProtoBin.sh"
+  source $apkdl/genProtoBin.sh
+  genBulkDetailsProtoBin
+  curl -sL -X POST "$bulkDetailsUrl" "${Headers[@]}" -H "Content-Type: application/x-protobuf" --data-binary @bulkDetails.bin -o "bulkDetails.protobuf"  # Send Request
+  rm -f bulkDetails.bin
+  bulkDetails=$(protoc --decode_raw < bulkDetails.protobuf) && rm -f bulkDetails.protobuf  # Decode Response
+  detailsList "$bulkDetails"
+}
+
+gPlayApiAppsUpdates() {
+  curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApps.sh -o "$apkdl/installedApps.sh"
+  source $apkdl/installedApps.sh
+  packagesInfo
+  gPlayApiAppsDetails
+  declare -g -a installedVersions installedVersionCodes lastUpdates
+  for i in ${!pkgs[@]}; do
+    for ((j=0; j<${#pkgnames[@]}; j++)); do
+      if [ "${pkgs[i]}" == "${pkgnames[j]}" ]; then
+        installedVersion="${iVersionNames[j]}"
+        versionCode="${iVersionCodes[j]}"
+        lastUpdateTime="${iLastUpdateTimes[j]}"
+        break
+      fi
+    done
+    installedVersions+=("$installedVersion")
+    installedVersionCodes+=("$versionCode")
+    lastUpdateTimes+=("$lastUpdateTime")
+  done
+
+  apps=()
+  for ((i=0; i<${#pkgs[@]}; i++)); do
+    apps+=("${names[i]} (${pkgs[i]}) | ${installedVersions[i]} (${lastUpdateTimes[i]}) → ${versionNames[i]} (${lastUpdates[i]})")
+  done
+}
+
+gPlayApiShowUpdates() {
+  buttons=("<Select>" "<Back>")
+  if menu "apps" "buttons"; then
+    pkg="${pkgs[selected]}"
+    offerType=${offerTypes[selected]}
+    versionCode="${versionCodes[selected]}"
+    installedVersionCode="${installedVersionCodes[selected]}"
+    return
+  else
+    return 1
+  fi
+}
+
 genManifestJson() {
   [ -f $HOME/manifest.json ] && rm -f $HOME/manifest.json
   [ -f $HOME/icon.png ] && rm -f $HOME/icon.png
@@ -292,6 +342,7 @@ EOF
 
 # src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/helpers/PurchaseHelper.kt
 gPlayApiDownloadApp() {
+  reqPatch=${1:-0}
   curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/genProtoBin.sh -o "$apkdl/genProtoBin.sh"
   source $apkdl/genProtoBin.sh
   genAcquireProtoBin
@@ -317,9 +368,11 @@ gPlayApiDownloadApp() {
   #protoc --decode_raw < purchaseHistory.protobuf && rm -f purchaseHistory.protobuf
 
   # Request Delivery Data (URLs and File names)
-  dlUrl="$deliveryUrl?doc=${pkg}&ot=${offerType}&vc=${versionCode}&delivery_token=${token}"
-  #installedVersionCode="84454280"
-  #dlUrl="$deliveryUrl?doc=$pkg&ot=$offerType&vc=$versionCode&bvc=$installedVersionCode&pf=1&delivery_token=$token"  # Receive a smaller patch file instead of full APK for app update. pf=patchFormat (GZIPPED_BSDIFF)
+  if [ $reqPatch -eq 0 ]; then
+    dlUrl="$deliveryUrl?doc=${pkg}&ot=${offerType}&vc=${versionCode}&delivery_token=${token}"
+  else
+    dlUrl="$deliveryUrl?doc=$pkg&ot=$offerType&vc=$versionCode&bvc=$installedVersionCode&pf=1&delivery_token=$token"  # Receive a smaller patch file instead of full APK for app update. pf=patchFormat (GZIPPED_BSDIFF)
+  fi
   curl -sL "$dlUrl" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "delivery.protobuf"
   protoc --decode_raw < delivery.protobuf > delivery.txt && rm -f delivery.protobuf
   
