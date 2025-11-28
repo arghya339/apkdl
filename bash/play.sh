@@ -115,7 +115,7 @@ gPlayApiSearchApps() {
     searchAppsUrl=("$searchUrl?q=${query}&c=3&ksm=1")
     while true; do
       curl -sL "${searchAppsUrl[$((page-1))]}" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "search.protobuf"
-      protoc --decode_raw < search.protobuf > search.txt && search=$(cat search.txt) && rm -f search.txt search.protobuf
+      protoc --decode_raw < search.protobuf > search.txt && search=$(cat search.txt) && rm -f search.protobuf #search.txt
       detailsList "$search"
       declare -a appInfo offerTypesS containsAdsS
       for ((i=0; i<${#pkgs[@]}; i++)); do
