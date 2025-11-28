@@ -1169,7 +1169,7 @@ while true; do
         RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)"
         PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
         ShowSystemApps="$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)"
-        AppUpdatesSource="(jq -r '.AppUpdatesSource' "$apkdlJson" 2>/dev/null)"
+        AppUpdatesSource="$(jq -r '.AppUpdatesSource' "$apkdlJson" 2>/dev/null)"
         options=(RmFileAfterInstallation PreReleasePatches "Add gh/ glab PAT (increases gh/ glab api rate limit)" AppUpdatesSource)
         if [ $isAndroid -eq 1 ] || { [ $isMacOS -eq 1 ] && [ -n "$cpuAbi" ]; }; then
           options+=(RipLocale RipDpi RipLib)
