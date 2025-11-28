@@ -282,7 +282,7 @@ gPlayApiAppsUpdates() {
 
   apps=()
   for ((i=0; i<${#pkgs[@]}; i++)); do
-    apps+=("${names[i]} (${pkgs[i]}) | ${installedVersions[i]} (${lastUpdateTimes[i]}) → ${versionNames[i]} (${lastUpdates[i]})")
+    [ "${installedVersions[i]}" != "${versionNames[i]}" ] && apps+=("${names[i]} (${pkgs[i]}) | ${installedVersions[i]} (${lastUpdateTimes[i]}) → ${versionNames[i]} (${lastUpdates[i]})")
   done
 }
 
