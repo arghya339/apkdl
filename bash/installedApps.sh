@@ -76,24 +76,26 @@ getUpdates() {
   not_exists_pnames=($(jq -r '.data[] | select(.exists == false) | .pname' <<< "$RESPONSE_JSON"))
   echo -e "$info total-apps: ${#packages[@]}\n$good found: ${#exists_pnames[@]}\n$notice not-found: ${#not_exists_pnames[@]}"
   
-  declare -a installVersions lastUpdates
+  declare -a installVersion lastUpdate
   for exists_pname in ${exists_pnames[@]}; do
     for ((i=0; i<${#packages[@]}; i++)); do
       if [ "$exists_pname" == "${packages[i]}" ]; then
-        versionName="${versionNames[i]}"
-        lastUpdateTime="${lastUpdateTimes[i]}"
+        versionNames="${versionNames[i]}"
+        lastUpdateTimes="${lastUpdateTimes[i]}"
         break
       fi
     done
-    installVersions+=("$versionName")
-    lastUpdates+=("$lastUpdateTime")
+    installVersion+=("$versionNames")
+    lastUpdate+=("$lastUpdateTimes")
   done
   
-  declare -a appNames releaseLinks developerNames releaseVersions releasePublishDates releaseWhatsNews
+  declare -a installVersions lastUpdates appNames releaseLinks developerNames releaseVersions releasePublishDates releaseWhatsNews
   for i in ${!exists_pnames[@]}; do
     echo -e "$running Processing $((i+1))/${#exists_pnames[@]}: ${exists_pnames[i]}"
     releaseVersion=$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .release.version" <<< "$RESPONSE_JSON")
-    if [ "$releaseVersion" != "${installVersions[i]}" ]; then
+    if [ "$releaseVersion" != "${installVersion[i]}" ]; then
+      installVersions+=(${installVersion[i]})
+      lastUpdates+=(${lastUpdate[i]})
       appNames[i]="$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .app.name" <<< "$RESPONSE_JSON")"
       releaseLinks[i]="https://apkmirror.com$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .release.link" <<< "$RESPONSE_JSON")"
       developerNames+=("$(jq -r ".data[] | select(.pname == \"${exists_pnames[i]}\") | .developer.name" <<< "$RESPONSE_JSON")")
