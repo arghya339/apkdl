@@ -303,7 +303,7 @@ gPlayApiShowUpdates() {
       versionCode="${versionCodes[selected]}"
       targetAPILevel=${targetAPILevels[selected]}
       installedVersionCode="${installedVersionCodes[selected]}"
-      GAME=$(awk -v p="${pkg}" '$0~p{f=1} f&&/53 \{/{i=1} i&&/1:/{gsub(/"/,"",$2);print $2;exit}' <<< "$bulkDetails")
+      GAME=$(awk -v p="${pkg}" '$0~"1: \""p"\""{f=1} $0~/1: "com\./&&$0!~p&&$0!~/gms|vending|play\.games/{f=0;i=0} f&&/53 \{/{i=1} i&&/1:/{gsub(/"/,"",$2);print $2;exit}' <<< "$bulkDetails")
       Files=("${pkg}")
       if [ -n "$GAME" ]; then
         Files+=("${pkg}")
