@@ -80,12 +80,13 @@ FDroidVersionsList() {
         versionCode="${versionCodes[selected]}"
         pkgNativeCode="${pkgNativeCodes[selected]}"
         APKdlSize="${APKdlSizes[selected]}"
+        APKdlSizeN=$(awk '{print $1}' <<< "$APKdlSize")
         #dlUrl="https://f-droid.org/repo/${pkg}_${versionCode}.apk"
         dlUrl="${APKdlUrls[selected]}"
         fileName="${appName}_v$versionName-$versionCode.apk"
         filePath="$Download/$fileName"
         echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
-        [ $APKdlSize -le 25 ] && dlFDroid || dlFDroid "aria2c"
+        [ $APKdlSizeN -le 25 ] && dlFDroid || dlFDroid "aria2c"
         return
       else
         return 1
