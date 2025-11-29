@@ -27,6 +27,7 @@ apkInstall() {
   elif [ "$apk_ext" == "xapk" ]; then
     isXAPK=1; isAPK=0; isAPKS=0
   fi
+  isGame=0
   if [ $isAPK -eq 0 ]; then
     bsdtar -tf "$outputAPK" --include='*.obb' >/dev/null 2>&1 && isGame=1 || isGame=0  # Check if APK contains OBB files (common in games)
     mkdir -p "$wo_ext"
