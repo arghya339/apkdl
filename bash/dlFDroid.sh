@@ -71,8 +71,14 @@ FDroidVersionsList() {
     mapfile -t APKdlUrls < <(jq -r '.[] | .children[]? | select(.class? == "package-version-download") | .children[]?.children[]?.href?' <<< "$responseJson" | grep "\.apk$")
     mapfile -t APKdlSizes < <(jq -r '.[] | .children[]? | select(.class? == "package-version-download") | .text' <<< "$responseJson" | grep -o '[0-9.]\+ MiB')
     declare -a versionsList
+    isSuggested=0
     for ((i=0; i<$versionsCount; i++)); do
-      versionsList+=("${versionNames[i]} (${versionCodes[i]}) | ${pkgNativeCodes[i]} | ${pkgVersionRequirement[i]} | ${APKdlSizes[i]} | ${addedDates[i]}")
+      if [ "${pkgNativeCodes[i]}" == "$cpuAbi" ] && [ $isSuggested -eq 0 ]; then
+        versionsList+=("${versionNames[i]} (${versionCodes[i]}) suggested | ${pkgNativeCodes[i]} | ${pkgVersionRequirement[i]} | ${APKdlSizes[i]} | ${addedDates[i]}")
+        isSuggested=1
+      else
+        versionsList+=("${versionNames[i]} (${versionCodes[i]}) | ${pkgNativeCodes[i]} | ${pkgVersionRequirement[i]} | ${APKdlSizes[i]} | ${addedDates[i]}")
+      fi
     done
     buttons=("<Select>" "<Back>")
       if menu versionsList buttons; then
