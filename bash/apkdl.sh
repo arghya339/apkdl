@@ -788,7 +788,7 @@ clearAppCaches() {
 
 declare -a apps applications
 while true; do
-  options=(PlayStore GitHub GitLab APKMirror Uptodown APKPure ReVanced RVX)
+  options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure ReVanced RVX)
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
     options+=(clearAppCaches)
   fi
@@ -888,6 +888,23 @@ while true; do
       fi
       echo; read -p "Press Enter to continue..."
       { [[ $isMacOS -eq 1 && ( "$ext" == "dmg" || "$ext" == "pkg" ) && $RmFileAfterInstallation -eq 1 ]]; } && rm -f "$filePath"
+      ;;
+    F-Droid)
+      curl -sL -o "$apkdl/dlFDroid.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlFDroid.sh"
+      source $apkdl/dlFDroid.sh
+
+      FDroidSearch
+      [ $? -ne 0 ] && continue
+
+      FDroidVersionsList
+      if [ $? -eq 0 ]; then
+        buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+        if [ "$opt" == "Yes" ]; then
+          [ -n "$serial" ] && adbInstall "$filePath"
+          [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+        fi
+        echo; read -p "Press Enter to continue..."
+      fi
       ;;
     APKMirror)
       curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"

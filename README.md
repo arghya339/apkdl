@@ -13,6 +13,7 @@ apk downloader
 - [PlayStore](https://play.google.com/store/apps/)
 - [GitHub](https://github.com/)
 - [GitLab](https://gitlab.com/)
+- [F-Droid](https://f-droid.org/)
 - [APKMirror](https://apkmirror.com/)
 - [Uptodown](https://en.uptodown.com/)
 - [APKPure](https://apkpure.com/)
