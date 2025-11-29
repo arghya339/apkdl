@@ -1112,7 +1112,7 @@ while true; do
         gPlayApiShowUpdates
         [ $? -ne 0 ] && continue
 
-        gPlayApiDownloadApp
+        gPlayApiDownloadApp "1"
         if [ $? -eq 0 ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
