@@ -11,11 +11,11 @@ apk downloader
 
 ## Supported source
 - [PlayStore](https://play.google.com/store/apps/)
-- [github.com](https://github.com/)
-- [gitlab.com](https://gitlab.com/)
-- [apkmirror.com](https://apkmirror.com/)
-- [uptodown.com](https://en.uptodown.com/)
-- [apkpure.com](https://apkpure.com/)
+- [GitHub](https://github.com/)
+- [GitLab](https://gitlab.com/)
+- [APKMirror](https://apkmirror.com/)
+- [Uptodown](https://en.uptodown.com/)
+- [APKPure](https://apkpure.com/)
 - [ReVanced](https://revanced.app/)
 - [RVX](https://github.com/inotia00/revanced-patches/)
 

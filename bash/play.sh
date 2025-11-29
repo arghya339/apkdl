@@ -72,7 +72,7 @@ detailsList() {
   local rawProto="${1}"
   declare -g -a pkgs  # declares empty global array
   pkgs=($(grep -o 'doc=[^"&]*' <<< "$rawProto" | cut -d= -f2 | awk '!seen[$0]++'))
-  declare -g -a names offeredBys offerTypes versionCodes versionNames downloadSizes downloads lastUpdates categorys containsAds dlCountsShorts starRatings contentRatings shortDescriptions
+  declare -g -a names offeredBys offerTypes appIconUrls versionCodes versionNames downloadSizes downloads lastUpdates targetAPILevels categorys containsAds dlCountsShorts starRatings contentRatings shortDescriptions
   for ((i=0; i<${#pkgs[@]}; i++)); do
     name=$(grep -A 10 "${pkgs[i]}" <<< "$rawProto" | grep -m 1 '5: "' | cut -d'"' -f2)
     [ -n "$name" ] && names+=("$name") || names+=("N/A")
@@ -80,6 +80,8 @@ detailsList() {
     [ -n "$offeredBy" ] && offeredBys+=("$offeredBy") || offeredBys+=("N/A")
     offerType=$(grep -A 20 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '8 {' | grep -m 1 '8:' | tr -d ' ' | cut -d':' -f2)
     [ -n "$offerType" ] && offerTypes+=($offerType) || offerTypes+=("N/A")
+    appIconUrl=$(awk -v p="${pkgs[i]}" '$0~"1: \""p"\""{f=1} /1: ".*"/&&!($0~p){f=0} f&&/10 \{/{b=1;i=0} f&&b&&/1: 4/{i=1} f&&i&&/5: "/{gsub(/.*5: "|"[[:space:]]*$/,"");print;exit}' <<< "$rawProto")
+    [ -n "$appIconUrl" ] && appIconUrls+=("$appIconUrl") || appIconUrls+=("N/A")
     versionCode=$(grep -A 200 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '13 {' | grep -A 2 '1 {' | grep -m 1 '3:' | tr -d ' ' | cut -d':' -f2)
     [ -n "$versionCode" ] && versionCodes+=("$versionCode") || versionCodes+=("N/A")
     versionName=$(grep -A 300 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '13 {' | grep -m 1 '4: "' | cut -d'"' -f2)
@@ -90,6 +92,8 @@ detailsList() {
     [ -n "$download" ] && downloads+=("$download") || downloads+=("N/A")
     lastUpdate=$(grep -A 600 "${pkgs[i]}" <<< "$rawProto" | grep -A 50 '13 {' | grep -m 1 '16: "' | cut -d'"' -f2)
     [ -n "$lastUpdate" ] && lastUpdates+=("$lastUpdate") || lastUpdates+=("N/A")
+    targetAPILevel=$(awk -v p="${pkgs[i]}" '$0~"1: \""p"\""{f=1} f&&/13 \{/{b=1} f&&b&&/32:/{print $2;exit}' <<< "$rawProto")
+    [ -n "$targetAPILevel" ] && targetAPILevels+=("$targetAPILevel") || targetAPILevels+=("N/A")
     category=$(grep -A 800 "${pkgs[i]}" <<< "$rawProto" | grep -A 100 '13 {' | grep -m 1 '48: "' | cut -d'"' -f2)
     [ -n "$category" ] && categorys+=("$category") || categorys+=("N/A")
     containAds=$(grep -A 800 "${pkgs[i]}" <<< "$rawProto" | sed '/14 {/q' | grep '30: "' | cut -d'"' -f2)
@@ -200,6 +204,7 @@ gPlayApiAppDetails() {
   dlCountShort=$(awk -F'"' '/ *61: "/ {print $2; exit}' <<< "$details")  # dlCountShort
   [ -z "$dlCountShort" ] && dlCountShort=$(awk -F'"' '/ *77: "/ {print $2; exit}' <<< "$details")
   lastUpdates=$(awk -F'"' '/ *64 \{/ { in_block=1 }in_block && / *1: "/ { print $2; exit }' <<< "$details")  # lastUpdates
+  targetAPILevel=$(grep -A 100 "13 {" <<< "$details" | grep -m 1 "32:" | awk '{print $2}')  # targetAPILevel
   #awk '/ *9 \{/ { in_cat=1; depth=0; next } in_cat { if ($0 ~ /\{/) depth++; if ($0 ~ /\}/) { if (depth == 0) in_cat=0; else depth-- } if (depth == 1 && $0 ~ / *1: "/) { s=$0; sub(/.*1: "/, "", s); sub(/"$/, "", s); print s } }' <<< "$details"  # catagoryTagName
   InAppPurchases=$(awk '/ *67: "/ { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print s }' <<< "$details")  # In-AppProductPriceRange
   downloadSize=$(awk '/13 \{/{a=1} a && /1 \{/{b=1} a && b && /9:/{print $2; exit}' <<< "$details")  # downloadSize
@@ -293,7 +298,9 @@ gPlayApiShowUpdates() {
   if menu "apps" "buttons"; then
     pkg="${pkgs[selected]}"
     offerType=${offerTypes[selected]}
+    appIconUrl="${appIconUrls[selected]}"
     versionCode="${versionCodes[selected]}"
+    targetAPILevel=${targetAPILevels[selected]}
     installedVersionCode="${installedVersionCodes[selected]}"
     return
   else

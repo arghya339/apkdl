@@ -1114,6 +1114,13 @@ while true; do
 
         gPlayApiDownloadApp
         if [ $? -eq 0 ]; then
+          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+          if [ "$opt" == "Yes" ]; then
+            [ -n "$serial" ] && adbInstall "$filePath"
+            [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+          else
+            [ "$apk_ext" == "apks" ] && APKS2APK && sign "${filePath%.*}.apk"
+          fi
           echo; read -p "Press Enter to continue..."
         fi
       else
