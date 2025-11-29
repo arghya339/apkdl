@@ -287,9 +287,9 @@ gPlayApiAppsUpdates() {
     lastUpdateTimes+=("$lastUpdateTime")
   done
 
-  apps=()
+  declare -g -a pnames apps
   for ((i=0; i<${#pkgs[@]}; i++)); do
-    [ "${installedVersionCodes[i]}" -lt "${versionCodes[i]}" ] && apps+=("${names[i]} (${pkgs[i]}) | ${installedVersions[i]} (${lastUpdateTimes[i]}) → ${versionNames[i]} (${lastUpdates[i]})")
+    [ "${installedVersionCodes[i]}" -lt "${versionCodes[i]}" ] && { pnames+=(${pkgs[i]}); apps+=("${names[i]} (${pkgs[i]}) | ${installedVersions[i]} (${lastUpdateTimes[i]}) → ${versionNames[i]} (${lastUpdates[i]})"); }
   done
 }
 
@@ -297,7 +297,7 @@ gPlayApiShowUpdates() {
   buttons=("<Select>" "<Back>")
   if [ ${#apps[@]} -ge 1 ]; then
     if menu "apps" "buttons"; then
-      pkg="${pkgs[selected]}"
+      pkg="${pnames[selected]}"
       offerType=${offerTypes[selected]}
       appIconUrl="${appIconUrls[selected]}"
       versionCode="${versionCodes[selected]}"
