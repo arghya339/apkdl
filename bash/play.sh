@@ -309,10 +309,10 @@ gPlayApiShowUpdates() {
         Files+=("${pkg}")
         ext="obb"
       else
-        Files+=(awk -v p="${pkg}" -F'"' '$0~"1: \""p"\""{f=1} $0~/1: "com\./&&$0!~p&&$0!~/gms|vending/{f=0} / *17 \{/{b=1} / *}/{b=0} f&&b&&/ *4: "/{print $2}' <<< "$bulkDetails")
+        Files+=($(awk -v p="${pkg}" -F'"' '$0~"1: \""p"\""{f=1} $0~/1: "com\./&&$0!~p&&$0!~/gms|vending/{f=0} / *17 \{/{b=1} / *}/{b=0} f&&b&&/ *4: "/{print $2}' <<< "$bulkDetails"))
         ext="apk"
       fi
-      filesSize=$(awk -v p="${pkg}" '$0~"1: \""p"\""{f=1} $0~/1: "com\./&&$0!~p&&$0!~/gms|vending/{f=0} /17 \{/{b=1} /}/{b=0} f&&b&&/3:/{print $2}' <<< "$bulkDetails")
+      filesSize=($(awk -v p="${pkg}" '$0~"1: \""p"\""{f=1} $0~/1: "com\./&&$0!~p&&$0!~/gms|vending/{f=0} /17 \{/{b=1} /}/{b=0} f&&b&&/3:/{print $2}' <<< "$bulkDetails"))
       filenames=("${Files[0]}.${versionCode}.apk")
       for ((i=1; i<${#Files[@]}; i++)); do
         filenames+=(${Files[i]}.${versionCode}.$ext)
