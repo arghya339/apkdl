@@ -290,7 +290,7 @@ gPlayApiAppsUpdates() {
   declare -g -a anames pnames otypes appicons vnames vcodes targetapis ivcodes apps
   for ((i=0; i<${#pkgs[@]}; i++)); do
     if [ "${installedVersionCodes[i]}" -lt "${versionCodes[i]}" ]; then
-      anames+=(${names[i]})
+      anames+=("${names[i]}")
       pnames+=(${pkgs[i]})
       otypes+=(${offerTypes[i]})
       appicons+=(${appIconUrls[i]})
