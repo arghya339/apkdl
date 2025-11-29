@@ -295,14 +295,18 @@ gPlayApiAppsUpdates() {
 
 gPlayApiShowUpdates() {
   buttons=("<Select>" "<Back>")
-  if menu "apps" "buttons"; then
-    pkg="${pkgs[selected]}"
-    offerType=${offerTypes[selected]}
-    appIconUrl="${appIconUrls[selected]}"
-    versionCode="${versionCodes[selected]}"
-    targetAPILevel=${targetAPILevels[selected]}
-    installedVersionCode="${installedVersionCodes[selected]}"
-    return
+  if [ ${#apps[@]} -ge 1 ]; then
+    if menu "apps" "buttons"; then
+      pkg="${pkgs[selected]}"
+      offerType=${offerTypes[selected]}
+      appIconUrl="${appIconUrls[selected]}"
+      versionCode="${versionCodes[selected]}"
+      targetAPILevel=${targetAPILevels[selected]}
+      installedVersionCode="${installedVersionCodes[selected]}"
+      return
+    else
+      return 1
+    fi
   else
     return 1
   fi
