@@ -287,12 +287,14 @@ gPlayApiAppsUpdates() {
     lastUpdateTimes+=("$lastUpdateTime")
   done
 
-  declare -g -a pnames otypes appicons vcodes targetapis ivcodes apps
+  declare -g -a anames pnames otypes appicons vnames vcodes targetapis ivcodes apps
   for ((i=0; i<${#pkgs[@]}; i++)); do
     if [ "${installedVersionCodes[i]}" -lt "${versionCodes[i]}" ]; then
+      anames+=(${names[i]})
       pnames+=(${pkgs[i]})
       otypes+=(${offerTypes[i]})
       appicons+=(${appIconUrls[i]})
+      vnames+=(${versionNames[i]})
       vcodes+=(${versionCodes[i]})
       targetapis+=(${targetAPILevels[i]})
       ivcodes+=(${installedVersionCodes[i]})
@@ -305,9 +307,11 @@ gPlayApiShowUpdates() {
   buttons=("<Select>" "<Back>")
   if [ ${#apps[@]} -ge 1 ]; then
     if menu "apps" "buttons"; then
+      appName="${anames[selected]}"
       pkg="${pnames[selected]}"
       offerType=${otypes[selected]}
       appIconUrl="${appicons[selected]}"
+      versionName="${vnames[selected]}"
       versionCode="${vcodes[selected]}"
       targetAPILevel=${targetapis[selected]}
       installedVersionCode="${ivcodes[selected]}"
