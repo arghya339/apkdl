@@ -287,9 +287,17 @@ gPlayApiAppsUpdates() {
     lastUpdateTimes+=("$lastUpdateTime")
   done
 
-  declare -g -a pnames apps
+  declare -g -a pnames otypes appicons vcodes targetapis ivcodes apps
   for ((i=0; i<${#pkgs[@]}; i++)); do
-    [ "${installedVersionCodes[i]}" -lt "${versionCodes[i]}" ] && { pnames+=(${pkgs[i]}); apps+=("${names[i]} (${pkgs[i]}) | ${installedVersions[i]} (${lastUpdateTimes[i]}) → ${versionNames[i]} (${lastUpdates[i]})"); }
+    if [ "${installedVersionCodes[i]}" -lt "${versionCodes[i]}" ]; then
+      pnames+=(${pkgs[i]})
+      otypes+=(${offerTypes[i]})
+      appicons+=(${appIconUrls[i]})
+      vcodes+=(${versionCodes[i]})
+      targetapis+=(${targetAPILevels[i]})
+      ivcodes+=(${installedVersionCodes[i]})
+      apps+=("${names[i]} (${pkgs[i]}) | ${installedVersions[i]} (${lastUpdateTimes[i]}) → ${versionNames[i]} (${lastUpdates[i]})")
+    fi
   done
 }
 
@@ -298,11 +306,11 @@ gPlayApiShowUpdates() {
   if [ ${#apps[@]} -ge 1 ]; then
     if menu "apps" "buttons"; then
       pkg="${pnames[selected]}"
-      offerType=${offerTypes[selected]}
-      appIconUrl="${appIconUrls[selected]}"
-      versionCode="${versionCodes[selected]}"
-      targetAPILevel=${targetAPILevels[selected]}
-      installedVersionCode="${installedVersionCodes[selected]}"
+      offerType=${otypes[selected]}
+      appIconUrl="${appicons[selected]}"
+      versionCode="${vcodes[selected]}"
+      targetAPILevel=${targetapis[selected]}
+      installedVersionCode="${ivcodes[selected]}"
       GAME=$(awk -v p="${pkg}" '$0~"1: \""p"\""{f=1} $0~/1: "com\./&&$0!~p&&$0!~/gms|vending|play\.games/{f=0;i=0} f&&/53 \{/{i=1} i&&/1:/{gsub(/"/,"",$2);print $2;exit}' <<< "$bulkDetails")
       Files=("${pkg}")
       if [ -n "$GAME" ]; then
