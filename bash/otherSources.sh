@@ -99,4 +99,16 @@ IzzyOnDroidSearch() {
     return 1
   fi
 }; IzzyOnDroidSearch
+
+dlAppGallery() {
+  while true; do read -r -p ">> Enter appId: " appId; [[ "$appId" =~ ^[Qq] ]] && appId=; break; [ -n "$appId" ] && break || echo -e "$notice Please enter a valid appId!"; done
+  if [ -n "$appId" ]; then
+    dlUrl=$(curl -s -D - -o /dev/null "https://appgallery.cloud.huawei.com/appdl/$appId" | grep -i "location:" | head -1 | sed 's/location: //i' | tr -d '\r')  # make GET request but only show response headers
+    fileName=$(echo "$dlUrl" | sed 's/.*\///; s/\?.*//')  # extract everything between last / and ?
+    filePath="$Download/$fileName"
+    return
+  else
+    return 1
+  fi
+}; dlAppGallery #C101184875
 ###############################################################################################################################################################################################################
