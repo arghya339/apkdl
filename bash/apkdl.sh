@@ -788,7 +788,7 @@ clearAppCaches() {
 
 declare -a apps applications
 while true; do
-  options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure ReVanced RVX)
+  options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced RVX)
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
     options+=(clearAppCaches)
   fi
@@ -1015,6 +1015,10 @@ while true; do
         fi
         echo; read -p "Press Enter to continue..."
       fi
+      ;;
+    otherSources)
+      curl -sL -o "$apkdl/otherSources.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/otherSources.sh"
+      source $apkdl/otherSources.sh
       ;;
     ReVanced)
       curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
