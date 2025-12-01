@@ -113,4 +113,66 @@ dlAppGallery() {
     return 1
   fi
 }; dlAppGallery #C101184875
+
+sf() {
+  sfDomain="https://sourceforge.net"
+  while true; do read -r -p ">> Enter projectName: " projectName; [[ "$projectName" =~ ^[Qq] ]] && projectName=; break; [ -n "$projectName" ] && break || echo -e "$notice Please enter a valid projectName!"; done
+  if [ -n "$projectName" ]; then
+    #$sfDomain/projects/$projectName/rss?path=/
+    baseUrl="$sfDomain/projects"
+    filesUrl="$baseUrl/$projectName/files"
+    while true; do
+      filesHtml=$(curl -sL "$filesUrl")
+      filesJson=$(pup '#files_list tbody tr[class^="folder"], #files_list tbody tr[class^="file"] json{}' <<< "$filesHtml")
+
+      filesTitle=($(jq -r '.[].title' <<< "$filesJson"))
+      filesUrls=($(jq -r '.[].children[0].children[0].href' <<< "$filesJson"))
+      fileTypes=($(jq -r '.[].class' <<< "$filesJson"))
+      mapfile -t modifiedTime < <(jq -r '.[].children[1].children[0].title' <<< "$filesJson")
+      downloadsCount=($(jq -r '.[] | .children[3].children[1].children[0].children[0].text? // .children[3].children[1].children[0].text? // "0"' <<< "$filesJson"))
+      parentFolder=$(pup '#parent_folder a attr{href}' <<< "$filesHtml")
+      
+      [ -n "$parentFolder" ] && items=("Parent folder") || items=()
+      for ((i=0; i<${#filesTitle[@]}; i++)); do
+        items+=("${filesTitle[i]} | ${fileTypes[i]} | ${modifiedTime[i]} | ${downloadsCount[i]}")
+      done
+
+      buttons=("<Select>" "<Back>")
+      if menu items buttons; then
+        if [ "${items[selected]}" == "Parent folder" ]; then
+          filesUrl="$(dirname "$filesUrl")/"
+          echo -e "parentFolderUrl: ${Blue}$filesUrl${Reset}"
+          continue
+        else
+          if [ -n "$parentFolder" ]; then
+            fileTitle="${filesTitle[$((selected-1))]}"
+            fileType="${fileTypes[$((selected-1))]}"
+            filesUrl="${filesUrls[$((selected-1))]}"
+          else
+            fileTitle="${filesTitle[selected]}"
+            fileType="${fileTypes[selected]}"
+            filesUrl="${filesUrls[selected]}"
+          fi
+          if [ "$fileType" == "file" ]; then
+            fileSize=$(jq --arg filename "$fileTitle" -r '.[] | select(.title == $filename) | .children[2].text' <<< "$filesJson")
+            dlUrl="$filesUrl"
+            fileName="$fileTitle"
+            filePath="$Download/$filePath"
+            echo -e "fileSize: $fileSize\ndlUrl: ${Blue}$dlUrl${Reset}\nfileName: $fileName"
+            return
+            break
+          else
+            filesUrl="$sfDomain/$filesUrl"
+            echo -e "folderUrl: ${Blue}$filesUrl${Reset}"
+            continue
+          fi
+        fi
+      else
+        return 1
+      fi
+    done
+  else
+    return 1
+  fi
+}; sf
 ###############################################################################################################################################################################################################
