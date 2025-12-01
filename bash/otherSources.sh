@@ -175,4 +175,88 @@ sf() {
     return 1
   fi
 }; sf
+
+APKComboVariants() {
+  variantsJson=$(curl -sL "$versionUrl" | pup '#variants-tab json{}') #> variants.json
+  mapfile -t versionNames < <(jq -r '.[] | .. | select(.class? == "vername") | .text' <<< "$variantsJson")
+  mapfile -t versionNamesN < <(jq -r '.[] | .. | select(.class? == "vername") | .text | match("[0-9.]+")?.string' <<< "$variantsJson")
+  mapfile -t versionCodes < <(jq -r '.[] | .. | select(.class? == "vercode") | .text | gsub("[()]"; "")' <<< "$variantsJson")
+  archs=($(jq -r '.[] | .children[]? | select(.class == "tree") | ((.. | objects | select(.tag? == "code") | .text) as $arch | .. | objects | select(.class == "file-list") | .children[] | $arch)' <<< "$variantsJson"))
+  mapfile -t minsdks < <(jq -r '.. | select(.text? | strings | test("Android")) | .text' <<< "$variantsJson")
+  mapfile -t dpis < <(jq -r '.. | select(.text? | strings | test("dpi")) | .text' <<< "$variantsJson")
+  vtypes=($(jq -r '.. | select(.class? == "vtype") | .children[0].text' <<< "$variantsJson"))
+  mapfile -t ltrs < <(jq -r '.. | select(.class? == "spec ltr") | .text' <<< "$variantsJson")
+  dlUrls=($(jq --arg domain "$baseUrl" -r '.. | select(.tag? == "a" and .class? == "variant") | $domain + .href' <<< "$variantsJson"))
+  declare -a variantsList
+  for ((i=0; i<${#versionNames[@]}; i++)); do
+    variantsList+=("${versionNamesN[i]} (${versionCodes[i]}) | ${minsdks[i]} | ${archs[i]} | ${dpis[i]} | ${vtypes[i]} | ${ltrs[i]}")
+  done
+  buttons=("<Select>" "<Back>")
+  if menu variantsList buttons; then
+    dlUrl="${dlUrls[selected]}"
+    echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
+    return
+  else
+    return 1
+  fi
+}
+
+APKComboVersions() {
+  oldVersionsUrl="${appUrl}old-versions/"
+  versionsJson=$(curl -sL "$oldVersionsUrl" | pup 'ul.list-versions li json{}') #> versions.json
+  mapfile -t versions < <(jq -r '.[].children[0].children[1].children[0].children[0].text' <<< "$versionsJson")
+  mapfile -t versionsN < <(jq -r '.[].children[0].children[1].children[0].children[0].text | match("[0-9.]+")?.string' <<< "$versionsJson")
+  fileTypes=($(jq -r '.[].children[0].children[1].children[0].children[1].children[0].text' <<< "$versionsJson"))
+  mapfile -t dates < <(jq -r '.[].children[0].children[1].children[1].text | split(" · ")[0]' <<< "$versionsJson")
+  mapfile -t minAndroids < <(jq -r '.[].children[0].children[1].children[1].text | split(" · ")[1]' <<< "$versionsJson")
+  versionsUrl=($(jq --arg domain "$baseUrl" -r '$domain + .[].children[0].href' <<< "$versionsJson"))
+  declare -a versionsList
+  for ((i=0; i<${#versions[@]}; i++)); do
+    versionsList+=("${versionsN[i]} | ${minAndroids[i]} | ${fileTypes[i]} | ${dates[i]}")
+  done
+  buttons=("<Select>" "<Back>")
+  if menu versionsList buttons; then
+    versionUrl="${versionsUrl[selected]}"
+    echo -e "versionUrl: ${Blue}$versionUrl${Reset}"
+    APKComboVariants
+    return
+  else
+    return 1
+  fi
+}
+
+APKComboSearch() {
+  baseUrl="https://apkcombo.com"
+  while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
+  if [ -n "$appName" ]; then
+    app_name=$(echo "$appName" | sed 's/ /-/g')
+    #https://suggestv2.apkcombo.org/search?q=instagram
+    searchUrl="$baseUrl/search/$app_name"
+    searchJson=$(curl -sL "$searchUrl" | pup 'a.l_item json{}') #> search.json
+    totalApps=$(jq 'length' <<< "$searchJson")
+    mapfile -t appNames < <(jq -r '.[].children[1].children[0].text' <<< "$searchJson")  # appName
+    mapfile -t developers < <(jq -r '.[].children[1].children[1].text | split("·")[0]' <<< "$searchJson")  # developer
+    mapfile -t categorys < <(jq -r '.[].children[1].children[1].text | split("·")[1]' <<< "$searchJson")  # category
+    mapfile -t dlCounts < <(jq -r '.[].children[1].children[2].children[0].text' <<< "$searchJson")  # dlCounts
+    mapfile -t ratings < <(jq -r '.[].children[1].children[2].children[1].text' <<< "$searchJson")  # ratings
+    mapfile -t dlSizes < <(jq -r '.[].children[1].children[2].children[2].text' <<< "$searchJson")  # dlSizes
+    pkgs=($(jq -r '.[].href | split("/")[2]' <<< "$searchJson"))  # pkgname
+    appUrls=($(jq --arg domain "$baseUrl" -r '$domain + .[].href' <<< "$searchJson"))  # appUrl
+    declare -a appsList
+    for ((i=0; i<${totalApps}; i++)); do
+      appsList+=("${appNames[i]} | ${developers[i]} | ${dlCounts[i]} | ${ratings[i]} | ${dlSizes[i]}")
+    done
+    buttons=("<Select>" "<Back>")
+    if menu appsList buttons; then
+      appUrl="${appUrls[selected]}"
+      echo -e "appUrl: ${Blue}$appUrl${Reset}"
+      APKComboVersions
+      return
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}; APKComboSearch
 ###############################################################################################################################################################################################################
