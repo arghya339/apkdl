@@ -1,6 +1,6 @@
 #!/bin/bash
 
-oidPackagesIndex() {
+iodPackagesIndex() {
   #$baseUrl/fdroid/index/apk/$pkg
   packagesJson=$(curl -sL "$baseUrl/fdroid/api/v1/packages/$pkg")
   mapfile -t versionNames < <(jq -r '.packages[].versionName' <<< "$packagesJson")
@@ -81,7 +81,7 @@ IzzyOnDroidSearch() {
           sourceUrl=${sourceUrls[selected]}
           if [ "$repo" == "iod" ]; then
             echo -e "sourceUrl: $sourceUrl\npkgName: $pkg"
-            oidPackagesIndex
+            iodPackagesIndex
           else
             echo -e "dlUrl: ${Blue}$dlUrl${Reset}\nsourceUrl: $sourceUrl\npkgName: $pkg"
             fileName="${appName}_v$versionName-$versionCode.apk"
@@ -144,15 +144,10 @@ sf() {
           echo -e "parentFolderUrl: ${Blue}$filesUrl${Reset}"
           continue
         else
-          if [ -n "$parentFolder" ]; then
-            fileTitle="${filesTitle[$((selected-1))]}"
-            fileType="${fileTypes[$((selected-1))]}"
-            filesUrl="${filesUrls[$((selected-1))]}"
-          else
-            fileTitle="${filesTitle[selected]}"
-            fileType="${fileTypes[selected]}"
-            filesUrl="${filesUrls[selected]}"
-          fi
+          [ -n "$parentFolder" ] && selected=$((selected-1))
+          fileTitle="${filesTitle[selected]}"
+          fileType="${fileTypes[selected]}"
+          filesUrl="${filesUrls[selected]}"
           if [ "$fileType" == "file" ]; then
             fileSize=$(jq --arg filename "$fileTitle" -r '.[] | select(.title == $filename) | .children[2].text' <<< "$filesJson")
             dlUrl="$filesUrl"
@@ -177,7 +172,7 @@ sf() {
 }; sf
 
 APKComboVariants() {
-  variantsJson=$(curl -sL "$versionUrl" | pup '#variants-tab json{}') #> variants.json
+  variantsJson=$(curl -sL --doh-url "$cloudflareDOH" "$versionUrl" | pup '#variants-tab json{}') #> variants.json
   mapfile -t versionNames < <(jq -r '.[] | .. | select(.class? == "vername") | .text' <<< "$variantsJson")
   mapfile -t versionNamesN < <(jq -r '.[] | .. | select(.class? == "vername") | .text | match("[0-9.]+")?.string' <<< "$variantsJson")
   mapfile -t versionCodes < <(jq -r '.[] | .. | select(.class? == "vercode") | .text | gsub("[()]"; "")' <<< "$variantsJson")
@@ -203,7 +198,7 @@ APKComboVariants() {
 
 APKComboVersions() {
   oldVersionsUrl="${appUrl}old-versions/"
-  versionsJson=$(curl -sL "$oldVersionsUrl" | pup 'ul.list-versions li json{}') #> versions.json
+  versionsJson=$(curl -sL --doh-url "$cloudflareDOH" "$oldVersionsUrl" | pup 'ul.list-versions li json{}') #> versions.json
   mapfile -t versions < <(jq -r '.[].children[0].children[1].children[0].children[0].text' <<< "$versionsJson")
   mapfile -t versionsN < <(jq -r '.[].children[0].children[1].children[0].children[0].text | match("[0-9.]+")?.string' <<< "$versionsJson")
   fileTypes=($(jq -r '.[].children[0].children[1].children[0].children[1].children[0].text' <<< "$versionsJson"))
@@ -232,7 +227,7 @@ APKComboSearch() {
     app_name=$(echo "$appName" | sed 's/ /-/g')
     #https://suggestv2.apkcombo.org/search?q=instagram
     searchUrl="$baseUrl/search/$app_name"
-    searchJson=$(curl -sL "$searchUrl" | pup 'a.l_item json{}') #> search.json
+    searchJson=$(curl -sL --doh-url "$cloudflareDOH" "$searchUrl" | pup 'a.l_item json{}') #> search.json
     totalApps=$(jq 'length' <<< "$searchJson")
     mapfile -t appNames < <(jq -r '.[].children[1].children[0].text' <<< "$searchJson")  # appName
     mapfile -t developers < <(jq -r '.[].children[1].children[1].text | split("·")[0]' <<< "$searchJson")  # developer
