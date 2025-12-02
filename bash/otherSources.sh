@@ -254,4 +254,178 @@ APKComboSearch() {
     return 1
   fi
 }; APKComboSearch
+
+aptoideSearch() {
+  # baseUrl: https://github.com/Aptoide/aptoide-client-v8/blob/master/gradle.properties#L31 + https://github.com/Aptoide/aptoide-client-v8/blob/master/gradle.properties#L26 | https + ws75.aptoide.com
+  # apiUrl: baseUrl + https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/V7.java | https://ws75.aptoide.com + /api/7/ 
+  aptoideApi="https://ws75.aptoide.com/api/7"
+  # src: https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/ListSearchAppsRequest.java
+  aptoideSearchAPI="$aptoideApi/listSearchApps"
+  while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
+  if [ -n "$appName" ]; then
+    app_name=$(echo "$appName" | sed 's/ /-/g')
+    searchJson=$(curl -sL "$aptoideSearchAPI?query=$app_name")
+    appsCount=$(jq -r '.datalist.count' <<< "$searchJson")
+    appsId=($(jq -r '.datalist.list.[].id' <<< "$searchJson"))
+    mapfile -t appNames < <(jq -r '.datalist.list.[].name' <<< "$searchJson")
+    packages=($(jq -r '.datalist.list.[].package' <<< "$searchJson"))
+    sizes=($(jq -r '.datalist.list.[].size' <<< "$searchJson"))
+    icons=($(jq -r '.datalist.list.[].icon' <<< "$searchJson"))
+    mapfile -t addedTimes < <(jq -r '.datalist.list.[].added' <<< "$searchJson")
+    mapfile -t modifiedTimes < <(jq -r '.datalist.list.[].modified' <<< "$searchJson")
+    mapfile -t updatedTimes < <(jq -r '.datalist.list.[].updated' <<< "$searchJson")
+    developerIds=($(jq -r '.datalist.list.[].developer.id' <<< "$searchJson"))
+    mapfile -t developerNames < <(jq -r '.datalist.list.[].developer.name' <<< "$searchJson")
+    mapfile -t vernames < <(jq -r '.datalist.list.[].file.vername' <<< "$searchJson")
+    vercodes=($(jq -r '.datalist.list.[].file.vercode' <<< "$searchJson"))
+    md5sums=($(jq -r '.datalist.list.[].file.md5sum' <<< "$searchJson"))  # file integrity
+    filesizes=($(jq -r '.datalist.list.[].file.filesize' <<< "$searchJson"))
+    sha1s=($(jq -r '.datalist.list.[].file.signature.sha1' <<< "$searchJson"))  # file signature
+    mapfile -t owners < <(jq -r '.datalist.list.[].file.signature.owner' <<< "$searchJson")  # signature owner
+    paths=($(jq -r '.datalist.list.[].file.path' <<< "$searchJson"))
+    malwareRanks=($(jq -r '.datalist.list.[].file.malware.rank' <<< "$searchJson"))
+    downloads=($(jq -r '.datalist.list.[].stats.pdownloads' <<< "$searchJson"))
+    avgRatings=($(jq -r '.datalist.list.[].stats.prating.avg' <<< "$searchJson"))
+    totalRatings=($(jq -r '.datalist.list.[].stats.prating.total' <<< "$searchJson"))
+    mapfile -t obbs < <(jq -r '.datalist.list.[].obb' <<< "$searchJson")
+    appsList=()
+    for ((i=0; i<$appsCount; i++)); do
+      Trusted=
+      [ "${malwareRanks[i]}" == "TRUSTED" ] && Trusted="✔" || Trusted="✘"
+      appsList+=("${appNames[i]} | ⚒ ${developerNames[i]} | ${downloads[i]}↓ | ${avgRatings[i]}★ | ⬆ ${totalRatings[i]} | $Trusted")
+    done
+    buttons=("<Select>" "<Back>")
+    if menu appsList buttons; then
+      appId="${appsId[selected]}"
+      appName="${appNames[selected]}"
+      echo "appName: $appName"
+      return
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}; aptoideSearch
+
+aptoideListAppVersions() {
+  # src: https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/listapps/ListAppVersionsRequest.java
+  aptoideListAppVersionsAPI="$aptoideApi/listAppVersions"
+  listAppVersionsJson=$(curl -sL "$aptoideListAppVersionsAPI/app_id=$appId" | jq -r '.list.[]') #> listAppVersions.json
+  fileIds=($(jq -r '.id' <<< "$listAppVersionsJson"))
+  mapfile -t vernames < <(jq -r '.file.vername' <<< "$listAppVersionsJson")
+  vercodes=($(jq -r '.file.vercode' <<< "$listAppVersionsJson"))
+  md5sums=($(jq -r '.file.md5sum' <<< "$listAppVersionsJson"))
+  filesizes=($(jq -r '.file.filesize' <<< "$listAppVersionsJson"))
+  mapfile -t addeds < <(jq -r '.file.added' <<< "$listAppVersionsJson")
+  malwareRanks=($(jq -r '.file.malware.rank' <<< "$listAppVersionsJson"))
+  sdks=($(jq -r '.file.hardware.sdk' <<< "$listAppVersionsJson"))
+  mapfile -t screens < <(jq -r '.file.hardware.screen' <<< "$listAppVersionsJson")
+  mapfile -t cpus < <(jq -r '.file.hardware.cpus.[]' <<< "$listAppVersionsJson")
+  mapfile -t densities < <(jq -r '.file.hardware.densities.[]' <<< "$listAppVersionsJson")
+  downloads=($(jq -r '.stats.downloads' <<< "$listAppVersionsJson"))
+  mapfile -t obbs < <(jq -r '.obb' <<< "$listAppVersionsJson")
+  declare -a versionsList
+  for ((i=0; i<${#fileIds[@]}; i++)); do
+    [ "${malwareRanks[i]}" == "TRUSTED" ] && Trusted="✔" || Trusted="✘"
+    versionsList+=("${vernames[i]} (${vercodes[i]}) | ${sdks[i]} | ${cpus[i]} | ${densities[i]} | ${addeds[i]} | ${filesizes[i]} B | $Trusted")
+  done
+  buttons=("<Select>" "<Back>")
+  if menu versionsList buttons; then
+    appId="${fileIds[selected]}"
+    vername="${vernames[selected]}"
+    vercode="${vercodes[selected]}"
+    echo "selected: $vername ($vercode)"
+    return
+  else
+    return 1
+  fi
+}; aptoideListAppVersions
+
+aptoideAppInfo() {
+  # src: https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/GetAppRequest.java
+  aptoideAppInfoAPI="$aptoideApi/getApp"
+  appNodesJson=$(curl -sL "$aptoideAppInfoAPI?app_id=$appId" | jq -r '.nodes') #> appInfo.json
+  appMetaDataJson=$(jq -r '.meta.data' <<< "$appNodesJson")
+  id=$(jq -r '.id' <<< "$appMetaDataJson")
+  name=$(jq -r '.name' <<< "$appMetaDataJson")
+  package=$(jq -r '.package' <<< "$appMetaDataJson")
+  size=$(jq -r '.size' <<< "$appMetaDataJson")
+  icon=$(jq -r '.icon' <<< "$appMetaDataJson")
+  added=$(jq -r '.added' <<< "$appMetaDataJson")
+  modified=$(jq -r '.modified' <<< "$appMetaDataJson")
+  updated=$(jq -r '.updated' <<< "$appMetaDataJson")
+  age=$(jq -r '.age.pegi' <<< "$appMetaDataJson" | cut -d '-' -f 2)
+  developerId=$(jq -r '.developer.id' <<< "$appMetaDataJson")
+  developerName=$(jq -r '.developer.name' <<< "$appMetaDataJson")
+  developerWebsite=$(jq -r '.developer.website' <<< "$appMetaDataJson")
+  developerEmail=$(jq -r '.developer.email' <<< "$appMetaDataJson")
+  userPrivacy=$(jq -r '.developer.privacy' <<< "$appMetaDataJson")
+  vername=$(jq -r '.file.vername' <<< "$appMetaDataJson")
+  vercode=$(jq -r '.file.vercode' <<< "$appMetaDataJson")
+  md5sum=$(jq -r '.file.md5sum' <<< "$appMetaDataJson")
+  filesize=$(jq -r '.file.filesize' <<< "$appMetaDataJson")
+  sha1=$(jq -r '.file.signature.sha1' <<< "$appMetaDataJson")
+  owner=$(jq -r '.file.signature.owner' <<< "$appMetaDataJson")
+    CN=$(echo "$owner" | cut -d= -f2 | cut -d, -f1)
+    OU=$(echo "$owner" | cut -d= -f3 | cut -d, -f1)
+    O=$(echo "$owner" | cut -d= -f4 | cut -d, -f1)
+    L=$(echo "$owner" | cut -d= -f5 | cut -d, -f1)
+    ST=$(echo "$owner" | cut -d= -f6 | cut -d, -f1)
+    C=$(echo "$owner" | cut -d= -f7)
+  path=$(jq -r '.file.path' <<< "$appMetaDataJson")
+  sdk=$(jq -r '.file.hardware.sdk' <<< "$appMetaDataJson")
+  screen=$(jq -r '.file.hardware.screen' <<< "$appMetaDataJson")
+  cpus=$(jq -r '.file.hardware.cpus.[]' <<< "$appMetaDataJson")
+  densities=$(jq -r '.file.hardware.densities.[]' <<< "$appMetaDataJson")
+  dependencies=$(jq -r '.file.hardware.dependencies.[].type' <<< "$appMetaDataJson")
+  malwareRank=$(jq -r '.file.malware.rank' <<< "$appMetaDataJson")
+  malwareValidatedDate=$(jq -r '.file.malware.reason.signature_validated.date' <<< "$appMetaDataJson")
+  used_features=$(jq -r '.file.used_features.[]' <<< "$appMetaDataJson")
+  used_permissions=$(jq -r '.file.used_permissions.[]' <<< "$appMetaDataJson")
+  tags=$(jq -r '.media.keywords.[]' <<< "$appMetaDataJson")
+  description=$(jq -r '.media.description' <<< "$appMetaDataJson")
+  descSummary=$(jq -r '.media.summary' <<< "$appMetaDataJson")
+  changelog=$(jq -r '.media.news' <<< "$appMetaDataJson")
+  avg=$(jq -r '.stats.prating.avg' <<< "$appMetaDataJson")
+  total=$(jq -r '.stats.prating.total' <<< "$appMetaDataJson")
+  pdownloads=$(jq -r '.stats.pdownloads' <<< "$appMetaDataJson")
+  aab=$(jq -r '.aab' <<< "$appMetaDataJson")
+    [ $aab == null ] && ext="apk" || ext="aab"
+  obb=$(jq -r '.obb' <<< "$appMetaDataJson")
+    [ $obb == null ] && TYPE="APPLICATION" || TYPE="GAME"
+  pay=$(jq -r '.pay' <<< "$appMetaDataJson")
+  advertising=$(jq -r '.appcoins.advertising' <<< "$appMetaDataJson")
+  billing=$(jq -r '.appcoins.billing' <<< "$appMetaDataJson")
+  appVersionsListJson=$(jq -r '.versions.list' <<< "$appNodesJson")
+  
+  echo "$name - APK Information"
+  [ $pay == null ] && echo "Free: Yes" || echo "Free: No"
+  [ $advertising == false ] && echo "containsAds: No" || echo "containsAds: Yes"
+  [ $billing == false ] && echo "InAppPurchases: No" || echo "InAppPurchases: $billing"
+  echo "APK Version: $vername"
+  echo "Package: $package"
+  echo "Android compatability: $sdk"
+  echo -e "Developer: [$developerName](${Blue}$developerWebsite${Reset})"
+  echo -e "Privacy Policy: ${Blue}$userPrivacy${Reset}"
+  #echo -e "Permissions:\n${used_permissions}"
+  echo "Size: $size B"
+  echo "Age: $age"
+  echo "Downloads: $pdownloads"
+  echo "Rating: ${avg}★"
+  echo "Release Date: $added"
+  echo "Min Screen: $screen"
+  echo "Supported CPU: $cpus"
+  echo "SHA1 Signature: $sha1"
+  echo "Developer (CN): $CN"
+  echo "Organizational Unit (OU): $OU"
+  echo "Organization (O): $O"
+  echo "Local (L): $L"
+  echo "State/City (ST): $ST"
+  echo "Country (C): $C"
+  dlUrl="$path"
+  echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
+}; aptoideAppInfo
+# curl -sL "https://ws75.aptoide.com/api/7/apps/getRecommended" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/GetRecommendedRequest.java
+# curl -sL "https://ws75-cache.aptoide.com/api/7/listApps?sort=latest&limit=10" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/ListAppsRequest.java
 ###############################################################################################################################################################################################################
