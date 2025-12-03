@@ -425,7 +425,79 @@ aptoideAppInfo() {
   echo "Country (C): $C"
   dlUrl="$path"
   echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
+  fileName="${name}_v$vername-$vercode.$ext"
+  filePath="$Download/$fileName"
 }; aptoideAppInfo
+
+aptoideListAppsUpdates() {
+  # src: https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/listapps/ListAppsUpdatesRequest.java
+  aptoideListAppsUpdatesAPI="https://ws75.aptoide.com/api/7/listAppsUpdates"
+  apks_data="apks_data=["
+  for ((i=0; i<${#packages[@]}; i++)); do
+    [ $i -eq 0 ] && apks_data+="{\"package\":\"${packages[i]}\",\"vercode\":${iVersionCodes[i]},\"signature\":null}" || apks_data+=",{\"package\":\"${packages[i]}\",\"vercode\":${iVersionCodes[i]},\"signature\":null}"
+  done
+  apks_data+="]"
+  listAppsUpdatesJson=$(curl -sL -d ${apks_data} "$aptoideListAppsUpdatesAPI" | jq -r '.list.[]') #> listAppsUpdates.json
+  appsId=($(jq -r '.id' <<< "$listAppsUpdatesJson"))
+  mapfile -t names < <(jq -r '.name' <<< "$listAppsUpdatesJson")
+  pkgs=($(jq -r '.package' <<< "$listAppsUpdatesJson"))
+  icons=($(jq -r '.icon' <<< "$listAppsUpdatesJson"))
+  mapfile -t modifieds < <(jq -r '.modified' <<< "$listAppsUpdatesJson")
+  developerIds=($(jq -r '.developer.id' <<< "$listAppsUpdatesJson"))
+  mapfile -t developerNames < <(jq -r '.developer.name' <<< "$listAppsUpdatesJson")
+  mapfile -t vernames < <(jq -r '.file.vername' <<< "$listAppsUpdatesJson")
+  vercodes=($(jq -r '.file.vercode' <<< "$listAppsUpdatesJson"))
+  md5sums=($(jq -r '.file.md5sum' <<< "$listAppsUpdatesJson"))
+  filesizes=($(jq -r '.file.filesize' <<< "$listAppsUpdatesJson"))
+  sha1s=($(jq -r '.file.signatures.sha1' <<< "$listAppsUpdatesJson"))
+  mapfile -t owners < <(jq -r '.file.signatures.owner' <<< "$listAppsUpdatesJson")
+  paths=($(jq -r '.file.path' <<< "$listAppsUpdatesJson"))
+  malwareRanks=($(jq -r '.malware.rank' <<< "$listAppsUpdatesJson"))
+  downloads=($(jq -r '.stats.downloads' <<< "$listAppsUpdatesJson"))
+  avgs=($(jq -r '.stats.prating.avg' <<< "$listAppsUpdatesJson"))
+  totals=($(jq -r '.stats.prating.total' <<< "$listAppsUpdatesJson"))
+  mapfile -t obbs < <(jq -r '.obb' <<< "$listAppsUpdatesJson")
+  advertisings=($(jq -r '.appcoins.advertising' <<< "$listAppsUpdatesJson"))
+  mapfile -t billings < <(jq -r '.appcoins.billing' <<< "$listAppsUpdatesJson")
+  declare -g -a apps
+  for i in ${!pkgs[@]}; do
+    installedVersion=; versionCode=; lastUpdateTime=
+    for ((j=0; j<${#packages[@]}; j++)); do
+      if [ "${pkgs[i]}" == "${packages[j]}" ]; then
+        installedVersionName="${iVersionNames[j]}"
+        installedVersionCode="${iVersionCodes[j]}"
+        lastUpdateTime="${iLastUpdateTimes[j]}"
+        break
+      fi
+    done
+    installedVersionNames+=("$installedVersionName")
+    installedVersionCodes+=("$installedVersionCode")
+    lastUpdateTimes+=("$lastUpdateTime")
+    apps+=("${names[i]} (${pkgs[i]}) | ${installedVersionNames[i]} (${lastUpdateTimes[i]}) → ${vernames[i]} (${modifieds[i]})")
+  done
+}; aptoideListAppsUpdates
+
+aptoideShowUpdates() {
+  buttons=("<Select>" "<Back>")
+  if [ ${#apps[@]} -ge 1 ]; then
+    if menu "apps" "buttons"; then
+      appName="${names[selected]}"
+      versionName="${vernames[selected]}"
+      versionCode="${vercodes[selected]}"
+      md5sum="${md5sums[selected]}"
+      filesize="${filesizes[selected]}"
+      dlUrl="${paths[selected]}"
+      echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
+      fileName="${appName}_v$versionName-$versionCode.apk"
+      filePath="$Download/$fileName"
+      return
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}; aptoideShowUpdates
 # curl -sL "https://ws75.aptoide.com/api/7/apps/getRecommended" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/GetRecommendedRequest.java
 # curl -sL "https://ws75-cache.aptoide.com/api/7/listApps?sort=latest&limit=10" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/ListAppsRequest.java
 ###############################################################################################################################################################################################################
