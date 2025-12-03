@@ -640,4 +640,125 @@ aptoideShowUpdates() {
 }; aptoideShowUpdates
 # curl -sL "https://ws75.aptoide.com/api/7/apps/getRecommended" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/GetRecommendedRequest.java
 # curl -sL "https://ws75-cache.aptoide.com/api/7/listApps?sort=latest&limit=10" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/ListAppsRequest.java
+
+liteapksSearch() {
+  liteapksWPPostsAPI="https://liteapks.com/wp-json/wp/v2/posts"
+  while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
+  if [ -n "$appName" ]; then
+    app_name=$(echo "$appName" | sed 's/ /-/g')
+    page=1
+    items_per_page=30
+    while true; do
+      searchUrl="$liteapksWPPostsAPI?search=${app_name}&page=${page}&per_page=${items_per_page}"
+      searchJson=$(curl -sL "$searchUrl" | jq -r '.[]')
+      postsId=($(jq -r '.id' <<< "$searchJson"))
+      dates=($(jq -r '.date' <<< "$searchJson"))
+      slugs=($(jq -r '.slug' <<< "$searchJson"))
+      links=($(jq -r '.link' <<< "$searchJson"))
+      mapfile -t titles < <(jq -r '.title.rendered' <<< "$searchJson")
+      icons=($(jq -r '.yoast_head_json.og_image.[].url' <<< "$searchJson"))
+      mapfile -t authors < <(jq -r '.yoast_head_json.author' <<< "$searchJson")
+      authorsImages=($(jq -r '.yoast_head_json.schema."@graph".[].image.url' <<< "$searchJson"))
+      thumbnails=($(jq -r '.thumbnail' <<< "$searchJson"))
+      mapfile -t mods < <(jq -r '.mod' <<< "$searchJson")
+      mapfile -t versions < <(jq -r '.version' <<< "$searchJson")
+      mapfile -t sizes < <(jq -r '.size' <<< "$searchJson")
+      views=($(jq -r '.views' <<< "$searchJson"))
+      rating_avgs=($(jq -r '.rating_avg' <<< "$searchJson"))
+      appsList=()
+      for ((i=0; i<${#postsId[@]}; i++)); do
+        appsList+=("${titles[i]} | ${mods[i]} | v${versions[i]} | ${rating_avgs[i]}★")
+      done
+      [ $page -ne 1 ] && appsList+=("<")
+      appsList+=(">")
+      buttons=("<Select>" "<Back>")
+      if menu appsList buttons; then
+        if [ "${appsList[selected]}" == "<" ]; then
+          ((page--))
+        elif [ "${appsList[selected]}" == ">" ]; then
+          ((page++))
+        else
+          postId="${postsId[selected]}"
+          slug="${slugs[selected]}"
+          link="${links[selected]}"
+          title="${titles[selected]}"
+          echo -e "$info selected: $title\n$info appUrl: ${Blue}$link${Reset}"
+          return
+          break
+        fi
+      else
+        return 1
+        break
+      fi
+    done
+  else
+    return 1
+  fi
+}; liteapksSearch
+
+liteapksAppDetails() {
+  slugUrl="$liteapksWPPostsAPI?slug=$slug"
+  slugJson=$(curl -sL "$slugUrl" | jq -r '.[]')
+  postId=$(jq -r '.id' <<< "$slugJson")
+  date=$(jq -r '.date' <<< "$slugJson")
+  slug=$(jq -r '.slug' <<< "$slugJson")
+  link=$(jq -r '.link' <<< "$slugJson")
+  title=$(jq -r '.title.rendered' <<< "$slugJson")
+  icon=$(jq -r '.yoast_head_json.og_image.[].url' <<< "$slugJson")
+  author=$(jq -r '.yoast_head_json.author' <<< "$slugJson")
+  authorsImage=$(jq -r '.yoast_head_json.schema."@graph".[].image.url' <<< "$slugJson")
+  thumbnail=$(jq -r '.thumbnail' <<< "$slugJson")
+  mod=$(jq -r '.mod' <<< "$slugJson")
+  version=$(jq -r '.version' <<< "$slugJson")
+  size=$(jq -r '.size' <<< "$slugJson")
+  view=$(jq -r '.views' <<< "$slugJson")
+  rating_avg=$(jq -r '.rating_avg' <<< "$slugJson")
+  category=$(jq -r '._links."wp:term"[] | select(.taxonomy == "category") | .href' <<< "$slugJson")
+  developer=$(jq -r '._links."wp:term"[] | select(.taxonomy == "developer") | .href' <<< "$slugJson")
+  app_type=$(jq -r '._links."wp:term"[] | select(.taxonomy == "app_type") | .href' <<< "$slugJson")
+  categoryName=$(curl -sL "$category" | jq -r '.[].name')
+  developerName=$(curl -sL "$developer" | jq -r '.[].name')
+  app_type_name=$(curl -sL "$app_type" | jq -r '.[].name')
+  echo -e "$info appName: $title"
+  echo -e "$info Publisher: $developerName"
+  echo -e "$info Author: $author"
+  echo -e "$info Genre: $categoryName"
+  echo -e "$info Type: $app_type_name"
+  echo -e "$info Size: $size"
+  echo -e "$info latestVersion: $version"
+  echo -e "$info MODInfo: $mod"
+  echo -e "$info starRating: ${rating_avg}★"
+}; liteapksAppDetails
+
+liteapksVersionsUrl() {
+  liteapksPostsAPI="https://liteapks.com/wp-json/v2/posts"
+  versionsUrl="$liteapksPostsAPI/$postId"
+  versionsJson=$(curl -sL "$versionsUrl")
+  original_download_url=$(jq -r '.data.original_download_url' <<< "$versionsJson")
+  name=$(jq -r '.data.name' <<< "$versionsJson")
+  mapfile -t versions < <(jq -r '.data.versions.[].version' <<< "$versionsJson")
+  version_download_types=($(jq -r '.data.versions.[].version_downloads.[].version_download_type' <<< "$versionsJson"))
+  mapfile -t version_download_sizes < <(jq -r '.data.versions.[].version_downloads.[].version_download_size' <<< "$versionsJson")
+  version_download_links=($(jq -r '.data.versions.[].version_downloads.[].version_download_link' <<< "$versionsJson"))
+  mapfile -t version_download_notes < <(jq -r '.data.versions.[].version_downloads.[].version_download_note' <<< "$versionsJson")
+  echo -e "$info Get it On: ${Blue}$original_download_url${Reset}"
+  declare -a versionsList
+  for ((i=0; i<${#version_download_links[@]}; i++)); do
+    versionsList+=("${versions[i]} | ${version_download_sizes[i]}")
+  done
+  buttons=("<Select>" "<Back>")
+  if menu versionsList buttons; then
+    version="$(cut -d' ' -f1 <<< "${versions[selected]}" | cut -d'"' -f2)"
+    version_download_type="${version_download_types[selected]}"
+    version_download_size="${version_download_sizes[selected]}"
+    dlUrl="${version_download_links[selected]}"
+    version_download_note="${version_download_notes[selected]}"
+    echo -e "$info dlUrl: ${Blue}$dlUrl${Reset}"
+    fileName="$name-${version_download_note}_$version.$version_download_type"
+    filePath="$Download/$fileName"
+    return
+  else
+    return 1
+  fi
+}; liteapksVersionsUrl
 ###############################################################################################################################################################################################################
