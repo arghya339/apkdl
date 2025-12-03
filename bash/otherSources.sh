@@ -1,5 +1,145 @@
 #!/bin/bash
 
+codebergSearch() {
+  codebergReposUrl="https://codeberg.org/api/v1/repos"
+  repoName="Gadgetbridge"
+  if [ -n "$repoName" ]; then
+    repo_name=$(echo $repoName  | sed 's/ /%20/g')
+    page=1
+    items_per_page=30
+    sort=stars  # sort search results by most stars
+    order=desc  # order search results "descending" (highest to lowest)
+    curl -fsL "https://codeberg.org/" >/dev/null 2>&1
+    [ ${PIPESTATUS[0]} -ne 0 ] && { open "https://status.codeberg.org/status/codeberg"; return 1; break; }
+    while true; do
+      searchUrl="$codebergReposUrl/search?q=${repo_name}&page=${page}&limit=${items_per_page}&sort=${sort}&order=${order}"
+      searchDataJson=$(curl -sL "$searchUrl" | jq -r '.data.[]')
+      echo "searchDataJson: $searchDataJson"
+      full_names=($(jq -r '.full_name' <<< "$searchDataJson"))
+      mapfile -t descriptions < <(jq -r '.description' <<< "$searchDataJson")
+      mapfile -t languages < <(jq -r '.language' <<< "$searchDataJson")
+      websites=($(jq -r '.website' <<< "$searchDataJson"))
+      stars_counts=($(jq -r '.stars_count' <<< "$searchDataJson"))
+      forks_counts=($(jq -r '.forks_count' <<< "$searchDataJson"))
+      created_ats=($(jq -r '.created_at' <<< "$searchDataJson"))
+      updated_ats=($(jq -r '.updated_at' <<< "$searchDataJson"))
+      has_releasess=($(jq -r '.has_releases' <<< "$searchDataJson"))
+      mapfile -t topicss < <(jq -r '.topics.[]' <<< "$searchDataJson")
+      availableRepo=()
+      for ((i=0; i<${#full_names[@]}; i++)); do
+        availableRepo+=("${full_names[i]} - ${descriptions[i]}")
+      done
+      [ $page -ne 1 ] && availableRepo+=(Previous)
+      availableRepo+=(Next)
+      buttons=("<Select>" "<Back>")
+      if menu "availableRepo" "buttons" "10"; then
+        if [ "${availableRepo[selected]}" == "Previous" ]; then
+          ((page--))
+        elif [ "${availableRepo[selected]}" == "Next" ]; then
+          ((page++))
+        else
+          full_name="${full_names[selected]}"
+          echo "selected: $full_name"
+          return
+          break
+        fi
+      else
+        return 1
+        break
+      fi
+    done
+  else
+    return 1
+  fi
+}; codebergSearch
+
+codebergLatestReleases() {
+  codebergLatestReleasesUrl="$codebergReposUrl/${full_name}/releases/latest"
+  latestReleasesJson=$(curl -sL "$codebergLatestReleasesUrl")
+  assets_names=($(jq -r '.assets.[].name' <<< "$latestReleasesJson"))
+  assets_sizes=($(jq -r '.assets.[].size' <<< "$latestReleasesJson"))
+  download_counts=($(jq -r '.assets.[].download_count' <<< "$latestReleasesJson"))
+  created_ats=($(jq -r '.assets.[].created_at' <<< "$latestReleasesJson"))
+  browser_download_urls=($(jq -r '.assets.[].browser_download_url' <<< "$latestReleasesJson"))
+  declare -a assets
+  for ((i=0; i<${#assets_names[@]}; i++)); do
+    assets+=("📦 ${assets_names[i]} | 💾 ${assets_sizes[i]} B | ${download_counts[i]}↓ | 📅 ${created_ats[i]}")
+  done
+  buttons=("<Select>" "<Back>")
+  if menu assets buttons; then
+    assets_name="${assets_names[selected]}"
+    dlUrl="${browser_download_urls[selected]}"
+    echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
+    fileName="$assets_name"
+    filePath="$Download/$fileName"
+    return
+  else
+    return 1
+  fi
+}; codebergLatestReleases
+
+#full_name="forgejo/forgejo"
+#full_name="Freeyourgadget/Gadgetbridge"
+codebergReleases() {
+  codebergReleasesUrl="$codebergReposUrl/${full_name}/releases"
+  page=1
+  while true; do
+    releasesJson=$(curl -sL "$codebergReleasesUrl?page=$page")
+    releasesCount=$(jq -r 'length' <<< "$releasesJson")
+    releases_names=(); changelogs=(); html_urls=(); created_ats=(); author_usernames=(); releases_assets=(); releases=()
+    for ((i=0; i<releasesCount; i++)); do
+      releases_names[i]="$(jq -r ".[$i].name" <<< "$releasesJson")"
+      changelogs[i]="$(jq -r ".[$i].body" <<< "$releasesJson")"
+      html_urls+=($(jq -r ".[$i].html_url" <<< "$releasesJson"))
+      created_ats+=($(jq -r ".[$i].created_at" <<< "$releasesJson"))
+      author_usernames+=($(jq -r ".[$i].author.username" <<< "$releasesJson"))
+      releases_assets[i]="$(jq -r ".[$i].assets" <<< "$releasesJson")"
+      releases+=("${releases_names[i]} | ${created_ats[i]} | ${author_usernames[i]}")
+    done
+    [ $page -ne 1 ] && releases+=(Previous)
+    releases+=(Next)
+    buttons=("<Select>" "<Back>")
+    if menu releases buttons; then
+      if [ "${releases[selected]}" == "Previous" ]; then
+        ((page--))
+      elif [ "${releases[selected]}" == "Next" ]; then
+        ((page++))
+      else
+        selected_assets="${releases_assets[selected]}"
+        assetsCount=$(jq -r 'length' <<< "$selected_assets")
+        declare -a assets_names assets_sizes download_counts created_ats browser_download_urls
+        for ((i=0; i<${assetsCount}; i++)); do
+          assets_names+=($(jq -r ".[$i].name" <<< "$selected_assets"))
+          assets_sizes+=($(jq -r ".[$i].size" <<< "$selected_assets"))
+          download_counts+=($(jq -r ".[$i].download_count" <<< "$selected_assets"))
+          created_ats+=($(jq -r ".[$i].created_at" <<< "$selected_assets"))
+          browser_download_urls+=($(jq -r ".[$i].browser_download_url" <<< "$selected_assets"))
+        done
+        declare -a assets
+        for ((i=0; i<${#assets_names[@]}; i++)); do
+          assets+=("📦 ${assets_names[i]} | 💾 ${assets_sizes[i]} B | ${download_counts[i]}↓ | 📅 ${created_ats[i]}")
+        done
+        buttons=("<Select>" "<Back>")
+        if menu assets buttons; then
+          assets_name="${assets_names[selected]}"
+          dlUrl="${browser_download_urls[selected]}"
+          echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
+          fileName="$assets_name"
+          filePath="$Download/$fileName"
+          return
+          break
+        else
+          return 1
+          break
+        fi
+      fi
+    else
+      return 1
+      break
+    fi
+  done
+}; codebergReleases
+
 iodPackagesIndex() {
   #$baseUrl/fdroid/index/apk/$pkg
   packagesJson=$(curl -sL "$baseUrl/fdroid/api/v1/packages/$pkg")
