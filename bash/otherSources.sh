@@ -2,7 +2,7 @@
 
 codebergSearch() {
   codebergReposUrl="https://codeberg.org/api/v1/repos"
-  repoName="Gadgetbridge"
+  while true; do read -r -p ">> Enter repoName: " repoName; [[ "$repoName" =~ ^[Qq] ]] && repoName=; break; [ -n "$repoName" ] && break || echo -e "$notice Please enter a valid repoName!"; done
   if [ -n "$repoName" ]; then
     repo_name=$(echo $repoName  | sed 's/ /%20/g')
     page=1
