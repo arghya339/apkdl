@@ -124,8 +124,8 @@ showUpdates() {
 aptoideListAppsUpdates() {
   # src: https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/listapps/ListAppsUpdatesRequest.java
   aptoideListAppsUpdatesAPI="https://ws75.aptoide.com/api/7/listAppsUpdates"
-  echo -e "$running Get Installed packages updates.."
   packagesInfo
+  echo -e "$running Get Installed packages updates.."
   apks_data="apks_data=["
   for ((i=0; i<${#packages[@]}; i++)); do
     [ $i -eq 0 ] && apks_data+="{\"package\":\"${packages[i]}\",\"vercode\":${iVersionCodes[i]},\"signature\":null}" || apks_data+=",{\"package\":\"${packages[i]}\",\"vercode\":${iVersionCodes[i]},\"signature\":null}"
