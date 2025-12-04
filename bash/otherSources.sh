@@ -660,6 +660,17 @@ liteapksAppDetails() {
   echo -e "$info starRating: ${rating_avg}★"
 }
 
+# method to generate expiration time encoded download url for LITEAPK.COM
+genExpiryTimestampUrl() {
+  # src: https://liteapks.com/wp-content/themes/new-theme-k/js/site.js?ver=2.2  # JavaScript generates token (CLIENT-SIDE)
+  timestamp=$(date +%s)  # get current system time in seconds
+  expiry=$((timestamp + 10800))  # adds 3 hours (10,800 seconds) in system time to create an token with 3H expiry time
+  first_encode=$(echo -n "$expiry" | base64)  # prints int time w/o new line then converts it to a Base64 encoded string for Url compatibility
+  token=$(echo -n "$first_encode" | base64 | sed 's/=/%3D/g')  # base64 generate twice equal sign due to twice base64 command. so, replace == with 3D3D (= is ASCII 61 → 0x3D in hex) using stream editor for Url encoding
+  finalUrl="${version_download_link}?token=${token}"  # final download url pattern for LITEAPK.COM
+  echo "$finalUrl"
+}
+
 liteapksVersionsUrl() {
   liteapksPostsAPI="https://liteapks.com/wp-json/v2/posts"
   versionsUrl="$liteapksPostsAPI/$postId"
@@ -681,8 +692,9 @@ liteapksVersionsUrl() {
     version="$(cut -d' ' -f1 <<< "${versions[selected]}" | cut -d'"' -f2)"
     version_download_type="${version_download_types[selected]}"
     version_download_size="${version_download_sizes[selected]}"
-    dlUrl="${version_download_links[selected]}"
+    version_download_link="${version_download_links[selected]}"
     version_download_note="${version_download_notes[selected]}"
+    dlUrl=$(genExpiryTimestampUrl)
     echo -e "$info dlUrl: ${Blue}$dlUrl${Reset}"
     fileName="$name-${version_download_note}_$version.$version_download_type"
     filePath="$Download/$fileName"
@@ -772,6 +784,20 @@ virustotalScanUrl() {
   fi
 }
 
+LITEAPKSdl() {
+  while true; do
+    if [ $isAndroid -eq 1 ]; then
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "Referer: $link" "$dlUrl"
+      exitStatus=$?
+    elif [ $isMacOS -eq 1 ]; then
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "Referer: $link" --ca-certificate="/etc/ssl/cert.pem" "$dlUrl"
+      exitStatus=$?
+    fi
+    echo
+    [ $exitStatus -eq 0 ] && break || sleep 5
+  done
+}
+
 options=(Codeberg IzzyOnDroid AppGallery SourceForge APKCombo Aptoide LITEAPKS)
 while true; do
   buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
@@ -841,6 +867,17 @@ while true; do
 
         virustotalScanUrl
         [ $? -ne 0 ] && continue
+
+        LITEAPKSdl
+        if [ $? -eq 0 ]; then
+          if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
+            buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt="Yes" || opt="No"
+            if [ "$opt" == "Yes" ]; then
+              [ $isMacOS -eq 1 ] && adbInstall "$filePath"
+              [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+            fi
+          fi
+        fi
       else
         APIKey
       fi
