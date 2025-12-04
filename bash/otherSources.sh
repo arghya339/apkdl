@@ -692,6 +692,86 @@ liteapksVersionsUrl() {
   fi
 }
 
+APIKey() {
+  echo -e "${running} Creating VirusTotal API Key.."
+  echo -e "$info sign up or sign in to VirusTotal Community > avatar menu > API Key > API KEY > Copy key to clipboard"
+  VirusTotalMyApiKeyUrl="https://www.virustotal.com/gui/my-apikey"  # access your API key
+  if [ $isAndroid -eq 1 ]; then
+    termux-open-url "$VirusTotalMyApiKeyUrl"
+  elif [ $isMacOS -eq 1 ]; then
+    open "$VirusTotalMyApiKeyUrl"
+  fi
+  echo -n "KEY: "  # Display prompt
+  # Read characters one by one
+  while IFS= read -rsn 1 char; do
+    # Handle Enter key (newline)
+    if [[ "$char" == $'\0' || "$char" == $'\n' || "$char" == $'\r' ]]; then
+      # Only break if input is not empty, input not start with space, input doesn't contain space & pat is valid
+      if [[ -n "$input" && ! "$input" =~ ^[[:space:]] && ! "$input" =~ [[:space:]] ]]; then
+        curl -fsL "https://www.virustotal.com/api/v3/users/${input}/overall_quotas" -H "x-apikey: ${input}" >/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+          echo -e "\n$good ${Green}Successfully added your VirusTotal API Key!${Reset}"
+          break
+        else
+          echo -ne "\r\033[K"  # Clear previous prompt line
+          echo -e "$notice ${Yellow}Invalid API Key!${Reset}"  # Display messages if pat is not valid
+          input=""  # Clear input variable's value
+          echo -n "KEY: "  # Display prompt
+        fi
+      else
+        continue
+      fi
+    fi
+    # Handle backspace ($'\177')
+    if [[ "$char" == $'\177' ]]; then
+      if [ -n "$input" ]; then
+        input="${input%?}"  # Remove last char from input & store in input
+        echo -ne "\b \b"  # Move cursor back, print space, move cursor back again
+      fi
+      continue
+    fi
+    # Handle delete ($'\E[3~')
+    # /bin/bash -c 'read -r -p "Type any ESC key: " input && printf "You Entered: %q\n" "$input"'  # q=safelyQuoted
+    if [[ "$char" == $'\E' ]]; then
+      read -rsn1 -t 0.1 seq1
+      if [[ "$seq1" == '[' ]]; then
+        read -rsn2 -t 0.1 seq2
+        case "$seq2" in
+          '3~')  # Delete key
+            if [ -n "$input" ]; then
+              input="${input%?}"
+              echo -ne "\b \b"
+            fi
+            ;;
+        esac
+      fi
+      continue
+    fi
+    # Only add printable characters (excluding control characters)
+    if [[ "$char" =~ [[:print:]] ]]; then
+      input+="$char"  # Add character to input
+      echo -n "*"  # Display asterisk
+    fi
+  done
+  config "VirusTotalAPIKey" "$input"
+}
+
+virustotalScanUrl() {
+  # https://docs.virustotal.com/reference/scan-url
+  base64EncodedUrl=$(echo -n "$dlUrl" | base64 | tr -d '\n' | tr -d '=' | tr '/+' '_-')
+  analysis_data=$(curl -sL "https://www.virustotal.com/api/v3/urls/$base64EncodedUrl" -H "x-apikey: $API_KEY" | jq -r '.data.attributes')
+  last_analysis_stats=$(jq -r '.last_analysis_stats' <<< "$analysis_data")
+  malicious=$(jq -r '.malicious' <<< "$last_analysis_stats")
+  suspicious=$(jq -r '.suspicious' <<< "$last_analysis_stats")
+  if [ $malicious -ne 0 ] || [ $suspicious -ne 0 ]; then
+    last_analysis_results=$(jq '.last_analysis_results | to_entries | map(select(.value.category == "malicious" or .value.category == "suspicious" or .value.result == "suspicious" or .value.result == "phishing")) | from_entries' <<< "$analysis_data")
+    jq <<< "$last_analysis_results"
+    buttons=("<Download anyway>" "<Got it>"); confirmPrompt "This app repored as malicious or suspicious by virustotal. Downloading this app may put your device at risk." "buttons" "1" && return 0 || return 1
+  else
+    return 0
+  fi
+}
+
 options=(Codeberg IzzyOnDroid AppGallery SourceForge APKCombo Aptoide LITEAPKS)
 while true; do
   buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
@@ -748,14 +828,22 @@ while true; do
       echo; read -p "Press Enter to continue..."
       ;;
     LITEAPKS)
-      liteapksSearch
-      [ $? -ne 0 ] && continue
+      jq -e '.VirusTotalAPIKey != null' "$apkdlJson" >/dev/null 2>&1 && API_KEY="$(jq -r '.VirusTotalAPIKey' "$apkdlJson" 2>/dev/null)" || API_KEY=
+      if [ -n "$API_KEY" ]; then
+        liteapksSearch
+        [ $? -ne 0 ] && continue
 
-      liteapksAppDetails
-      [ $? -ne 0 ] && continue
+        liteapksAppDetails
+        [ $? -ne 0 ] && continue
 
-      liteapksVersionsUrl
-      [ $? -ne 0 ] && continue
+        liteapksVersionsUrl
+        [ $? -ne 0 ] && continue
+
+        virustotalScanUrl
+        [ $? -ne 0 ] && continue
+      else
+        APIKey
+      fi
       echo; read -p "Press Enter to continue..."
       ;;
   esac
