@@ -462,10 +462,10 @@ sign() {
 downloadAPK() {
   while true; do
     if [ $isAndroid -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: https://www.apkmirror.com/" --async-dns=true --async-dns-server="$cloudflareIP" "$dlLink"
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" --header="Referer: https://www.apkmirror.com/" --async-dns=true --async-dns-server="$cloudflareIP" "$dlLink"
       exitStatus=$?
     elif [ $isMacOS -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" -U "Referer: $variantLink" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server=$cloudflareIP "$dlLink"
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" --header="Referer: $variantLink" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server=$cloudflareIP "$dlLink"
       exitStatus=$?
     fi
     echo

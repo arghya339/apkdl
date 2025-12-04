@@ -787,10 +787,10 @@ virustotalScanUrl() {
 LITEAPKSdl() {
   while true; do
     if [ $isAndroid -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "Referer: $link" "$dlUrl"
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" --header="Referer: $link" "$dlUrl"
       exitStatus=$?
     elif [ $isMacOS -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "Referer: $link" --ca-certificate="/etc/ssl/cert.pem" "$dlUrl"
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" --referer="$link" --ca-certificate="/etc/ssl/cert.pem" "$dlUrl"
       exitStatus=$?
     fi
     echo

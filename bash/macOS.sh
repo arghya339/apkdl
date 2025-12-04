@@ -42,7 +42,7 @@
   formulaeInstall "openjdk"  # java install/update
   grep -q 'export PATH="/usr/local/opt/openjdk/bin:$PATH"' ~/.zshrc 2>/dev/null || echo 'export PATH="/usr/local/opt/openjdk/bin:$PATH"' >> ~/.zshrc
   # https://github.com/aria2/aria2/issues/1920
-  aria2Executing=$(aria2c -q -d "$HOME" -o aria2Executing -U "User-Agent: $USER_AGENT" -U "Referer: https://one.one.one.one/" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server="$cloudflareIP" "https://one.one.one.one/")
+  aria2Executing=$(aria2c -q -d "$HOME" -o aria2Executing -U "User-Agent: $USER_AGENT" --header="Referer: https://one.one.one.one/" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server="$cloudflareIP" "https://one.one.one.one/")
   if echo "$aria2Executing" | grep -q "--async-dns=true" 2>/dev/null; then
     curl -L --progress-bar -C - -o $HOME/Downloads/aria2c-macos-$Arch.tar https://github.com/tofuliang/aria2/releases/download/20240919/aria2c-macos-$Arch.tar
     pv "$HOME/Downloads/aria2c-macos-$Arch.tar" | tar -xf - -C "$HOME/Downloads" && rm -f "$HOME/Downloads/aria2c-macos-$Arch.tar"
