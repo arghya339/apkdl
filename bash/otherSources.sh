@@ -694,7 +694,7 @@ liteapksVersionsUrl() {
 
 options=(Codeberg IzzyOnDroid AppGallery SourceForge APKCombo Aptoide LITEAPKS)
 while true; do
-  buttons=("<Select>" "<Back>"); if menu "options" "buttons"; then selected="${options[$selected]}"; else break; fi
+  buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
   case "$selected" in
     Codeberg)
       codebergSearch
