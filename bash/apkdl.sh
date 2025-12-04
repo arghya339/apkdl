@@ -1179,9 +1179,6 @@ while true; do
           echo; read -p "Press Enter to continue..."
         fi
       else
-        curl -sL -o "$apkdl/otherSources.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/otherSources.sh"
-        source $apkdl/otherSources.sh
-        
         [ ${#apps[@]} -eq 0 ] && aptoideListAppsUpdates
 
         aptoideShowUpdates
