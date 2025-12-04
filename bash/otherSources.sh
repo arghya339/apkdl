@@ -14,7 +14,6 @@ codebergSearch() {
     while true; do
       searchUrl="$codebergReposUrl/search?q=${repo_name}&page=${page}&limit=${items_per_page}&sort=${sort}&order=${order}"
       searchDataJson=$(curl -sL "$searchUrl" | jq -r '.data.[]')
-      echo "searchDataJson: $searchDataJson"
       full_names=($(jq -r '.full_name' <<< "$searchDataJson"))
       mapfile -t descriptions < <(jq -r '.description' <<< "$searchDataJson")
       mapfile -t languages < <(jq -r '.language' <<< "$searchDataJson")
