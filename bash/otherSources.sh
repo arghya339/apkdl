@@ -51,7 +51,7 @@ codebergSearch() {
   else
     return 1
   fi
-}; codebergSearch
+}
 
 codebergLatestReleases() {
   codebergLatestReleasesUrl="$codebergReposUrl/${full_name}/releases/latest"
@@ -76,7 +76,7 @@ codebergLatestReleases() {
   else
     return 1
   fi
-}; codebergLatestReleases
+}
 
 #full_name="forgejo/forgejo"
 #full_name="Freeyourgadget/Gadgetbridge"
@@ -138,7 +138,7 @@ codebergReleases() {
       break
     fi
   done
-}; codebergReleases
+}
 
 iodPackagesIndex() {
   #$baseUrl/fdroid/index/apk/$pkg
@@ -238,7 +238,7 @@ IzzyOnDroidSearch() {
   else
     return 1
   fi
-}; IzzyOnDroidSearch
+}
 
 dlAppGallery() {
   [ $isAndroid -eq 1 ] && termux-open-url "https://appgallery.huawei.com"
@@ -252,7 +252,7 @@ dlAppGallery() {
   else
     return 1
   fi
-}; dlAppGallery #C101184875
+}
 
 sf() {
   sfDomain="https://sourceforge.net"
@@ -309,7 +309,7 @@ sf() {
   else
     return 1
   fi
-}; sf
+}
 
 APKComboVariants() {
   variantsJson=$(curl -sL --doh-url "$cloudflareDOH" "$versionUrl" | pup '#variants-tab json{}') #> variants.json
@@ -393,7 +393,7 @@ APKComboSearch() {
   else
     return 1
   fi
-}; APKComboSearch
+}
 
 aptoideSearch() {
   # baseUrl: https://github.com/Aptoide/aptoide-client-v8/blob/master/gradle.properties#L31 + https://github.com/Aptoide/aptoide-client-v8/blob/master/gradle.properties#L26 | https + ws75.aptoide.com
@@ -446,7 +446,7 @@ aptoideSearch() {
   else
     return 1
   fi
-}; aptoideSearch
+}
 
 aptoideListAppVersions() {
   # src: https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/listapps/ListAppVersionsRequest.java
@@ -480,7 +480,7 @@ aptoideListAppVersions() {
   else
     return 1
   fi
-}; aptoideListAppVersions
+}
 
 aptoideAppInfo() {
   # src: https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/GetAppRequest.java
@@ -567,11 +567,14 @@ aptoideAppInfo() {
   echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
   fileName="${name}_v$vername-$vercode.$ext"
   filePath="$Download/$fileName"
-}; aptoideAppInfo
+}
 
 aptoideListAppsUpdates() {
   # src: https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/listapps/ListAppsUpdatesRequest.java
   aptoideListAppsUpdatesAPI="https://ws75.aptoide.com/api/7/listAppsUpdates"
+  curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApps.sh -o "$apkdl/installedApps.sh"
+  source $apkdl/installedApps.sh
+  packagesInfo
   apks_data="apks_data=["
   for ((i=0; i<${#packages[@]}; i++)); do
     [ $i -eq 0 ] && apks_data+="{\"package\":\"${packages[i]}\",\"vercode\":${iVersionCodes[i]},\"signature\":null}" || apks_data+=",{\"package\":\"${packages[i]}\",\"vercode\":${iVersionCodes[i]},\"signature\":null}"
@@ -615,7 +618,7 @@ aptoideListAppsUpdates() {
     lastUpdateTimes+=("$lastUpdateTime")
     apps+=("${names[i]} (${pkgs[i]}) | ${installedVersionNames[i]} (${lastUpdateTimes[i]}) → ${vernames[i]} (${modifieds[i]})")
   done
-}; aptoideListAppsUpdates
+}
 
 aptoideShowUpdates() {
   buttons=("<Select>" "<Back>")
@@ -637,7 +640,7 @@ aptoideShowUpdates() {
   else
     return 1
   fi
-}; aptoideShowUpdates
+}
 # curl -sL "https://ws75.aptoide.com/api/7/apps/getRecommended" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/GetRecommendedRequest.java
 # curl -sL "https://ws75-cache.aptoide.com/api/7/listApps?sort=latest&limit=10" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/ListAppsRequest.java
 
@@ -694,7 +697,7 @@ liteapksSearch() {
   else
     return 1
   fi
-}; liteapksSearch
+}
 
 liteapksAppDetails() {
   slugUrl="$liteapksWPPostsAPI?slug=$slug"
@@ -728,7 +731,7 @@ liteapksAppDetails() {
   echo -e "$info latestVersion: $version"
   echo -e "$info MODInfo: $mod"
   echo -e "$info starRating: ${rating_avg}★"
-}; liteapksAppDetails
+}
 
 liteapksVersionsUrl() {
   liteapksPostsAPI="https://liteapks.com/wp-json/v2/posts"
@@ -760,5 +763,74 @@ liteapksVersionsUrl() {
   else
     return 1
   fi
-}; liteapksVersionsUrl
+}
+
+options=(Codeberg IzzyOnDroid AppGallery SourceForge APKCombo Aptoide LITEAPKS)
+while true; do
+  buttons=("<Select>" "<Back>"); if menu "options" "buttons"; then selected="${options[$selected]}"; else break; fi
+  case "$selected" in
+    Codeberg)
+      codebergSearch
+      [ $? -ne 0 ] && continue
+      
+      curl -fsL "$codebergReposUrl/${full_name}/releases/latest" >/dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        codebergReleases
+        [ $? -ne 0 ] && continue
+      else
+        buttons=("<Latest>" "<Releases>"); confirmPrompt "Please Select release type" "buttons" && opt=Latest || opt=Releases
+        if [ "$opt" == "Latest" ]; then
+          codebergLatestReleases
+          [ $? -ne 0 ] && continue
+        else
+          codebergReleases
+          [ $? -ne 0 ] && continue
+        fi
+      fi
+      echo; read -p "Press Enter to continue..."
+      ;;
+    IzzyOnDroid)
+      IzzyOnDroidSearch
+      [ $? -ne 0 ] && continue
+      echo; read -p "Press Enter to continue..."
+      ;;
+    AppGallery)
+      dlAppGallery
+      [ $? -ne 0 ] && continue
+      echo; read -p "Press Enter to continue..."
+      ;;
+    SourceForge)
+      sf
+      [ $? -ne 0 ] && continue
+      echo; read -p "Press Enter to continue..."
+      ;;
+    APKCombo)
+      APKComboSearch
+      [ $? -ne 0 ] && continue
+      echo; read -p "Press Enter to continue..."
+      ;;
+    Aptoide)
+      aptoideSearch
+      [ $? -ne 0 ] && continue
+
+      aptoideListAppVersions
+      [ $? -ne 0 ] && continue
+
+      aptoideAppInfo
+      [ $? -ne 0 ] && continue
+      echo; read -p "Press Enter to continue..."
+      ;;
+    LITEAPKS)
+      liteapksSearch
+      [ $? -ne 0 ] && continue
+
+      liteapksAppDetails
+      [ $? -ne 0 ] && continue
+
+      liteapksVersionsUrl
+      [ $? -ne 0 ] && continue
+      echo; read -p "Press Enter to continue..."
+      ;;
+  esac
+done
 ###############################################################################################################################################################################################################

@@ -1144,7 +1144,7 @@ while true; do
           fi
           echo; read -p "Press Enter to continue..."
         fi
-      else
+      elif [ "$AppUpdatesSource" == "APKMirror" ]; then
         curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
         source $apkdl/APKMdl.sh
         
@@ -1178,6 +1178,15 @@ while true; do
           fi
           echo; read -p "Press Enter to continue..."
         fi
+      else
+        curl -sL -o "$apkdl/otherSources.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/otherSources.sh"
+        source $apkdl/otherSources.sh
+        
+        [ ${#apps[@]} -eq 0 ] && aptoideListAppsUpdates
+
+        aptoideShowUpdates
+        [ $? -ne 0 ] && continue
+        echo; read -p "Press Enter to continue..."
       fi
       ;;
     uninstallApps)
@@ -1398,12 +1407,14 @@ while true; do
             auth  # Call the auth function to create GitHub/ GitLab token
             ;;
           AppUpdatesSource)
-            [ "$AppUpdatesSource" == "PlayStore" ] && echo "AppUpdatesSource == PlayStore" || echo "AppUpdatesSource == APKMirror"
-            buttons=("<PlayStore>" "<APKMirror>"); confirmPrompt "AppUpdatesSource" "buttons" && source="PlayStore" || source="APKMirror"
+            if [ "$AppUpdatesSource" == "PlayStore" ]; then echo "AppUpdatesSource == PlayStore"; elif [ "$AppUpdatesSource" == "APKMirror" ]; then echo "AppUpdatesSource == APKMirror"; else echo "AppUpdatesSource == Aptoide"; fi
+            options=(PlayStore APKMirror Aptoide)
+            buttons=("<Select>" "<Back>"); if menu "options" "buttons" "3"; then source="${options[$selected]}"; fi
             if [ -n "$source" ]; then
               case "$source" in
                 PlayStore) config "AppUpdatesSource" "PlayStore" && echo -e "$good ${Green}AppUpdatesSource as PlayStore set successfully!${Reset}" ;;
                 APKMirror) config "AppUpdatesSource" "APKMirror" && echo -e "$good ${Green}AppUpdatesSource as APKMirror set successfully!${Reset}" ;;
+                Aptoide) config "AppUpdatesSource" "Aptoide" && echo -e "$good ${Green}AppUpdatesSource as Aptoide set successfully!${Reset}" ;;
               esac
               sleep 2
             fi
