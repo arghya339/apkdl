@@ -1,21 +1,22 @@
 #!/bin/bash
 
+runCmd() {
+  command=${1}
+  if [ $isAndroid -eq 1 ]; then
+    if [ $su -eq 1 ]; then
+      su -c "$command"
+    elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
+      ~/rish -c "$command"
+    elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
+      ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$command"
+    fi
+  elif [ $isMacOS -eq 1 ]; then
+    adb -s $serial shell "$command"
+  fi
+}
+
 packagesInfo() {
   reqAppName=${1:-0}
-  runCmd() {
-    command=${1}
-    if [ $isAndroid -eq 1 ]; then
-      if [ $su -eq 1 ]; then
-        su -c "$command"
-      elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-        ~/rish -c "$command"
-      elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-        ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$command"
-      fi
-    elif [ $isMacOS -eq 1 ]; then
-      adb -s $serial shell "$command"
-    fi
-  }
   
   if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
     [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
@@ -229,7 +230,13 @@ packagesUninstall() {
 }
 
 showUninstalledSystemApps() {
+  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
+  fi
   uninstalledSystemApps=($(adb shell "pm list packages -s -u | grep -vF \"\$(pm list packages -s)\" | sed 's/package://'")); echo "${uninstalledSystemApps[@]}"
+  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+    [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
+  fi
 }
 
 recoverSystemApps() {
