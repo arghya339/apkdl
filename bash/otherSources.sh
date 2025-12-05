@@ -290,7 +290,7 @@ sf() {
           filesUrl="${filesUrls[selected]}"
           if [ "$fileType" == "file" ]; then
             fileSize=$(jq --arg filename "$fileTitle" -r '.[] | select(.title == $filename) | .children[2].text' <<< "$filesJson")
-            dlUrl="$filesUrl"
+            dlUrl=$(curl -sL -I "$filesUrl" | grep -i "location:" | tail -1 | sed 's/location: //i' | tr -d '\r')
             fileName="$fileTitle"
             filePath="$Download/$fileName"
             echo -e "fileSize: $fileSize\ndlUrl: ${Blue}$dlUrl${Reset}\nfileName: $fileName"
