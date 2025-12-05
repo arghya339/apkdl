@@ -292,7 +292,7 @@ sf() {
             fileSize=$(jq --arg filename "$fileTitle" -r '.[] | select(.title == $filename) | .children[2].text' <<< "$filesJson")
             dlUrl="$filesUrl"
             fileName="$fileTitle"
-            filePath="$Download/$filePath"
+            filePath="$Download/$fileName"
             echo -e "fileSize: $fileSize\ndlUrl: ${Blue}$dlUrl${Reset}\nfileName: $fileName"
             return
             break
