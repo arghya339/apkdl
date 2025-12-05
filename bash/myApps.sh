@@ -18,9 +18,6 @@ runCmd() {
 packagesInfo() {
   reqAppName=${1:-0}
   
-  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
-    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
-  fi
   echo -e "$running Get Installed packages list.."
   #packages=($(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm list packages -3" | sed 's/package://'))
   [ $ShowSystemApps -eq 0 ] && runCmdOut=$(runCmd "pm list packages -3") || runCmdOut=$(runCmd "pm list packages")
@@ -61,9 +58,6 @@ fi
       application_labels[i]=$(grep "application-label:" <<< "$runCmdOut" | cut -d"'" -f2) && unset runCmdOut
     fi
   done
-  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
-    [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
-  fi
 }
 
 getUpdates() {
@@ -212,16 +206,10 @@ hideApps() {
 }
 
 showHiddenApps() {
-  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
-    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
-  fi
   all_pkgs=$(runCmd "pm list packages -u")
   installed_pkgs=$(runCmd "pm list packages")
   hidden_pkgs=$(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://')
   hiddenApps=($hidden_pkgs)
-  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
-    [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
-  fi
 }
 
 unhideApps() {
@@ -266,9 +254,6 @@ packagesUninstall() {
     package="${packages[selected]}"
     appLabel="${application_labels[selected]}"
     echo -e "$running Uninstalling $package"
-    if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
-      [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
-    fi
     runCmdOut=$(runCmd "pm uninstall --user 0 $package")
     if echo "$runCmdOut" | grep -q 'Success' >/dev/null 2>&1; then
       unset runCmdOut; echo -e "$good Successfully uninstalled $appLabel."
@@ -278,23 +263,14 @@ packagesUninstall() {
       echo "$runCmdOut" | grep -q 'Failure' >/dev/null 2>&1 && echo -e "$notice Failed to uninstall $appLabel!" || echo -e "$good Successfully uninstalled $appLabel."
       unset runCmdOut
     fi
-    if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
-      [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
-    fi
   fi
 }
 
 showUninstalledSystemApps() {
-  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
-    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
-  fi
   all_pkgs=$(runCmd "pm list packages -s -u")
   installed_pkgs=$(runCmd "pm list packages -s")
   uninstalled_pkgs=$(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://')
   uninstalledSystemApps=($uninstalled_pkgs)
-  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
-    [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
-  fi
 }
 
 recoverSystemApps() {

@@ -1120,6 +1120,9 @@ while true; do
       if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
         options+=(clearAppCaches hideApps unhideApps)
       fi
+      if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+        [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
+      fi
       while true; do
         buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
@@ -1203,6 +1206,9 @@ while true; do
         esac
         echo; read -p "Press Enter to continue..."
       done
+      if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+        [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
+      fi
       ;;
     Configuration)
       while true; do
