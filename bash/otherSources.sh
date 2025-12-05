@@ -173,7 +173,7 @@ IzzyOnDroidSearch() {
     while true; do
       searchUrl="$baseUrl/fdroid/index.php/list/page/$page?repo=$repo;searchterm=$app_name;doFilter=1;limit=$appsPerPage"
       izzysoftHTML=$(curl -sL "$searchUrl")
-      approwJson=$(pup 'div.approw json{}' <<< "$izzysoftHTML") && echo $approwJson > approw.json
+      approwJson=$(pup 'div.approw json{}' <<< "$izzysoftHTML")
       mapfile -t appNames < <(jq -r '.. | select(.class? == "boldname") | .text' <<< "$approwJson")  # appName
       mapfile -t versionAddeds < <(jq -r '.. | select(.class? == "minor-details") | .text | select(test(" / [0-9]{4}-[0-9]{2}-[0-9]{2}"))' <<< "$approwJson")  # versionName / addedOn
       mapfile -t versionNames < <(jq -r '.. | select(.class? == "minor-details") | .text | select(test(" / [0-9]{4}")) | split(" / ")[0]' <<< "$approwJson")  # versionName
@@ -571,6 +571,8 @@ aptoideAppInfo() {
 # curl -sL "https://ws75.aptoide.com/api/7/apps/getRecommended" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/GetRecommendedRequest.java
 # curl -sL "https://ws75-cache.aptoide.com/api/7/listApps?sort=latest&limit=10" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/ListAppsRequest.java
 
+# top_post_id=$(curl -sL "https://apkdone.com/wp-json/elasticpress/autosuggest?q=picsart" | jq -r '.list.[].post_id' | head -1)
+# https://apkdone.com/wp-json/wp/v2/posts/$top_post_id
 liteapksSearch() {
   liteapksWPPostsAPI="https://liteapks.com/wp-json/wp/v2/posts"
   while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done

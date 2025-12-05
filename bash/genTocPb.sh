@@ -197,5 +197,6 @@ modules {
 EOF
 
 # proto bin
-protoc --encode=android.bundle.Toc --proto_path=. toc.proto < toc.txt > toc.pb && rm -f toc.proto toc.txt
+protoc --encode=android.bundle.Toc --proto_path=. toc.proto < toc.txt > toc.pb
+rm -f toc.proto toc.txt
 #########################################################################################################
