@@ -786,7 +786,7 @@ clearAppCaches() {
   fi
 }
 
-declare -a apps applications uninstalledSystemApps
+declare -a apps applications disabledApps uninstalledSystemApps
 while true; do
   options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced RVX)
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
@@ -1121,23 +1121,19 @@ while true; do
       echo; read -p "Press Enter to continue..."
       ;;
     manageApps)
-      options=(appUpdates uninstallApps recoverSystemApps)
+      curl -sL -o "$apkdl/myApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh"
+      source $apkdl/myApps.sh
+      options=(appUpdates disableApps enableApps uninstallApps recoverSystemApps)
       while true; do
         buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
-          appUpdates)
-            curl -sL -o "$apkdl/myApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh"
-            source $apkdl/myApps.sh
-      
+          appUpdates)      
             if [ "$AppUpdatesSource" == "PlayStore" ]; then
               curl -sL -o "$apkdl/play.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/play.sh"
               source $apkdl/play.sh
-
               [ ${#apps[@]} -eq 0 ] && gPlayApiAppsUpdates
-
               gPlayApiShowUpdates
               [ $? -ne 0 ] && continue
-
               gPlayApiDownloadApp "1"
               if [ $? -eq 0 ]; then
                 buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
@@ -1147,20 +1143,15 @@ while true; do
                 else
                   [ "$apk_ext" == "apks" ] && APKS2APK && sign "${filePath%.*}.apk"
                 fi
-                echo; read -p "Press Enter to continue..."
               fi
             elif [ "$AppUpdatesSource" == "APKMirror" ]; then
               curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
               source $apkdl/APKMdl.sh
-        
               [ ${#apps[@]} -eq 0 ] && getUpdates
-
               showUpdates
               [ $? -ne 0 ] && continue
-      
               getVariant
               [ $? -ne 0 ] && continue
-      
               getDownloadLink
               if [ $? -eq 0 ]; then
                 getAppDetails
@@ -1181,35 +1172,31 @@ while true; do
                     fi
                   fi
                 fi
-                echo; read -p "Press Enter to continue..."
               fi
             else
               [ ${#apps[@]} -eq 0 ] && aptoideListAppsUpdates
-
               aptoideShowUpdates
               [ $? -ne 0 ] && continue
-              echo; read -p "Press Enter to continue..."
             fi
             ;;
-          uninstallApps)
-            curl -sL -o "$apkdl/myApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh"
-            source $apkdl/myApps.sh
-      
+          disableApps)
             [ ${#applications[@]} -eq 0 ] && packagesList
-      
+            disableApps
+            ;;
+          enableApps)
+            [ ${#disabledApps[@]} -eq 0 ] && showDisabledApps
+            enableApps
+            ;;
+          uninstallApps)
+            [ ${#applications[@]} -eq 0 ] && packagesList
             packagesUninstall
-            [ $? -ne 0 ] && continue || { echo; read -p "Press Enter to continue..."; }
             ;;
           recoverSystemApps)
-            curl -sL -o "$apkdl/myApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh"
-            source $apkdl/myApps.sh
-
             [ ${#uninstalledSystemApps[@]} -eq 0 ] && showUninstalledSystemApps
-
             recoverSystemApps
-            echo; read -p "Press Enter to continue..."
             ;;
         esac
+        echo; read -p "Press Enter to continue..."
       done
       ;;
     Configuration)

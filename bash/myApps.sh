@@ -202,6 +202,29 @@ packagesList() {
   done
 }
 
+disableApps() {
+  buttons=("<Select>" "<Back>")
+  if menu "applications" "buttons"; then
+    package="${packages[selected]}"
+    appLabel="${application_labels[selected]}"
+    echo -e "$running Disabling $package"
+    runCmd "pm disable $package" && echo -e "$good Successfully disabled $appLabel." || echo -e "$notice Failed to disabled $appLabel!"
+  fi
+}
+
+showDisabledApps() {
+  disabled_pkgs=$(runCmd "pm list packages -d")
+  disabledApps=($(sed 's/package://' <<< "$disabled_pkgs"))
+}
+
+enableApps() {
+  buttons=("<Select>" "<Back>")
+  if menu "disabledApps" "buttons"; then
+    package="${disabledApps[selected]}"
+    runCmd "pm enable $package"
+  fi
+}
+
 packagesUninstall() {
   buttons=("<Select>" "<Back>")
   if menu "applications" "buttons"; then
@@ -223,9 +246,6 @@ packagesUninstall() {
     if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
       [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
     fi
-    return
-  else
-    return 1
   fi
 }
 
