@@ -780,14 +780,28 @@ APIKey() {
 
 virustotalScanUrl() {
   # https://docs.virustotal.com/reference/scan-url
-  base64EncodedUrl=$(echo -n "$dlUrl" | base64 | tr -d '\n' | tr -d '=' | tr '/+' '_-')
-  analysis_data=$(curl -sL "https://www.virustotal.com/api/v3/urls/$base64EncodedUrl" -H "x-apikey: $API_KEY" | jq -r '.data.attributes')
-  last_analysis_stats=$(jq -r '.last_analysis_stats' <<< "$analysis_data")
-  malicious=$(jq -r '.malicious' <<< "$last_analysis_stats")
-  suspicious=$(jq -r '.suspicious' <<< "$last_analysis_stats")
+  # submit url for analysis
+  analysis_id=$(curl -sL "https://www.virustotal.com/api/v3/urls" -H "x-apikey: $API_KEY" -H "Content-Type: application/x-www-form-urlencoded" --data-urlencode "url=$version_download_link" | jq -r '.data.id')
+  # get analysis data
+  if [ "$analysis_id" != "null" ]; then
+    while true; do
+      analysis_data=$(curl -sL "https://www.virustotal.com/api/v3/analyses/$analysis_id" -H "x-apikey: $API_KEY" | jq -r '.data.attributes')
+      analysis_status=$(jq -r '.status' <<< "$analysis_data")
+      if [ "$analysis_status" == "completed" ]; then
+        break
+      elif [ "$analysis_status" == "queued" ]; then
+        sleep 5
+      fi
+    done
+  fi
+  # get analysis stats
+  analysis_stats=$(jq -r '.stats' <<< "$analysis_data")
+  malicious=$(jq -r '.malicious' <<< "$analysis_stats")
+  suspicious=$(jq -r '.suspicious' <<< "$analysis_stats")
   if [ $malicious -ne 0 ] || [ $suspicious -ne 0 ]; then
-    last_analysis_results=$(jq '.last_analysis_results | to_entries | map(select(.value.category == "malicious" or .value.category == "suspicious" or .value.result == "suspicious" or .value.result == "phishing")) | from_entries' <<< "$analysis_data")
-    jq <<< "$last_analysis_results"
+    # get analysis results
+    analysis_results=$(jq '.results | to_entries | map(select(.value.category == "malicious" or .value.category == "suspicious" or .value.result == "suspicious" or .value.result == "phishing")) | from_entries' <<< "$analysis_data")
+    jq <<< "$analysis_results"
     buttons=("<Download anyway>" "<Got it>"); confirmPrompt "This app repored as malicious or suspicious by virustotal. Downloading this app may put your device at risk." "buttons" "1" && return 0 || return 1
   else
     return 0
