@@ -793,7 +793,7 @@ while true; do
     options+=(clearAppCaches)
   fi
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
-    options+=(appUpdates uninstallApps)
+    options+=(manageApps)
   fi
   if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
     options+=(Configuration)
@@ -1120,80 +1120,88 @@ while true; do
       clearAppCaches
       echo; read -p "Press Enter to continue..."
       ;;
-    appUpdates)
-      curl -sL -o "$apkdl/installedApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApps.sh"
-      source $apkdl/installedApps.sh
+    manageApps)
+      options=(appUpdates uninstallApps)
+      while true; do
+        buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
+        case "$selected" in
+          appUpdates)
+            curl -sL -o "$apkdl/myApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh"
+            source $apkdl/myApps.sh
       
-      if [ "$AppUpdatesSource" == "PlayStore" ]; then
-        curl -sL -o "$apkdl/play.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/play.sh"
-        source $apkdl/play.sh
+            if [ "$AppUpdatesSource" == "PlayStore" ]; then
+              curl -sL -o "$apkdl/play.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/play.sh"
+              source $apkdl/play.sh
 
-        [ ${#apps[@]} -eq 0 ] && gPlayApiAppsUpdates
+              [ ${#apps[@]} -eq 0 ] && gPlayApiAppsUpdates
 
-        gPlayApiShowUpdates
-        [ $? -ne 0 ] && continue
+              gPlayApiShowUpdates
+              [ $? -ne 0 ] && continue
 
-        gPlayApiDownloadApp "1"
-        if [ $? -eq 0 ]; then
-          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
-          if [ "$opt" == "Yes" ]; then
-            [ -n "$serial" ] && adbInstall "$filePath"
-            [ $isAndroid -eq 1 ] && apkInstall "$filePath"
-          else
-            [ "$apk_ext" == "apks" ] && APKS2APK && sign "${filePath%.*}.apk"
-          fi
-          echo; read -p "Press Enter to continue..."
-        fi
-      elif [ "$AppUpdatesSource" == "APKMirror" ]; then
-        curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
-        source $apkdl/APKMdl.sh
-        
-        [ ${#apps[@]} -eq 0 ] && getUpdates
-
-        showUpdates
-        [ $? -ne 0 ] && continue
-      
-        getVariant
-        [ $? -ne 0 ] && continue
-      
-        getDownloadLink
-        if [ $? -eq 0 ]; then
-          getAppDetails
-          appName=$(echo "${appName%%[:—(]*}" | xargs)
-          fileName="${appName}_v${version}-${arch}${file_ext}"
-          apkPath="$Download/$fileName"
-          [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
-          [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
-          [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
-          if [ -f "$apkPath" ]; then
-            buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
-            if [ "$opt" == "Yes" ]; then
-              if [ $isAndroid -eq 1 ]; then
-                sign "$apkPath" && apkInstall "$apkPath"
-              elif [ $isMacOS -eq 1 ]; then
-                ext="${fileName##*.}"
-                ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
+              gPlayApiDownloadApp "1"
+              if [ $? -eq 0 ]; then
+                buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+                if [ "$opt" == "Yes" ]; then
+                  [ -n "$serial" ] && adbInstall "$filePath"
+                  [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+                else
+                  [ "$apk_ext" == "apks" ] && APKS2APK && sign "${filePath%.*}.apk"
+                fi
+                echo; read -p "Press Enter to continue..."
               fi
-            fi
-          fi
-          echo; read -p "Press Enter to continue..."
-        fi
-      else
-        [ ${#apps[@]} -eq 0 ] && aptoideListAppsUpdates
+            elif [ "$AppUpdatesSource" == "APKMirror" ]; then
+              curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
+              source $apkdl/APKMdl.sh
+        
+              [ ${#apps[@]} -eq 0 ] && getUpdates
 
-        aptoideShowUpdates
-        [ $? -ne 0 ] && continue
-        echo; read -p "Press Enter to continue..."
-      fi
-      ;;
-    uninstallApps)
-      curl -sL -o "$apkdl/installedApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/installedApps.sh"
-      source $apkdl/installedApps.sh
+              showUpdates
+              [ $? -ne 0 ] && continue
       
-      [ ${#applications[@]} -eq 0 ] && packagesList
+              getVariant
+              [ $? -ne 0 ] && continue
       
-      packagesUninstall
-      [ $? -ne 0 ] && continue || { echo; read -p "Press Enter to continue..."; }
+              getDownloadLink
+              if [ $? -eq 0 ]; then
+                getAppDetails
+                appName=$(echo "${appName%%[:—(]*}" | xargs)
+                fileName="${appName}_v${version}-${arch}${file_ext}"
+                apkPath="$Download/$fileName"
+                [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
+                [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
+                [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
+                if [ -f "$apkPath" ]; then
+                  buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
+                  if [ "$opt" == "Yes" ]; then
+                    if [ $isAndroid -eq 1 ]; then
+                      sign "$apkPath" && apkInstall "$apkPath"
+                    elif [ $isMacOS -eq 1 ]; then
+                      ext="${fileName##*.}"
+                      ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
+                    fi
+                  fi
+                fi
+                echo; read -p "Press Enter to continue..."
+              fi
+            else
+              [ ${#apps[@]} -eq 0 ] && aptoideListAppsUpdates
+
+              aptoideShowUpdates
+              [ $? -ne 0 ] && continue
+              echo; read -p "Press Enter to continue..."
+            fi
+            ;;
+          uninstallApps)
+            curl -sL -o "$apkdl/myApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh"
+            source $apkdl/myApps.sh
+      
+            [ ${#applications[@]} -eq 0 ] && packagesList
+      
+            packagesUninstall
+            [ $? -ne 0 ] && continue || { echo; read -p "Press Enter to continue..."; }
+            ;;
+        esac
+      done
       ;;
     Configuration)
       while true; do
