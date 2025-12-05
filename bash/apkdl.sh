@@ -786,7 +786,7 @@ clearAppCaches() {
   fi
 }
 
-declare -a apps applications
+declare -a apps applications uninstalledSystemApps
 while true; do
   options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced RVX)
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
@@ -1121,7 +1121,7 @@ while true; do
       echo; read -p "Press Enter to continue..."
       ;;
     manageApps)
-      options=(appUpdates uninstallApps)
+      options=(appUpdates uninstallApps recoverSystemApps)
       while true; do
         buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
@@ -1199,6 +1199,15 @@ while true; do
       
             packagesUninstall
             [ $? -ne 0 ] && continue || { echo; read -p "Press Enter to continue..."; }
+            ;;
+          recoverSystemApps)
+            curl -sL -o "$apkdl/myApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh"
+            source $apkdl/myApps.sh
+
+            [ ${#uninstalledSystemApps[@]} -eq 0 ] && showUninstalledSystemApps
+
+            recoverSystemApps
+            echo; read -p "Press Enter to continue..."
             ;;
         esac
       done

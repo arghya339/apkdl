@@ -227,4 +227,16 @@ packagesUninstall() {
     return 1
   fi
 }
+
+showUninstalledSystemApps() {
+  uninstalledSystemApps=($(adb shell "pm list packages -s -u | grep -vF \"\$(pm list packages -s)\" | sed 's/package://'")); echo "${uninstalledSystemApps[@]}"
+}
+
+recoverSystemApps() {
+  buttons=("<Select>" "<Back>")
+  if menu "uninstalledSystemApps" "buttons"; then
+    package="${uninstalledSystemApps[selected]}"
+    runCmd "cmd package install-existing $package"
+  fi
+}
 ############################################################################################################################################
