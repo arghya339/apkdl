@@ -248,7 +248,7 @@ dlAppGallery() {
     echo -e "$info dlUrl: ${Blue}$dlUrl${Reset}"
     fileName=$(echo "$dlUrl" | sed 's/.*\///; s/\?.*//')  # extract everything between last / and ?
     filePath="$Download/$fileName"
-    return
+    [ -n "$dlUrl" ] && return 0 || return 1
   else
     return 1
   fi
