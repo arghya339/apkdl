@@ -208,7 +208,7 @@ disableApps() {
     package="${packages[selected]}"
     appLabel="${application_labels[selected]}"
     echo -e "$running Disabling $package"
-    runCmd "pm disable $package" && echo -e "$good Successfully disabled $appLabel." || echo -e "$notice Failed to disabled $appLabel!"
+    runCmd "pm disable-user --user 0 $package" && echo -e "$good Successfully disabled $appLabel." || echo -e "$notice Failed to disabled $appLabel!"
   fi
 }
 
