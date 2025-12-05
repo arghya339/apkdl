@@ -786,12 +786,9 @@ clearAppCaches() {
   fi
 }
 
-declare -a apps applications disabledApps uninstalledSystemApps
+declare -a apps applications enabledApps disabledApps uninstalledSystemApps
 while true; do
   options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced RVX)
-  if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
-    options+=(clearAppCaches)
-  fi
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
     options+=(manageApps)
   fi
@@ -1116,14 +1113,13 @@ while true; do
         echo; read -p "Press Enter to continue..."
       fi
       ;;
-    clearAppCaches)
-      clearAppCaches
-      echo; read -p "Press Enter to continue..."
-      ;;
     manageApps)
       curl -sL -o "$apkdl/myApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh"
       source $apkdl/myApps.sh
       options=(appUpdates disableApps enableApps uninstallApps recoverSystemApps)
+      if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
+        options+=(clearAppCaches)
+      fi
       while true; do
         buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
@@ -1179,8 +1175,9 @@ while true; do
               [ $? -ne 0 ] && continue
             fi
             ;;
+          clearAppCaches) clearAppCaches ;;
           disableApps)
-            [ ${#applications[@]} -eq 0 ] && packagesList
+            [ ${#enabledApps[@]} -eq 0 ] && showEnabledApps
             disableApps
             ;;
           enableApps)

@@ -202,13 +202,17 @@ packagesList() {
   done
 }
 
+showEnabledApps() {
+  enabled_pkgs=$(runCmd "pm list packages -e")
+  enabledApps=($(sed 's/package://' <<< "$enabled_pkgs"))
+}
+
 disableApps() {
   buttons=("<Select>" "<Back>")
-  if menu "applications" "buttons"; then
-    package="${packages[selected]}"
-    appLabel="${application_labels[selected]}"
+  if menu "enabledApps" "buttons"; then
+    package="${enabledApps[selected]}"
     echo -e "$running Disabling $package"
-    runCmd "pm disable-user --user 0 $package" && echo -e "$good Successfully disabled $appLabel." || echo -e "$notice Failed to disabled $appLabel!"
+    runCmd "pm disable-user --user 0 $package" && echo -e "$good Successfully disabled $package." || echo -e "$notice Failed to disabled $package!"
   fi
 }
 
