@@ -233,7 +233,10 @@ showUninstalledSystemApps() {
   if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
     [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
   fi
-  uninstalledSystemApps=($(adb shell "pm list packages -s -u | grep -vF \"\$(pm list packages -s)\" | sed 's/package://'")); echo "${uninstalledSystemApps[@]}"
+  all_pkgs=$(runCmd "pm list packages -s -u")
+  installed_pkgs=$(runCmd "pm list packages -s")
+  uninstalled_pkgs=$(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://')
+  uninstalledSystemApps=($uninstalled_pkgs)
   if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
     [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
   fi
