@@ -262,6 +262,7 @@ sf() {
     baseUrl="$sfDomain/projects"
     filesUrl="$baseUrl/$projectName/files"
     while true; do
+      curl -fsL "$filesUrl" >/dev/null 2>&1 || { [ $isAndroid -eq 1 ] && termux-open-url "$filesUrl"; [ $isMacOS -eq 1 ] && open "$filesUrl"; return 1; break; }
       filesHtml=$(curl -sL "$filesUrl")
       filesJson=$(pup '#files_list tbody tr[class^="folder"], #files_list tbody tr[class^="file"] json{}' <<< "$filesHtml")
 
