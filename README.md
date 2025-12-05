@@ -9,7 +9,7 @@ apk downloader
 ## Purpose
 - This script automates process of downloading apk file using shell script.
 
-## Supported source
+## Supported sources
 - [PlayStore](https://play.google.com/store/apps/)
 - [GitHub](https://github.com/)
 - [GitLab](https://gitlab.com/)
@@ -17,6 +17,14 @@ apk downloader
 - [APKMirror](https://apkmirror.com/)
 - [Uptodown](https://en.uptodown.com/)
 - [APKPure](https://apkpure.com/)
+- otherSources
+  - [Codeberg](https://codeberg.org/)
+  - [IzzyOnDroid](https://apt.izzysoft.de/fdroid/)
+  - [AppGallery](https://appgallery.huawei.com/)
+  - [SourceForge](https://sourceforge.net/)
+  - [APKCombo](https://apkcombo.com/)
+  - [Aptoide](https://en.aptoide.com/group/applications/)
+  - [LITEAPKS](https://liteapks.com/)
 - [ReVanced](https://revanced.app/)
 - [RVX](https://github.com/inotia00/revanced-patches/)
 
