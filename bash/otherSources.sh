@@ -329,13 +329,13 @@ APKComboVariants() {
   done
   buttons=("<Select>" "<Back>")
   if menu variantsList buttons; then
-    versionNameN="${versionNamesN[selected]}"
+    version="${versionNamesN[selected]}"
     arch="${archs[selected]}"
     vtype="${vtypes[selected]}"
     dlUrl="${dlUrls[selected]}"
     echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
-    [ "$vtype" == "APK" ] && file_ext="apk" || file_ext="xapk"
-    fileName="${appName}_v$versionNameN-$arch.$file_ext"
+    [ "$vtype" == "APK" ] && file_ext="apk" || file_ext="apks"
+    fileName="${appName}_v$version-$arch.$file_ext"
     filePath="$Download/$fileName"
     return
   else
@@ -912,6 +912,9 @@ while true; do
       [ $? -ne 0 ] && continue
       dlOther
       if [ $? -eq 0 ]; then
+        [ -f "$Download/${appName}_v$version-$arch.apks" ] && apks2apk
+        fileName="${appName}_v$version-$arch.apk"
+        filePath="$Download/$fileName"
         if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt="Yes" || opt="No"
           if [ "$opt" == "Yes" ]; then
