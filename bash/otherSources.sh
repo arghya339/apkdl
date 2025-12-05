@@ -331,9 +331,11 @@ APKComboVariants() {
   if menu variantsList buttons; then
     versionNameN="${versionNamesN[selected]}"
     arch="${archs[selected]}"
+    vtype="${vtypes[selected]}"
     dlUrl="${dlUrls[selected]}"
     echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
-    fileName="${appName}_v$versionNameN-$arch.apk"
+    [ "$vtype" == "APK" ] && file_ext="apk" || file_ext="xapk"
+    fileName="${appName}_v$versionNameN-$arch.$file_ext"
     filePath="$Download/$fileName"
     return
   else
