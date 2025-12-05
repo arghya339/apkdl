@@ -329,8 +329,12 @@ APKComboVariants() {
   done
   buttons=("<Select>" "<Back>")
   if menu variantsList buttons; then
+    versionNameN="${versionNamesN[selected]}"
+    arch="${archs[selected]}"
     dlUrl="${dlUrls[selected]}"
     echo -e "dlUrl: ${Blue}$dlUrl${Reset}"
+    fileName="${appName}_v$versionNameN-$arch.apk"
+    filePath="$Download/$fileName"
     return
   else
     return 1
@@ -384,6 +388,7 @@ APKComboSearch() {
     done
     buttons=("<Select>" "<Back>")
     if menu appsList buttons; then
+      appName="${appNames[selected]}"
       appUrl="${appUrls[selected]}"
       echo -e "appUrl: ${Blue}$appUrl${Reset}"
       APKComboVersions
