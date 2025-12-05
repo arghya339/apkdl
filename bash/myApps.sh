@@ -202,6 +202,37 @@ packagesList() {
   done
 }
 
+hideApps() {
+  buttons=("<Select>" "<Back>")
+  if menu "applications" "buttons"; then
+    package="${packages[selected]}"
+    appLabel="${application_labels[selected]}"
+    runCmd "pm hide $package" && echo -e "$good Successfully hidden $appLabel." || echo -e "$notice Failed to hidden $appLabel!"
+  fi
+}
+
+showHiddenApps() {
+  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
+  fi
+  all_pkgs=$(runCmd "pm list packages -u")
+  installed_pkgs=$(runCmd "pm list packages")
+  hidden_pkgs=$(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://')
+  hiddenApps=($hidden_pkgs)
+  if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+    [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
+  fi
+}
+
+unhideApps() {
+  buttons=("<Select>" "<Back>")
+  if menu "hiddenApps" "buttons"; then
+    package="${hiddenApps[selected]}"
+    echo -e "$running Disabling $package"
+    runCmd "pm unhide $package"
+  fi
+}
+
 showEnabledApps() {
   enabled_pkgs=$(runCmd "pm list packages -e")
   enabledApps=($(sed 's/package://' <<< "$enabled_pkgs"))
