@@ -40,18 +40,18 @@ Headers=(
 
 # Request toc (Table of Contents) to initialize a session and get session cookies
 echo -e "$running Initializing fdfe session.."
-[ -f cookies.txt ] && rm -f cookies.txt
-curl -sL -c "cookies.txt" "$tocUrl" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "toc.protobuf"
+[ -f $apkdl/cookies.txt ] && rm -f $apkdl/cookies.txt
+curl -sL -c "$apkdl/cookies.txt" "$tocUrl" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "toc.protobuf"
 protoc --decode_raw < toc.protobuf > toc.txt && rm -f toc.protobuf
 tosToken=$(awk -F'"' '/1 \{/{f1=1} f1&&/6 \{/{f6=1} f6&&/7: "/{print $2; exit}' toc.txt)  # tosToken (Terms of Service Token) is usually in field 7 of tocResponse
 # Accept Google Play's Terms of Service
 if [ -n "$tosToken" ]; then
   echo -e "$notice Terms of Service found! Accepting.."
-  curl -sL -X POST "$acceptTosUrl" "${Headers[@]}" -b "cookies.txt" -d "tost=$tosToken" -d "toscme=false" -o /dev/null
+  curl -sL -X POST "$acceptTosUrl" "${Headers[@]}" -b "$apkdl/cookies.txt" -d "tost=$tosToken" -d "toscme=false" -o /dev/null
   echo -e "$good Terms of Service accepted."
 fi
 rm -f toc.txt
-Headers+=(-b "cookies.txt")
+Headers+=(-b "$apkdl/cookies.txt")
 
 # src: https://gitlab.com/AuroraOSS/AuroraStore/-/blob/master/app/src/main/java/com/aurora/store/util/CommonUtil.kt
 humanReadableForm() {
