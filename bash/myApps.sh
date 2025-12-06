@@ -288,7 +288,7 @@ showUninstalledSystemApps() {
   uninstalled_pkgs=($(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://'))
   packagesInfo "uninstalled_pkgs" "1"
   uninstalledSystemApps=()
-  for ((i=1; i<${#uninstalled_pkgs[@]}; i++)); do
+  for ((i=0; i<${#uninstalled_pkgs[@]}; i++)); do
     uninstalledSystemApps+=("${application_labels[i]} (${uninstalled_pkgs[i]})")
   done
 }
