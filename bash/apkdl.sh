@@ -1180,7 +1180,7 @@ while true; do
             ;;
           clearAppCaches) clearAppCaches ;;
           hideApps)
-            [ ${#applications[@]} -eq 0 ] && packagesList
+            [ ${#applications[@]} -eq 0 ] && appsList
             hideApps
             ;;
           unhideApps)
@@ -1196,7 +1196,7 @@ while true; do
             enableApps
             ;;
           uninstallApps)
-            [ ${#applications[@]} -eq 0 ] && packagesList
+            [ ${#applications[@]} -eq 0 ] && appsList
             packagesUninstall
             ;;
           recoverSystemApps)

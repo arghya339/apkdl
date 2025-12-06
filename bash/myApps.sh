@@ -15,16 +15,17 @@ runCmd() {
   fi
 }
 
-packagesInfo() {
-  reqAppName=${1:-0}
-  
+packagesList() {
   echo -e "$running Get Installed packages list.."
-  #packages=($(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm list packages -3" | sed 's/package://'))
   [ $ShowSystemApps -eq 0 ] && runCmdOut=$(runCmd "pm list packages -3") || runCmdOut=$(runCmd "pm list packages")
   packages=($(sed 's/package://g' <<< "$runCmdOut")) && unset runCmdOut
+}
+
+packagesInfo() {
+  local -n packages_name=$1
+  reqAppName=${2:-0}
   
 if [ $reqAppName -eq 1 ]; then
-  #~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell [ ! -f "/data/local/tmp/aapt2" ] && ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) push ~/aapt2 /data/local/tmp/ >/dev/null 2>&1
   if [ $isAndroid -eq 1 ]; then
     if [ $su -eq 1 ]; then
       su -c "[ ! -f "/data/local/tmp/aapt2" ]" && su -c "cp $HOME/aapt2 /data/local/tmp/"
@@ -41,10 +42,9 @@ if [ $reqAppName -eq 1 ]; then
 fi
   
   echo -e "$running Get Installed packages info.."
-  for ((i=0; i<${#packages[@]}; i++)); do
-    echo -e "$running Processing $((i+1))/${#packages[@]}: ${packages[$i]}"
-    #appInfo=$(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "pm dump "${packages[i]}" | grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath'")
-    runCmdOut=$(runCmd "pm dump ${packages[$i]}")
+  for ((i=0; i<${#packages_name[@]}; i++)); do
+    echo -e "$running Processing $((i+1))/${#packages_name[@]}: ${packages_name[$i]}"
+    runCmdOut=$(runCmd "pm dump ${packages_name[$i]}")
     appInfo=$(grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath' <<< "$runCmdOut") && unset runCmdOut
     iVersionNames[i]=$(echo "$appInfo" | grep "versionName" | awk -F'=' '{print $2}')
     iVersionCodes[i]=$(echo "$appInfo" | grep "versionCode" | awk -F'=' '{print $2}' | awk '{print $1}')
@@ -53,7 +53,6 @@ fi
     codePaths[i]=$(echo "$appInfo" | grep "codePath" | sed 's/.*codePath=//')
     basePaths[i]="${codePaths[$i]}/base.apk"
     if [ $reqAppName -eq 1 ]; then
-      #application_labels[i]=$(~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$aapt2 dump badging ${basePaths[$i]}" | grep "application-label:" | cut -d"'" -f2)
       runCmdOut=$(runCmd "$aapt2 dump badging ${basePaths[$i]}")
       application_labels[i]=$(grep "application-label:" <<< "$runCmdOut" | cut -d"'" -f2) && unset runCmdOut
     fi
@@ -61,7 +60,8 @@ fi
 }
 
 getUpdates() {
-  packagesInfo
+  packagesList
+  packagesInfo "packages"
   echo -e "$running Get Installed packages updates.."
   
   pkgs=$(sed 's/ /", "/g; s/^/"/; s/$/"/' <<< "${packages[@]}")
@@ -119,7 +119,8 @@ showUpdates() {
 aptoideListAppsUpdates() {
   # src: https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/listapps/ListAppsUpdatesRequest.java
   aptoideListAppsUpdatesAPI="https://ws75.aptoide.com/api/7/listAppsUpdates"
-  packagesInfo
+  packagesList
+  packagesInfo "packages"
   echo -e "$running Get Installed packages updates.."
   apks_data="apks_data=["
   for ((i=0; i<${#packages[@]}; i++)); do
@@ -188,8 +189,9 @@ aptoideShowUpdates() {
   fi
 }
 
-packagesList() {
-  packagesInfo "1"
+appsList() {
+  packagesList
+  packagesInfo "packages" "1"
   applications=()
   for ((i=0; i<${#packages[@]}; i++)); do
     applications+=("${application_labels[$i]} (${packages[$i]})")
@@ -208,42 +210,56 @@ hideApps() {
 showHiddenApps() {
   all_pkgs=$(runCmd "pm list packages -u")
   installed_pkgs=$(runCmd "pm list packages")
-  hidden_pkgs=$(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://')
-  hiddenApps=($hidden_pkgs)
+  hidden_pkgs=($(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://'))
+  packagesInfo "hidden_pkgs" "1"
+  hiddenApps=()
+  for ((i=0; i<${#hidden_pkgs[@]}; i++)); do
+    hiddenApps+=("${application_labels[i]} (${hidden_pkgs[i]})")
+  done
 }
 
 unhideApps() {
   buttons=("<Select>" "<Back>")
   if menu "hiddenApps" "buttons"; then
-    package="${hiddenApps[selected]}"
-    echo -e "$running Disabling $package"
+    package="${hidden_pkgs[selected]}"
+    echo -e "$running Unhidden $package"
     runCmd "pm unhide $package"
   fi
 }
 
 showEnabledApps() {
-  enabled_pkgs=$(runCmd "pm list packages -e")
-  enabledApps=($(sed 's/package://' <<< "$enabled_pkgs"))
+  runCmdOut=$(runCmd "pm list packages -e")
+  enabled_pkgs=($(sed 's/package://' <<< "$runCmdOut")) && unset runCmdOut
+  packagesInfo "enabled_pkgs" "1"
+  enabledApps=()
+  for ((i=0; i<${#enabled_pkgs[@]}; i++)); do
+    enabledApps+=("${application_labels[i]} (${enabled_pkgs[i]})")
+  done
 }
 
 disableApps() {
   buttons=("<Select>" "<Back>")
   if menu "enabledApps" "buttons"; then
-    package="${enabledApps[selected]}"
+    package="${enabled_pkgs[selected]}"
     echo -e "$running Disabling $package"
     runCmd "pm disable-user --user 0 $package" && echo -e "$good Successfully disabled $package." || echo -e "$notice Failed to disabled $package!"
   fi
 }
 
 showDisabledApps() {
-  disabled_pkgs=$(runCmd "pm list packages -d")
-  disabledApps=($(sed 's/package://' <<< "$disabled_pkgs"))
+  runCmdOut=$(runCmd "pm list packages -d")
+  disabled_pkgs=($(sed 's/package://' <<< "$runCmdOut")) && unset runCmdOut
+  packagesInfo "disabled_pkgs" "1"
+  disabledApps=()
+  for ((i=0; i<${#disabled_pkgs[@]}; i++)); do
+    disabledApps+=("${application_labels[i]} (${disabled_pkgs[i]})")
+  done
 }
 
 enableApps() {
   buttons=("<Select>" "<Back>")
   if menu "disabledApps" "buttons"; then
-    package="${disabledApps[selected]}"
+    package="${disabled_pkgs[selected]}"
     runCmd "pm enable $package"
   fi
 }
@@ -269,14 +285,18 @@ packagesUninstall() {
 showUninstalledSystemApps() {
   all_pkgs=$(runCmd "pm list packages -s -u")
   installed_pkgs=$(runCmd "pm list packages -s")
-  uninstalled_pkgs=$(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://')
-  uninstalledSystemApps=($uninstalled_pkgs)
+  uninstalled_pkgs=($(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://'))
+  packagesInfo "uninstalled_pkgs" "1"
+  uninstalledSystemApps=()
+  for ((i=1; i<${#uninstalled_pkgs[@]}; i++)); do
+    uninstalledSystemApps+=("${application_labels[i]} (${uninstalled_pkgs[i]})")
+  done
 }
 
 recoverSystemApps() {
   buttons=("<Select>" "<Back>")
   if menu "uninstalledSystemApps" "buttons"; then
-    package="${uninstalledSystemApps[selected]}"
+    package="${uninstalled_pkgs[selected]}"
     runCmd "cmd package install-existing $package"
   fi
 }

@@ -269,7 +269,8 @@ gPlayApiAppsDetails() {
 gPlayApiAppsUpdates() {
   curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh -o "$apkdl/myApps.sh"
   source $apkdl/myApps.sh
-  packagesInfo
+  packagesList
+  packagesInfo "packages"
   gPlayApiAppsDetails "${packages[@]}"
   declare -g -a installedVersions installedVersionCodes lastUpdates
   for i in ${!pkgs[@]}; do
