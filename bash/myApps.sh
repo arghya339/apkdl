@@ -45,11 +45,12 @@ fi
   for ((i=0; i<${#packages_name[@]}; i++)); do
     echo -e "$running Processing $((i+1))/${#packages_name[@]}: ${packages_name[$i]}"
     runCmdOut=$(runCmd "pm dump ${packages_name[$i]}")
-    appInfo=$(grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath' <<< "$runCmdOut") && unset runCmdOut
+    appInfo=$(grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath|installerPackageName' <<< "$runCmdOut") && unset runCmdOut
     iVersionNames[i]=$(echo "$appInfo" | grep "versionName" | awk -F'=' '{print $2}')
     iVersionCodes[i]=$(echo "$appInfo" | grep "versionCode" | awk -F'=' '{print $2}' | awk '{print $1}')
     firstInstallTimes[i]=$(echo "$appInfo" | grep "firstInstallTime" | awk -F'=' '{print $2}')
     iLastUpdateTimes[i]=$(echo "$appInfo" | grep "lastUpdateTime" | awk -F'=' '{print $2}')
+    installerPackageNames[i]=$(grep "installerPackageName" <<< "$appInfo" | awk -F'=' '{print $2}')
     codePaths[i]=$(echo "$appInfo" | grep "codePath" | sed 's/.*codePath=//')
     basePaths[i]="${codePaths[$i]}/base.apk"
     if [ $reqAppName -eq 1 ]; then
