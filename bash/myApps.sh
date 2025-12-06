@@ -228,19 +228,21 @@ unhideApps() {
 }
 
 showEnabledApps() {
-  runCmdOut=$(runCmd "pm list packages -e")
-  enabled_pkgs=($(sed 's/package://' <<< "$runCmdOut")) && unset runCmdOut
+  #runCmdOut=$(runCmd "pm list packages -e")
+  #enabled_pkgs=($(sed 's/package://' <<< "$runCmdOut")) && unset runCmdOut
+  runCmdOut=$(runCmd "cmd package query-activities -a android.intent.action.MAIN -c android.intent.category.LAUNCHER")  # filter out non-launchable apps (apps without a launcher activity)
+  launchable_pkgs=($(grep 'packageName=' <<< "$runCmdOut" | sed 's/.*packageName=//' | sort -u)) && unset runCmdOut
   packagesInfo "enabled_pkgs" "1"
   enabledApps=()
-  for ((i=0; i<${#enabled_pkgs[@]}; i++)); do
-    enabledApps+=("${application_labels[i]} (${enabled_pkgs[i]})")
+  for ((i=0; i<${#launchable_pkgs[@]}; i++)); do
+    enabledApps+=("${application_labels[i]} (${launchable_pkgs[i]})")
   done
 }
 
 disableApps() {
   buttons=("<Select>" "<Back>")
   if menu "enabledApps" "buttons"; then
-    package="${enabled_pkgs[selected]}"
+    package="${launchable_pkgs[selected]}"
     echo -e "$running Disabling $package"
     runCmd "pm disable-user --user 0 $package" && echo -e "$good Successfully disabled $package." || echo -e "$notice Failed to disabled $package!"
   fi
