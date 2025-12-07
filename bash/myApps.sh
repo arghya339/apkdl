@@ -217,7 +217,7 @@ blockInternet() {
       adb -s $serial shell su -c "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
     fi
-    [ -n "$status" ] && echo -e "$good Successfully blocked internet access for $appLabel." || echo -e "$notice Failed to blocking internet access for $appLabel!"
+    [ -n "$status" ] && { echo -e "$good Successfully blocked internet access for $appLabel."; runCmd "am force-stop $package"; } || echo -e "$notice Failed to blocking internet access for $appLabel!"
   fi
 }
 
@@ -239,7 +239,7 @@ unblockInternet() {
       adb -s $serial shell su -c "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
     fi
-    [ -z "$status" ] && echo -e "$good Successfully unblocked internet access for $appLabel." || echo -e "$notice Failed to unblocking internet access for $appLabel!"
+    [ -z "$status" ] && { echo -e "$good Successfully unblocked internet access for $appLabel."; runCmd "am force-stop $package"; } || echo -e "$notice Failed to unblocking internet access for $appLabel!"
   fi
 }
 
