@@ -234,6 +234,91 @@ Releases() {
   done
 }
 
+ghActions() {
+  owner="rhunk"
+  owner="FreeTubeApp"
+  repo="SnapEnhance"
+  repo="FreeTube"
+  workflowsJson=$(curl -sL $releasesUrl/actions/workflows)
+  workflowsCount=$(jq -r '.total_count' <<< "$workflowsJson")
+  mapfile -t workflowsNames < <(jq -r '.workflows.[].name' <<< "$workflowsJson")
+  workflowsStates=($(jq -r '.workflows.[].state' <<< "$workflowsJson"))
+  updated_ats=($(jq -r '.workflows.[].updated_at' <<< "$workflowsJson"))
+  workflows_urls=($(jq -r '.workflows.[].url' <<< "$workflowsJson"))
+  declare -a workflowsList
+  for ((i=0; i<${workflowsCount}; i++)); do
+    workflowsList+=("${workflowsNames[i]} | ${workflowsStates[i]} | ${updated_ats[i]}")
+  done
+  buttons=("<Select>" "<Back>")
+  if menu workflowsList buttons; then
+    workflowsName=${workflowsNames[selected]}
+    workflows_url=${workflows_urls[selected]}
+    echo -e "$info selected: $workflowsName"
+    
+    runsJson=$(curl -sL "$workflows_url/runs?page=1")
+    runsCount=$(jq -r '.total_count' <<< "$runsJson")
+    runs_ids=($(jq -r '.workflow_runs.[].id' <<< "$runsJson"))
+    head_branchs=($(jq -r '.workflow_runs.[].head_branch' <<< "$runsJson"))
+    mapfile -t display_titles < <(jq -r '.workflow_runs.[].display_title' <<< "$runsJson")
+    run_numbers=($(jq -r '.workflow_runs.[].run_number' <<< "$runsJson"))
+    status=($(jq -r '.workflow_runs.[].status' <<< "$runsJson"))
+    conclusions=($(jq -r '.workflow_runs.[].conclusion' <<< "$runsJson"))
+    runs_urls=($(jq -r '.workflow_runs.[].url' <<< "$runsJson"))
+    mapfile -t actors < <(jq -r '.workflow_runs.[].actor.login' <<< "$runsJson")
+    run_started_ats=($(jq -r '.workflow_runs.[].run_started_at' <<< "$runsJson"))
+    runsList=()
+    for ((i=0; i<${#runs_urls[@]}; i++)); do
+      runsList+=("${display_titles[i]} | ${status[i]} | ${head_branchs[i]} | ${run_started_ats[i]} | ${conclusions[i]} | #${run_numbers[i]} | ${actors[i]}")
+    done
+    if menu runsList buttons; then
+      runs_id=${runs_ids[selected]}
+      display_title=${display_titles[selected]}
+      runs_url=${runs_urls[selected]}
+      echo -e "$info selected: $display_title"
+
+      artifactsJson=$(curl -sL "$runs_url/artifacts")
+      artifactsCount=$(jq -r '.total_count' <<< "$artifactsJson")
+      artifacts_ids=($(jq -r '.artifacts.[].id' <<< "$artifactsJson"))
+      names=($(jq -r '.artifacts.[].name' <<< "$artifactsJson"))
+      sizes=($(jq -r '.artifacts.[].size_in_bytes' <<< "$artifactsJson"))
+      archive_download_urls=($(jq -r '.artifacts.[].archive_download_url' <<< "$artifactsJson"))
+      expired=($(jq -r '.artifacts.[].expired' <<< "$artifactsJson"))
+      digests=($(jq -r '.artifacts.[].digest' <<< "$artifactsJson"))
+      created_ats=($(jq -r '.artifacts.[].created_at' <<< "$artifactsJson"))
+      expires_ats=($(jq -r '.artifacts.[].expires_at' <<< "$artifactsJson"))
+      artifactsList=()
+      for ((i=0; i<$artifactsCount; i++)); do
+        artifactsList+=("${names[i]} | ${sizes[i]} | ${created_ats[i]} | expired: ${expired[i]} (${expires_ats[i]})")
+      done
+      if menu artifactsList buttons; then
+        artifacts_id=${artifacts_ids[selected]}
+        name=${names[selected]}
+        size=${names[selected]}
+        archive_download_url=${archive_download_urls[selected]}
+        digest=${digests[selected]}
+        echo -e "$info dlUrl: ${Blue}$archive_download_url${Reset}"
+        browser_download_url="https://github.com/$owner/$repo/actions/runs/$runs_id/artifacts/$artifacts_ids"
+        echo -e "$info browser_download_url: ${Blue}$browser_download_url${Reset}"
+        fileName="$name.zip"
+        if jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
+          asset_browser_download_url=$(curl -sL -I -H "Authorization: Bearer ${ghToken}" "$archive_download_url" | grep -i "location:" | head -1 | sed 's/location: //i' | tr -d '\r')
+          return 0
+        else
+          [ $isAndroid -eq 1 ] && termux-open-url "$browser_download_url"
+          [ $isMacOS -eq 1 ] && open "$browser_download_url"
+          return 1
+        fi
+      else
+        return 1
+      fi
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
+
 dlGH() {
   while true; do
     if [ $isAndroid -eq 1 ]; then
