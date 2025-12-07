@@ -821,7 +821,7 @@ while true; do
       searchGH
       [ $? -ne 0 ] && continue
 
-      buttons=("<Releases>" "Actions"); confirmPrompt "Browse" "buttons" && opt=Releases || opt=Actions
+      buttons=("<Releases>" "<Actions>"); confirmPrompt "Browse" "buttons" && opt=Releases || opt=Actions
       if [ "$opt" == "Releases" ]; then
         curl -fsL ${ghAuth} "$releasesUrl/latest" >/dev/null 2>&1
         if [ $? -ne 0 ]; then
