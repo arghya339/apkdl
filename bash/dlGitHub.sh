@@ -235,11 +235,7 @@ Releases() {
 }
 
 ghActions() {
-  owner="rhunk"
-  owner="FreeTubeApp"
-  repo="SnapEnhance"
-  repo="FreeTube"
-  workflowsJson=$(curl -sL $releasesUrl/actions/workflows)
+  workflowsJson=$(curl -sL $(dirname "$releasesUrl")/actions/workflows)
   workflowsCount=$(jq -r '.total_count' <<< "$workflowsJson")
   mapfile -t workflowsNames < <(jq -r '.workflows.[].name' <<< "$workflowsJson")
   workflowsStates=($(jq -r '.workflows.[].state' <<< "$workflowsJson"))

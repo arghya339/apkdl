@@ -821,19 +821,25 @@ while true; do
       searchGH
       [ $? -ne 0 ] && continue
 
-      curl -fsL ${ghAuth} "$releasesUrl/latest" >/dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        Releases
-        [ $? -ne 0 ] && continue
-      else
-        buttons=("<Latest>" "<Releases>"); confirmPrompt "Please Select release type" "buttons" && opt=Latest || opt=Releases
-        if [ "$opt" == "Latest" ]; then
-          Latest
-          [ $? -ne 0 ] && continue
-        else
+      buttons=("<Releases>" "Actions"); confirmPrompt "Browse" "buttons" && opt=Releases || opt=Actions
+      if [ "$opt" == "Releases" ]; then
+        curl -fsL ${ghAuth} "$releasesUrl/latest" >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
           Releases
           [ $? -ne 0 ] && continue
+        else
+          buttons=("<Latest>" "<Releases>"); confirmPrompt "Please Select release type" "buttons" && opt=Latest || opt=Releases
+          if [ "$opt" == "Latest" ]; then
+            Latest
+            [ $? -ne 0 ] && continue
+          else
+            Releases
+            [ $? -ne 0 ] && continue
+          fi
         fi
+      else
+        ghActions
+        [ $? -ne 0 ] && continue
       fi
 
       fileName=$(basename "$asset_browser_download_url")
