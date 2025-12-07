@@ -199,6 +199,50 @@ appsList() {
   done
 }
 
+blockInternet() {
+  buttons=("<Select>" "<Back>")
+  if menu "applications" "buttons"; then
+    package="${packages[selected]}"
+    appLabel="${application_labels[selected]}"
+    echo -e "$running Blocking internet access for $package"
+    runCmdOut=$(runCmd "pm list packages -U")
+    uid=$(grep $package <<< "$runCmdOut" | awk -F'uid:' '{print $2}') && unset runCmdOut
+    if [ $su -eq 1 ]; then
+      runCmd "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
+      runCmd "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
+      runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
+      status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
+    elif [ $shellSU -eq 1 ]; then
+      adb -s $serial shell su -c "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
+      adb -s $serial shell su -c "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
+      status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
+    fi
+    [ -n "$status" ] && echo -e "$good Successfully blocked internet access for $appLabel." || echo -e "$notice Failed to blocking internet access for $appLabel!"
+  fi
+}
+
+unblockInternet() {
+  buttons=("<Select>" "<Back>")
+  if menu "applications" "buttons"; then
+    package="${packages[selected]}"
+    appLabel="${application_labels[selected]}"
+    echo -e "$running Unblocking internet access for $package"
+    runCmdOut=$(runCmd "pm list packages -U")
+    uid=$(grep $package <<< "$runCmdOut" | awk -F'uid:' '{print $2}') && unset runCmdOut
+    if [ $su -eq 1 ]; then
+      runCmd "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
+      runCmd "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
+      runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
+      status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
+    elif [ $shellSU -eq 1 ]; then
+      adb -s $serial shell su -c "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
+      adb -s $serial shell su -c "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
+      status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
+    fi
+    [ -z "$status" ] && echo -e "$good Successfully unblocked internet access for $appLabel." || echo -e "$notice Failed to unblocking internet access for $appLabel!"
+  fi
+}
+
 hideApps() {
   buttons=("<Select>" "<Back>")
   if menu "applications" "buttons"; then

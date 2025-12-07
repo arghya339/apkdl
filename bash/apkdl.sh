@@ -1124,7 +1124,7 @@ while true; do
       source $apkdl/myApps.sh
       options=(appUpdates disableApps enableApps uninstallApps recoverSystemApps)
       if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
-        options+=(clearAppCaches hideApps unhideApps)
+        options+=(clearAppCaches blockInternet unblockInternet hideApps unhideApps)
       fi
       if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
         [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
@@ -1185,6 +1185,14 @@ while true; do
             fi
             ;;
           clearAppCaches) clearAppCaches ;;
+          blockInternet)
+            [ ${#applications[@]} -eq 0 ] && appsList
+            blockInternet
+            ;;
+          unblockInternet)
+            [ ${#applications[@]} -eq 0 ] && appsList
+            unblockInternet
+            ;;
           hideApps)
             [ ${#applications[@]} -eq 0 ] && appsList
             hideApps
