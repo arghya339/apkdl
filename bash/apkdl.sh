@@ -786,7 +786,7 @@ clearAppCaches() {
   fi
 }
 
-declare -a apps applications firewallBlocklist hiddenApps enabledApps disabledApps uninstalledSystemApps
+declare -a apps applications hiddenApps enabledApps disabledApps uninstalledSystemApps
 while true; do
   options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced RVX)
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
@@ -1190,10 +1190,8 @@ while true; do
             blockInternet
             ;;
           unblockInternet)
-            if [ ${#firewallBlocklist[@]} -eq 0 ]; then
-              showFirewallBlocklist
-              [ $? -ne 0 ] && continue
-            fi
+            showFirewallBlocklist
+            [ $? -ne 0 ] && continue
             unblockInternet
             ;;
           hideApps)

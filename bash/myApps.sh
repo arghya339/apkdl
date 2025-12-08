@@ -199,11 +199,11 @@ appsList() {
   done
 }
 
-firewallServiceScript() {
+firewallService() {
   if [ ! -f $apkdl/firewallBlocklist.json ]; then
     jq -n '[]' > $apkdl/firewallBlocklist.json
   fi
-  if ! jq -e --arg package "$package" 'any(.[]; .package == $package)' $apkdl/firewallBlocklist.json 2>/dev/null; then
+  if ! jq -e --arg package "$package" 'any(.[]; .package == $package)' $apkdl/firewallBlocklist.json >/dev/null 2>&1; then
     jq --arg package "$package" --arg uid "$uid" --arg label "$appLabel" '. += [{"package": $package,"uid": $uid,"label": $label}]' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
   fi
   cat > $apkdl/script.apkdl.firewall.sh << 'EOF'
@@ -256,7 +256,7 @@ blockInternet() {
     echo -e "$running Blocking internet access for $package"
     runCmdOut=$(runCmd "pm list packages -U")
     uid=$(grep $package <<< "$runCmdOut" | awk -F'uid:' '{print $2}') && unset runCmdOut
-    firewallServiceScript
+    firewallService
     if [ $su -eq 1 ]; then
       runCmd "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       runCmd "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
@@ -275,7 +275,6 @@ blockInternet() {
 
 showFirewallBlocklist() {
   if [ -f $apkdl/firewallBlocklist.json ]; then
-    blocked_pkgs=(); uids=(); labels=()
     blocked_pkgs=($(jq -r '.[].package' $apkdl/firewallBlocklist.json))
     uids=($(jq -r '.[].uid' $apkdl/firewallBlocklist.json))
     mapfile -t labels < <(jq -r '.[].label' $apkdl/firewallBlocklist.json)
@@ -283,7 +282,7 @@ showFirewallBlocklist() {
     for ((i=0; i<${#blocked_pkgs[@]}; i++)); do
       firewallBlocklist+=("${labels[i]} (${blocked_pkgs[i]})")
     done
-    return 0
+    return
   else
     return 1
   fi
