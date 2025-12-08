@@ -227,7 +227,7 @@ for ((i=0; i<${#packages[@]}; i++)); do
 done
 EOF
   if [ $su -eq 1 ]; then
-    su -c "mkdir -p /data/adb/script.apkdl.firewall"
+    su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin"
     su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq"
     su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
