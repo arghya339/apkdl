@@ -204,7 +204,7 @@ firewallServiceScript() {
     jq -n '[]' > $apkdl/firewallBlocklist.json
   fi
   if ! jq -e --arg package "$package" 'any(.[]; .package == $package)' $apkdl/firewallBlocklist.json 2>/dev/null; then
-    jq --arg package "$package" --arg uid "$uid" --arg label "$appLabel" '. += [{"package": $package,"uid": $uid,"label": $label]' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
+    jq --arg package "$package" --arg uid "$uid" --arg label "$appLabel" '. += [{"package": $package,"uid": $uid,"label": $label}]' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
   fi
   cat > $apkdl/script.apkdl.firewall.sh << 'EOF'
 #!/system/bin/sh
