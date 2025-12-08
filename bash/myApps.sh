@@ -199,6 +199,46 @@ appsList() {
   done
 }
 
+firewallServiceScript() {
+  if [ ! -f $apkdl/firewallBlocklist.json ]; then
+    jq -n '[]' > $apkdl/firewallBlocklist.json
+  fi
+  if ! jq -e --arg package "$package" 'any(.[]; .package == $package)' $apkdl/firewallBlocklist.json 2>/dev/null; then
+    jq --arg package "$package" --arg uid "$uid" --arg label "$appLabel" '. += [{"package": $package,"uid": $uid,"label": $label]' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
+  fi
+  cat > $apkdl/script.apkdl.firewall.sh << 'EOF'
+#!/system/bin/sh
+
+script="/data/adb/script.apkdl.firewall"
+jq="$script/utils/bin/jq"
+firewallBlocklistJson="$script/firewallBlocklist.json"
+
+packages=($($jq -r '.[].package' $firewallBlocklistJson))
+uids=($($jq -r '.[].uid' $firewallBlocklistJson))
+
+until [ $(getprop sys.boot_completed) -eq 1 ]; do
+  sleep 1
+done
+
+for ((i=0; i<${#packages[@]}; i++)); do
+  ip6tables -I OUTPUT 1 -m owner --uid-owner ${uids[i]} -j DROP
+  iptables -I OUTPUT 1 -m owner --uid-owner ${uids[i]} -j DROP
+  am force-stop ${packages[i]}
+done
+EOF
+  if [ $su -eq 1 ]; then
+    su -c "mkdir -p /data/adb/script.apkdl.firewall"
+    su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq"
+    su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
+    su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
+  elif [ $shellSU -eq 1 ]; then
+    adb -s $serial shell su -c "mkdir -p /data/adb/script.apkdl.firewall"
+    adb -s $serial shell su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq"
+    adb -s $serial shell su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
+    adb -s $serial shell su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
+  fi
+}
+
 blockInternet() {
   buttons=("<Select>" "<Back>")
   if menu "applications" "buttons"; then
@@ -207,36 +247,71 @@ blockInternet() {
     echo -e "$running Blocking internet access for $package"
     runCmdOut=$(runCmd "pm list packages -U")
     uid=$(grep $package <<< "$runCmdOut" | awk -F'uid:' '{print $2}') && unset runCmdOut
+    firewallServiceScript
     if [ $su -eq 1 ]; then
       runCmd "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       runCmd "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
+      sleep 0.5
       status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
     elif [ $shellSU -eq 1 ]; then
       adb -s $serial shell su -c "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       adb -s $serial shell su -c "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
+      sleep 0.5
       status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
     fi
     [ -n "$status" ] && { echo -e "$good Successfully blocked internet access for $appLabel."; runCmd "am force-stop $package"; } || echo -e "$notice Failed to blocking internet access for $appLabel!"
   fi
 }
 
+showFirewallBlocklist() {
+  if [ -f $apkdl/firewallBlocklist.json ]; then
+    blocked_pkgs=($(jq -r '.[].package' $apkdl/firewallBlocklist.json))
+    uids=($(jq -r '.[].uid' $apkdl/firewallBlocklist.json))
+    mapfile -t labels < <(jq -r '.[].label' $apkdl/firewallBlocklist.json)
+    declare -a firewallBlocklist
+    for ((i=0; i<${#blocked_pkgs[@]}; i++)); do
+      firewallBlocklist+=("${labels[i]} (${blocked_pkgs[i]})")
+    done
+    return
+  else
+    return 1
+  fi
+}
+
 unblockInternet() {
   buttons=("<Select>" "<Back>")
-  if menu "applications" "buttons"; then
-    package="${packages[selected]}"
-    appLabel="${application_labels[selected]}"
+  if menu "firewallBlocklist" "buttons"; then
+    package="${blocked_pkgs[selected]}"
+    uid="${uids[selected]}"
+    appLabel="${labels[selected]}"
     echo -e "$running Unblocking internet access for $package"
-    runCmdOut=$(runCmd "pm list packages -U")
-    uid=$(grep $package <<< "$runCmdOut" | awk -F'uid:' '{print $2}') && unset runCmdOut
+    jq --arg package "$package" 'map(select(.package != $package))' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
+    if [ $(jq 'length' $apkdl/firewallBlocklist.json) -ge 1 ]; then
+      if [ $su -eq 1 ]; then
+        su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
+      elif [ $shellSU -eq 1 ]; then
+        adb -s $serial push $apkdl/firewallBlocklist.json /data/local/tmp/firewallBlocklist.json >/dev/null 2>&1
+        adb -s $serial shell su -c "mv /data/local/tmp/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
+      fi
+    else
+      rm -f $apkdl/firewallBlocklist.json
+      if [ $su -eq 1 ]; then
+        su -c "rm -rf /data/adb/script.apkdl.firewall /data/adb/service.d/script.apkdl.firewall.sh"
+      elif [ $shellSU -eq 1 ]; then
+        adb -s $serial shell su -c "rm -rf /data/adb/script.apkdl.firewall /data/adb/service.d/script.apkdl.firewall.sh"
+      fi
+    fi
     if [ $su -eq 1 ]; then
       runCmd "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       runCmd "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
+      sleep 0.5
       status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
     elif [ $shellSU -eq 1 ]; then
       adb -s $serial shell su -c "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       adb -s $serial shell su -c "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
+      sleep 0.5
       status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
     fi
     [ -z "$status" ] && { echo -e "$good Successfully unblocked internet access for $appLabel."; runCmd "am force-stop $package"; } || echo -e "$notice Failed to unblocking internet access for $appLabel!"
