@@ -211,29 +211,38 @@ firewallServiceScript() {
 
 script="/data/adb/script.apkdl.firewall"
 jq="$script/utils/bin/jq"
+lib="$script/utils/lib"
 firewallBlocklistJson="$script/firewallBlocklist.json"
 
-packages=($($jq -r '.[].package' $firewallBlocklistJson))
-uids=($($jq -r '.[].uid' $firewallBlocklistJson))
+export LD_LIBRARY_PATH="$lib:$LD_LIBRARY_PATH"
 
-until [ $(getprop sys.boot_completed) -eq 1 ]; do
+until [ "$(getprop sys.boot_completed)" == "1" ]; do
   sleep 1
 done
 
-for ((i=0; i<${#packages[@]}; i++)); do
-  ip6tables -I OUTPUT 1 -m owner --uid-owner ${uids[i]} -j DROP
-  iptables -I OUTPUT 1 -m owner --uid-owner ${uids[i]} -j DROP
-  am force-stop ${packages[i]}
+if [ "$(getenforce 2>/dev/null)" == "Enforcing" ]; then
+  setenforce 0
+  writeSELinux=1
+else
+  writeSELinux=0
+fi
+
+"$jq" -r '.[] | "\(.package) \(.uid)"' "$firewallBlocklistJson" | while read -r package uid; do
+  ip6tables -I OUTPUT 1 -m owner --uid-owner ${uid} -j DROP
+  iptables -I OUTPUT 1 -m owner --uid-owner ${uid} -j DROP
+  am force-stop ${package}
 done
+
+[ $writeSELinux -eq 1 ] && setenforce 1
 EOF
   if [ $su -eq 1 ]; then
-    su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin"
-    su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq"
+    su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin /data/adb/script.apkdl.firewall/utils/lib"
+    su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && { cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq; cp $PREFIX/lib/libjq.so /data/adb/script.apkdl.firewall/utils/lib/libjq.so; cp $PREFIX/lib/libonig.so /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
     su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
   elif [ $shellSU -eq 1 ]; then
-    adb -s $serial shell su -c "mkdir -p /data/adb/script.apkdl.firewall"
-    adb -s $serial shell su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq"
+    adb -s $serial shell su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin /data/adb/script.apkdl.firewall/utils/lib"
+    adb -s $serial shell su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && { cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq; cp $PREFIX/lib/libjq.so /data/adb/script.apkdl.firewall/utils/lib/libjq.so; cp $PREFIX/lib/libonig.so /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
     adb -s $serial shell su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     adb -s $serial shell su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
   fi
