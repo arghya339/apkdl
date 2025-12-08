@@ -1190,8 +1190,10 @@ while true; do
             blockInternet
             ;;
           unblockInternet)
-            [ ${#firewallBlocklist[@]} -eq 0 ] && showFirewallBlocklist
-            [ $? -ne 0 ] && continue
+            if [ ${#firewallBlocklist[@]} -eq 0 ]; then
+              showFirewallBlocklist
+              [ $? -ne 0 ] && continue
+            fi
             unblockInternet
             ;;
           hideApps)
