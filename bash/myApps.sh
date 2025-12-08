@@ -283,7 +283,7 @@ showFirewallBlocklist() {
     for ((i=0; i<${#blocked_pkgs[@]}; i++)); do
       firewallBlocklist+=("${labels[i]} (${blocked_pkgs[i]})")
     done
-    return
+    return 0
   else
     return 1
   fi
