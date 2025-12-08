@@ -275,6 +275,7 @@ blockInternet() {
 
 showFirewallBlocklist() {
   if [ -f $apkdl/firewallBlocklist.json ]; then
+    blocked_pkgs=(); uids=(); labels=()
     blocked_pkgs=($(jq -r '.[].package' $apkdl/firewallBlocklist.json))
     uids=($(jq -r '.[].uid' $apkdl/firewallBlocklist.json))
     mapfile -t labels < <(jq -r '.[].label' $apkdl/firewallBlocklist.json)
