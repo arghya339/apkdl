@@ -28,11 +28,11 @@ packagesInfo() {
 if [ $reqAppName -eq 1 ]; then
   if [ $isAndroid -eq 1 ]; then
     if [ $su -eq 1 ]; then
-      su -c "[ ! -f "/data/local/tmp/aapt2" ]" && su -c "cp $HOME/aapt2 /data/local/tmp/"
+      su -c "[ ! -f /data/local/tmp/aapt2 ] && { cp $HOME/aapt2 /data/local/tmp/ && chmod +x /data/local/tmp/aapt2; }"
     elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-      ~/rish -c "[ ! -f "/data/local/tmp/aapt2" ]" && ~/rish -c "cp $HOME/aapt2 /data/local/tmp/"
+      ~/rish -c "[ ! -f /data/local/tmp/aapt2 ] && { cp $HOME/aapt2 /data/local/tmp/ && chmod +x /data/local/tmp/aapt2; }"
     elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-      ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell [ ! -f "/data/local/tmp/aapt2" ] && ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) push ~/aapt2 /data/local/tmp/ >/dev/null 2>&1
+      ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell [ ! -f "/data/local/tmp/aapt2" ] && { ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) push ~/aapt2 /data/local/tmp/ >/dev/null 2>&1 && ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell chmod +x /data/local/tmp/aapt2; }
     fi
   elif [ $isMacOS -eq 1 ]; then
     [ ! -f "$apkdl/aapt2" ] && curl -sL --progress-bar -o "$apkdl/aapt2_$cpuAbi" "https://github.com/arghya339/aapt2/releases/download/all/aapt2_$cpuAbi"
