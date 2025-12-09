@@ -324,7 +324,7 @@ unblockInternet() {
     package="${blocked_pkgs[selected]}"
     uid="${uids[selected]}"
     appLabel="${labels[selected]}"
-    echo -e "$running Unblocking internet access for $package"
+    echo -e "$running Unblocking internet access for $package [$uid]"
     [ $isMacOS -eq 1 ] && echo "$firewallBlocklistJson" > $apkdl/firewallBlocklist.json
     jq --arg package "$package" 'map(select(.package != $package))' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
     if [ $(jq 'length' $apkdl/firewallBlocklist.json) -ge 1 ]; then
