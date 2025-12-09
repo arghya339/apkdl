@@ -264,7 +264,7 @@ EOF
       adb -s $serial shell su -c "mv ${filesPath1} /data/adb/script.apkdl.firewall/utils/lib/libjq.so"
       adb -s $serial shell su -c "mv ${filesPath2} /data/adb/script.apkdl.firewall/utils/lib/libonig.so"
     fi
-    adb -s $serial push $apkdl/firewallBlocklist.json /data/local/tmp/firewallBlocklist.json >/dev/null 2>&1
+    adb -s $serial push $apkdl/firewallBlocklist.json /data/local/tmp/firewallBlocklist.json >/dev/null 2>&1 && rm -f $apkdl/firewallBlocklist.json
     adb -s $serial shell su -c "mv /data/local/tmp/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     adb -s $serial push $apkdl/script.apkdl.firewall.sh /data/local/tmp/script.apkdl.firewall.sh >/dev/null 2>&1 && rm -f $apkdl/script.apkdl.firewall.sh
     adb -s $serial shell su -c "mv /data/local/tmp/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh"
@@ -299,10 +299,15 @@ blockInternet() {
 }
 
 showFirewallBlocklist() {
-  if [ -f $apkdl/firewallBlocklist.json ]; then
-    blocked_pkgs=($(jq -r '.[].package' $apkdl/firewallBlocklist.json))
-    uids=($(jq -r '.[].uid' $apkdl/firewallBlocklist.json))
-    mapfile -t labels < <(jq -r '.[].label' $apkdl/firewallBlocklist.json)
+  if [ $isAndroid -eq 1 ]; then
+    firewallBlocklistJson=$(cat $apkdl/firewallBlocklist.json)
+  elif [ $isMacOS -eq 1 ]; then
+    firewallBlocklistJson=$(adb -s $serial shell su -c "cat /data/adb/script.apkdl.firewall/firewallBlocklist.json")
+  fi
+  if [ -n "$firewallBlocklistJson" ]; then
+    blocked_pkgs=($(jq -r '.[].package' <<< $firewallBlocklistJson))
+    uids=($(jq -r '.[].uid' <<< $firewallBlocklistJson))
+    mapfile -t labels < <(jq -r '.[].label' <<< $firewallBlocklistJson)
     firewallBlocklist=()
     for ((i=0; i<${#blocked_pkgs[@]}; i++)); do
       firewallBlocklist+=("${labels[i]} (${blocked_pkgs[i]})")
@@ -345,7 +350,7 @@ unblockInternet() {
     elif [ $shellSU -eq 1 ]; then
       adb -s $serial shell su -c "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       adb -s $serial shell su -c "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
-      sleep 0.5
+      sleep 1
       status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
     fi
     [ -z "$status" ] && { echo -e "$good Successfully unblocked internet access for $appLabel."; runCmd "am force-stop $package"; } || echo -e "$notice Failed to unblocking internet access for $appLabel!"
