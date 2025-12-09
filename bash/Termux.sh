@@ -63,6 +63,7 @@
   fi
 
   su -c "id" >/dev/null 2>&1 && su=1 || su=0
+  shellSU=0
 
   # --- Shizuku Setup first time ---
   if [ $su -eq 0 ] && { [ ! -f "$HOME/rish" ] || [ ! -f "$HOME/rish_shizuku.dex" ]; }; then

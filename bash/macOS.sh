@@ -79,6 +79,7 @@
   }; getSerial
 
   adb -s $serial shell 'su -c "id"' &>/dev/null && shellSU=1 || shellSU=0
+  su=0
 
   aapt2=("$HOME/Library/Android/sdk/build-tools/"*/aapt2) && aapt2="${aapt2[-1]}"
 
