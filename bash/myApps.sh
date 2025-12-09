@@ -351,7 +351,7 @@ unblockInternet() {
     elif [ $shellSU -eq 1 ]; then
       adb -s $serial shell su -c "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       adb -s $serial shell su -c "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
-      sleep 3
+      sleep 1
       status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
     fi
     [ -z "$status" ] && { echo -e "$good Successfully unblocked internet access for $appLabel."; runCmd "am force-stop $package"; } || echo -e "$notice Failed to unblocking internet access for $appLabel!"
