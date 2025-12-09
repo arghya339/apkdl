@@ -305,9 +305,9 @@ showFirewallBlocklist() {
     firewallBlocklistJson=$(adb -s $serial shell su -c "cat /data/adb/script.apkdl.firewall/firewallBlocklist.json")
   fi
   if [ -n "$firewallBlocklistJson" ]; then
-    blocked_pkgs=($(jq -r '.[].package' <<< $firewallBlocklistJson))
-    uids=($(jq -r '.[].uid' <<< $firewallBlocklistJson))
-    mapfile -t labels < <(jq -r '.[].label' <<< $firewallBlocklistJson)
+    blocked_pkgs=($(jq -r '.[].package' <<< "$firewallBlocklistJson"))
+    uids=($(jq -r '.[].uid' <<< "$firewallBlocklistJson"))
+    mapfile -t labels < <(jq -r '.[].label' <<< "$firewallBlocklistJson")
     firewallBlocklist=()
     for ((i=0; i<${#blocked_pkgs[@]}; i++)); do
       firewallBlocklist+=("${labels[i]} (${blocked_pkgs[i]})")
