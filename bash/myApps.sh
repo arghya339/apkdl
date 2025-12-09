@@ -256,11 +256,10 @@ EOF
       bsdtar -xOf $path data.tar.xz | bsdtar -C ~/apkdl -xf -
       [ $i -eq 0 ] && filesPath+=("/data/local/tmp/jq" "/data/local/tmp/libjq.so") || filesPath+=("/data/local/tmp/libonig.so")
     done
-    
     adb -s $serial shell su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ]" && { adb -s $serial push $apkdl/data/data/com.termux/files/usr/bin/jq ${filesPath[0]} >/dev/null 2>&1; adb -s $serial push $apkdl/data/data/com.termux/files/usr/lib/libjq.so ${filesPath[1]} >/dev/null 2>&1; adb -s $serial push $apkdl/data/data/com.termux/files/usr/lib/libonig.so ${filesPath[2]} >/dev/null 2>&1; }
     adb -s $serial shell su -c "[ -f /data/local/tmp/jq ] && { mv ${filesPath[0]} /data/adb/script.apkdl.firewall/utils/bin/jq; chmod +x /data/adb/script.apkdl.firewall/utils/bin/jq; mv ${filesPath[1]} /data/adb/script.apkdl.firewall/utils/lib/libjq.so; mv ${filesPath[2]} /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
     adb -s $serial push $apkdl/firewallBlocklist.json /data/local/tmp/firewallBlocklist.json >/dev/null 2>&1
-    adb -s $serial shell su -c "mv /data/local/tmp/ /data/adb/script.apkdl.firewall/firewallBlocklist.json"
+    adb -s $serial shell su -c "mv /data/local/tmp/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     adb -s $serial push $apkdl/script.apkdl.firewall.sh /data/local/tmp/script.apkdl.firewall.sh >/dev/null 2>&1 && rm -f $apkdl/script.apkdl.firewall.sh
     adb -s $serial shell su -c "mv /data/local/tmp/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
     [ -d $apkdl/data ] && rm -rf $apkdl/data
