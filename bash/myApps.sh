@@ -345,17 +345,25 @@ unblockInternet() {
     if [ $su -eq 1 ]; then
       runCmd "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       runCmd "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
-      runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
       sleep 0.5
-      status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
+      runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
+      ip6status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
+      runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
+      ip4status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
     elif [ $shellSU -eq 1 ]; then
       adb -s $serial shell su -c "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       adb -s $serial shell su -c "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       sleep 1
-      status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
-      echo "status: $status"
+      ip6status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
+      ip4status=$(adb -s $serial shell su -c "iptables -L OUTPUT -n -v | grep -i $uid")
     fi
-    [ -z "$status" ] && { echo -e "$good Successfully unblocked internet access for $appLabel."; runCmd "am force-stop $package"; } || echo -e "$notice Failed to unblocking internet access for $appLabel!"
+    if [ -z "$ip6status" ] && [ -z "$ip4status" ]; then
+      runCmd "am force-stop $package"
+      echo -e "$good Successfully unblocked internet access for $appLabel."
+    else
+      echo -e "ip6status: $ip6status\nip4status: $ip4status"
+      echo -e "$notice Failed to unblocking internet access for $appLabel!"
+    fi
   fi
 }
 
