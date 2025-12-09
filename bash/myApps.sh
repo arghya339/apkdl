@@ -240,7 +240,7 @@ EOF
   if [ $su -eq 1 ]; then
     su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin /data/adb/script.apkdl.firewall/utils/lib"
     su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && { cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq; chmod +x /data/adb/script.apkdl.firewall/utils/bin/jq; cp $PREFIX/lib/libjq.so /data/adb/script.apkdl.firewall/utils/lib/libjq.so; cp $PREFIX/lib/libonig.so /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
-    su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
+    su -c "mv $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
   elif [ $shellSU -eq 1 ]; then
     adb -s $serial shell su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin /data/adb/script.apkdl.firewall/utils/lib"
@@ -302,9 +302,9 @@ blockInternet() {
 
 showFirewallBlocklist() {
   if [ $isAndroid -eq 1 ]; then
-    firewallBlocklistJson=$(cat $apkdl/firewallBlocklist.json)
+    su -c "[ -f /data/adb/script.apkdl.firewall/firewallBlocklist.json ]" && firewallBlocklistJson=$(su -c "cat /data/adb/script.apkdl.firewall/firewallBlocklist.json") || firewallBlocklistJson=
   elif [ $isMacOS -eq 1 ]; then
-    firewallBlocklistJson=$(adb -s $serial shell su -c "cat /data/adb/script.apkdl.firewall/firewallBlocklist.json")
+    adb -s $serial shell su -c "[ -f /data/adb/script.apkdl.firewall/firewallBlocklist.json ]" && firewallBlocklistJson=$(adb -s $serial shell su -c "cat /data/adb/script.apkdl.firewall/firewallBlocklist.json") || firewallBlocklistJson=
   fi
   if [ -n "$firewallBlocklistJson" ]; then
     blocked_pkgs=($(jq -r '.[].package' <<< "$firewallBlocklistJson"))
@@ -327,7 +327,7 @@ unblockInternet() {
     uid="${uids[selected]}"
     appLabel="${labels[selected]}"
     echo -e "$running Unblocking internet access for $package [$uid]"
-    [ $isMacOS -eq 1 ] && echo "$firewallBlocklistJson" > $apkdl/firewallBlocklist.json
+    echo "$firewallBlocklistJson" > $apkdl/firewallBlocklist.json
     jq --arg package "$package" 'map(select(.package != $package))' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
     if [ $(jq 'length' $apkdl/firewallBlocklist.json) -ge 1 ]; then
       if [ $su -eq 1 ]; then
