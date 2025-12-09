@@ -637,27 +637,27 @@ auth() {
           if [ ${#web[@]} -eq 2 ]; then
             buttons=("<GitHub>" "<GitLab>"); confirmPrompt "Select WebSite" "buttons" "1" && userInput="GitHub" || userInput="GitLab"
           else
-            userInput="$(echo "${web[@]}")"
+            userInput="${web[0]}"
           fi
           if [ "$userInput" == "GitHub" ]; then
             if gh auth status >/dev/null 2>&1; then
               gh auth logout  # Logout from gh cli
+              url="https://github.com/settings/applications"
             elif jq -e '.GH' "$apkdlJson" >/dev/null 2>&1; then
               jq 'del(.GH)' "$apkdlJson" > temp.json && mv temp.json "$apkdlJson"  # Delete GH key from apkdl.json
               url="https://github.com/settings/tokens"
-              [ $isAndroid -eq 1 ] && termux-open-url "$url"
-              [ $isMacOS -eq 1 ] && open "$url"
             fi
           elif [ "$userInput" == "GitLab" ]; then
             if glab auth status >/dev/null 2>&1; then
               glab auth logout --hostname gitlab.com  # Logout from glab cli
+              url="https://gitlab.com/-/user_settings/applications"
             elif jq -e '.GLAB' "$apkdlJson" >/dev/null 2>&1; then
               jq 'del(.GLAB)' "$apkdlJson" > temp.json && mv temp.json "$apkdlJson"  # Delete GLAB key from apkdl.json
               url="https://gitlab.com/-/user_settings/personal_access_tokens"
-              [ $isAndroid -eq 1 ] && termux-open-url "$url"
-              [ $isMacOS -eq 1 ] && open "$url"
             fi
           fi
+          [ $isAndroid -eq 1 ] && termux-open-url "$url"
+          [ $isMacOS -eq 1 ] && open "$url"
           echo -e "$good ${Green}Successfully deleted your $userInput token!${Reset}"
           ;;
       esac
