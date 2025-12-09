@@ -229,7 +229,9 @@ fi
 
 "$jq" -r '.[] | "\(.package) \(.uid)"' "$firewallBlocklistJson" | while read -r package uid; do
   ip6tables -I OUTPUT 1 -m owner --uid-owner ${uid} -j DROP
+  #ip6tables -I INPUT 1 -m owner --uid-owner $uid -j DROP
   iptables -I OUTPUT 1 -m owner --uid-owner ${uid} -j DROP
+  #iptables -I INPUT 1 -m owner --uid-owner $uid -j DROP
   am force-stop ${package}
 done
 
