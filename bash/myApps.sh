@@ -259,14 +259,16 @@ EOF
     adb -s $serial shell su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ]" && { adb -s $serial push $apkdl/data/data/com.termux/files/usr/bin/jq ${filesPath[0]} >/dev/null 2>&1; adb -s $serial push $apkdl/data/data/com.termux/files/usr/lib/libjq.so ${filesPath[1]} >/dev/null 2>&1; adb -s $serial push $apkdl/data/data/com.termux/files/usr/lib/libonig.so ${filesPath[2]} >/dev/null 2>&1; }
     filesPath0="${filesPath[0]}"; filesPath1="${filesPath[1]}"; filesPath2="${filesPath[2]}"
     if adb -s $serial shell su -c "[ -f /data/local/tmp/jq ]"; then
-      adb -s $serial shell su -c "mv ${filesPath0} /data/adb/script.apkdl.firewall/utils/bin/jq && chmod +x /data/adb/script.apkdl.firewall/utils/bin/jq"
+      adb -s $serial shell su -c "mv ${filesPath0} /data/adb/script.apkdl.firewall/utils/bin/jq"
+      adb -s $serial shell su -c "chmod +x /data/adb/script.apkdl.firewall/utils/bin/jq"
       adb -s $serial shell su -c "mv ${filesPath1} /data/adb/script.apkdl.firewall/utils/lib/libjq.so"
       adb -s $serial shell su -c "mv ${filesPath2} /data/adb/script.apkdl.firewall/utils/lib/libonig.so"
     fi
     adb -s $serial push $apkdl/firewallBlocklist.json /data/local/tmp/firewallBlocklist.json >/dev/null 2>&1
     adb -s $serial shell su -c "mv /data/local/tmp/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     adb -s $serial push $apkdl/script.apkdl.firewall.sh /data/local/tmp/script.apkdl.firewall.sh >/dev/null 2>&1 && rm -f $apkdl/script.apkdl.firewall.sh
-    adb -s $serial shell su -c "mv /data/local/tmp/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
+    adb -s $serial shell su -c "mv /data/local/tmp/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh"
+    adb -s $serial shell su -c "chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
     [ -d $apkdl/data ] && rm -rf $apkdl/data
   fi
 }
