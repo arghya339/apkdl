@@ -237,12 +237,27 @@ done
 EOF
   if [ $su -eq 1 ]; then
     su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin /data/adb/script.apkdl.firewall/utils/lib"
-    su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && { cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq; cp $PREFIX/lib/libjq.so /data/adb/script.apkdl.firewall/utils/lib/libjq.so; cp $PREFIX/lib/libonig.so /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
+    su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && { cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq; chmod +x /data/adb/script.apkdl.firewall/utils/bin/jq; cp $PREFIX/lib/libjq.so /data/adb/script.apkdl.firewall/utils/lib/libjq.so; cp $PREFIX/lib/libonig.so /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
     su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
   elif [ $shellSU -eq 1 ]; then
     adb -s $serial shell su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin /data/adb/script.apkdl.firewall/utils/lib"
-    adb -s $serial shell su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && { cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq; cp $PREFIX/lib/libjq.so /data/adb/script.apkdl.firewall/utils/lib/libjq.so; cp $PREFIX/lib/libonig.so /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
+    if [ "$cpuAbi" == "arm64-v8a" ]; then arch="aarch64"; elif [ "$cpuAbi" == "armeabi-v7a" ]; then arch="arm"; elif [ "$cpuAbi" == "x86" ]; then arch="i686"; else arch="$cpuAbi"; fi
+    urls=("https://packages.termux.dev/apt/termux-main/pool/main/j/jq" "https://packages.termux.dev/apt/termux-main/pool/main/o/oniguruma")
+    declare -a files filesPath
+    for ((i=0; i<${#urls[@]}; i++)); do
+      files+=($(curl -sL "${urls[i]}" | pup 'a json{}' | jq -r --arg arch "$arch" '.[] | select(.href | contains($arch)) | .href'))
+      path="$apkdl/${files[i]}"
+      dlUrl="${urls[i]}/${files[i]}"
+      while true; do
+        curl -sL -C - -o $path ${urls[i]}
+        [ $? -eq 0 ] && break || sleep 5
+      done
+      bsdtar -xOf $path data.tar.xz | bsdtar -C ~/apkdl -xf -
+      [ $i -eq 0 ] && filesPath+=("$apkdl/data/data/com.termux/files/usr/bin/jq" "$apkdl/data/data/com.termux/files/usr/lib/libjq.so") || filesPath+=("$apkdl/data/data/com.termux/files/usr/lib/libonig.so")
+    done
+    adb -s $serial shell su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && { cp ${filesPath[0]} /data/adb/script.apkdl.firewall/utils/bin/jq; chmod +x /data/adb/script.apkdl.firewall/utils/bin/jq; cp ${filesPath[1]} /data/adb/script.apkdl.firewall/utils/lib/libjq.so; cp ${filesPath[2]} /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
+    [ -d $apkdl/data ] && rm -rf $apkdl/data
     adb -s $serial shell su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     adb -s $serial shell su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
   fi
