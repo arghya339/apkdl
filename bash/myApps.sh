@@ -250,7 +250,7 @@ EOF
       path="$apkdl/${files[i]}"
       dlUrl="${urls[i]}/${files[i]}"
       while true; do
-        curl -sL -C - -o $path ${urls[i]}
+        curl -sL -C - -o $path ${dlUrl}
         [ $? -eq 0 ] && break || sleep 5
       done
       bsdtar -xOf $path data.tar.xz | bsdtar -C ~/apkdl -xf -
