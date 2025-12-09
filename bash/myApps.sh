@@ -257,9 +257,9 @@ EOF
       [ $i -eq 0 ] && filesPath+=("$apkdl/data/data/com.termux/files/usr/bin/jq" "$apkdl/data/data/com.termux/files/usr/lib/libjq.so") || filesPath+=("$apkdl/data/data/com.termux/files/usr/lib/libonig.so")
     done
     adb -s $serial shell su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && { cp ${filesPath[0]} /data/adb/script.apkdl.firewall/utils/bin/jq; chmod +x /data/adb/script.apkdl.firewall/utils/bin/jq; cp ${filesPath[1]} /data/adb/script.apkdl.firewall/utils/lib/libjq.so; cp ${filesPath[2]} /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
-    [ -d $apkdl/data ] && rm -rf $apkdl/data
     adb -s $serial shell su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     adb -s $serial shell su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
+    [ -d $apkdl/data ] && rm -rf $apkdl/data
   fi
 }
 
