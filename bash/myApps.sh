@@ -331,7 +331,7 @@ unblockInternet() {
     jq --arg package "$package" 'map(select(.package != $package))' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
     if [ $(jq 'length' $apkdl/firewallBlocklist.json) -ge 1 ]; then
       if [ $su -eq 1 ]; then
-        su -c "cp $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
+        su -c "mv $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
       elif [ $shellSU -eq 1 ]; then
         adb -s $serial push $apkdl/firewallBlocklist.json /data/local/tmp/firewallBlocklist.json >/dev/null 2>&1 && rm -f $apkdl/firewallBlocklist.json
         adb -s $serial shell su -c "mv /data/local/tmp/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
