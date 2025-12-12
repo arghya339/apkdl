@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
   isCheckTermuxUpdate=1
-  isJdkVersion="25"
+  isJdkVersion="21"
   
   pkg update > /dev/null 2>&1 || apt update >/dev/null 2>&1  # It downloads latest package list with versions from Termux remote repository, then compares them to local (installed) pkg versions, and shows a list of what can be upgraded if they are different.
   outdatedPKG=$(apt list --upgradable 2>/dev/null)  # list of outdated pkg
