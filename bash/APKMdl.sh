@@ -243,39 +243,27 @@ getVariant() {
         ] | join("\t")
     ')
     
+    variantList=()
     for i in "${!variants_table_row[@]}"; do
-      IFS=$'\t' read -r version version_code type arch os dpi link <<< "${variants_table_row[$i]}"
+      IFS=$'\t' read -r version vcode type arch os dpi link <<< "${variants_table_row[$i]}"
       
-      if [ $i -eq 0 ]; then
-        if [ $isAndroid -eq 1 ]; then
-          if [ "$arch" == "$cpuAbi" ]; then
-            options=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi (Recommended)")
-          else
-            options=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
-          fi
+      if [ -n "$cpuAbi" ]; then
+        if [ "$arch" == "$cpuAbi" ]; then
+          variantList+=("Version: $version ($vcode) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi (Recommended)")
         else
-          options=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
+          variantList+=("Version: $version ($vcode) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
         fi
       else
-        if [ $isAndroid -eq 1 ]; then
-          if [ "$arch" == "$cpuAbi" ]; then
-            options+=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi (Recommended)")
-          else
-            options+=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
-          fi
-        else
-          options+=("Version: $version ($version_code) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
-        fi
+        variantList+=("Version: $version ($vcode) | Type: $type | Arch: $arch | OS: $os | DPI: $dpi")
       fi
     done
     
     buttons=("<Select>" "<Back>")
-    if menu "options" "buttons" "10"; then
-      selectedVariantIndex=$selected
-      IFS=$'\t' read -r version version_code type arch os dpi link <<< "${variants_table_row[$selectedVariantIndex]}"
+    if menu "variantList" "buttons" "10"; then
+      IFS=$'\t' read -r version vcode type arch os dpi link <<< "${variants_table_row[selected]}"
       
       echo -e "$notice Selected Variant: "
-      echo -e "$info versionCode: $version_code | Type: $type | Arch: $arch | OS: $os | DPI: $dpi"
+      echo -e "$info versionCode: $vcode | Type: $type | Arch: $arch | OS: $os | DPI: $dpi"
       variantLink="$link"
       echo -e "$info variantLink: ${Blue}$variantLink${Reset}"
       return 0
