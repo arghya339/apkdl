@@ -127,7 +127,7 @@ getLatestUploads() {
         grep -q "_cf_chl_" <<< "$latestUploadsHTML" && cf_chl_error && break
         latestUploadsJSON=$(pup 'a.fontBlack json{}' <<< "$latestUploadsHTML" | jq '.[0:30] | map({title: .text, link: ("https://www.apkmirror.com" + .href)})')
         
-        mapfile -t availableVersions < <(jq -r '.[] | .title' <<< "$latestUploadsJson" | grep -o '[0-9].*')
+        mapfile -t availableVersions < <(jq -r '.[] | .title' <<< "$latestUploadsJSON" | grep -o '[0-9].*')
         if [ -n "$version" ]; then
           for i in "${!availableVersions[@]}"; do
             versionName=$(grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' <<< "${availableVersions[$i]}")
