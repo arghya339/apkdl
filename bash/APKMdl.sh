@@ -127,11 +127,12 @@ getLatestUploads() {
         grep -q "_cf_chl_" <<< "$latestUploadsHTML" && cf_chl_error && break
         latestUploadsJSON=$(pup 'a.fontBlack json{}' <<< "$latestUploadsHTML" | jq '.[0:30] | map({title: .text, link: ("https://www.apkmirror.com" + .href)})')
         
-        mapfile -t availableVersions < <(echo "$latestUploadsJSON" | jq -r '.[] | .title')
+        mapfile -t availableVersions < <(jq -r '.[] | .title' <<< "$latestUploadsJson" | grep -o '[0-9].*')
         if [ -n "$version" ]; then
           for i in "${!availableVersions[@]}"; do
             if [ "${availableVersions[$i]}" == "${appName} $version" ]; then
-              availableVersions[$i]="${appName} $version (Recommended)"
+              versionName=$(grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' <<< "${availableVersions[$i]}")
+            [ "$versionName" == "$version" ] && availableVersions[$i]="${availableVersions[$i]} (Recommended)"
             fi
           done
         fi
@@ -140,12 +141,12 @@ getLatestUploads() {
         [ $page -ne $lastPage ] && { availableVersions+=(Next); availableVersions+=(Last); }
         mapfile -t versionUrls < <(echo "$latestUploadsJSON" | jq -r '.[] | .link')
         
-        buttons=("<Select>" "<Back>"); if menu "availableVersions" "buttons" "10"; then selected="$selected"; else break; fi
+        buttons=("<Select>" "<Back>"); menu "availableVersions" "buttons" "10" || break
         
         if [ "${availableVersions[$selected]}" == "First" ]; then
           echo
           page=1
-          latestUploadsUrl="https://www.apkmirror.com/uploads/?appcategory=$searchTerm"
+          #latestUploadsUrl="https://www.apkmirror.com/uploads/$baseUploadsUrl"
           continue
         elif [ "${availableVersions[$selected]}" == "Prev" ]; then
           echo
@@ -161,6 +162,7 @@ getLatestUploads() {
           continue
         else
           selectedVersion="${availableVersions[$selected]}"
+          selectedVersion="${selectedVersion%% (Recommended)}"
           versionLink="${versionUrls[$selected]}"
           echo -e "$good Selected Version: ${Green}$selectedVersion${Reset}"
           echo -e "$info versionLink: ${Blue}$versionLink${Reset}"
