@@ -293,34 +293,27 @@ getDownloadLink() {
     
     if [ -n "$or" ]; then
       jsonLength=$(echo "$downloadButtonJOSN" | jq '. | length')
+      downloadButtonTypes=()
       for ((i=0; i<jsonLength; i++)); do
         types[i]=$(echo "$downloadButtonJOSN" | jq -r ".[$i].type")
         sizes[i]=$(echo "$downloadButtonJOSN" | jq -r ".[$i].size")
         urls[i]=$(echo "$downloadButtonJOSN" | jq -r ".[$i].url")
-        [ $i -eq 0 ] && downloadButtonTypes=("${types[i]} | ${sizes[i]}") || downloadButtonTypes+=("${types[i]} | ${sizes[i]}")
+        downloadButtonTypes+=("${types[i]} | ${sizes[i]}")
       done
       buttons=("<Select>" "<Back>")
       if menu "downloadButtonTypes" "buttons" "10"; then
-        selectedTypeIndex=$selected
-        fileType="${types[selectedTypeIndex]}"
-        fileSize="${sizes[selectedTypeIndex]}"
-        downloadButtonLink="${urls[selectedTypeIndex]}"
-        ! grep -q "https://www.apkmirror.com" <<< "$downloadButtonLink" && downloadButtonLink="https://www.apkmirror.com$downloadButtonLink"
-        downloadButtonLink="${downloadButtonLink//amp;/}"
-        echo "Selected download type:"
-        echo -e "$info fileType: $fileType"
-        echo -e "$info fileSize: $fileSize"
-        echo -e "$info downloadButtonLink: ${Blue}$downloadButtonLink${Reset}"
+        fileType="${types[selected]}"
+        fileSize="${sizes[selected]}"
+        downloadButtonLink="${urls[selected]}"
       fi
     else
       fileType=$(echo "$downloadButtonJOSN" | jq -r '.[0].type')
       fileSize=$(echo "$downloadButtonJOSN" | jq -r '.[0].size')
       downloadButtonLink=$(echo "$downloadButtonJOSN" | jq -r '.[0].url')
-      ! grep -q "https://www.apkmirror.com" <<< "$downloadButtonLink" && downloadButtonLink="https://www.apkmirror.com$downloadButtonLink"
-      downloadButtonLink="${downloadButtonLink//amp;/}"
-      echo -e "$info fileSize: $fileSize"
-      echo -e "$info downloadButtonLink: ${Blue}$downloadButtonLink${Reset}"
     fi
+    ! grep -q "https://www.apkmirror.com" <<< "$downloadButtonLink" && downloadButtonLink="https://www.apkmirror.com$downloadButtonLink"
+    downloadButtonLink="${downloadButtonLink//amp;/}"
+    echo -e "Selected download type:\n$info fileType: $fileType\n$info fileSize: $fileSize\n$info downloadButtonLink: ${Blue}$downloadButtonLink${Reset}"
   
     if [ "$fileType" == "Download APK" ]; then
       file_ext=".apk"
