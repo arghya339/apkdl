@@ -121,15 +121,11 @@ getLatestUploads() {
     if ! grep -q "_cf_chl_" <<< "$latestUploadsHTML"; then
       lastPageLink=$(pup 'a.last[aria-label="Last Page"] attr{href}' <<< "$latestUploadsHTML"); lastPage=$(echo "$lastPageLink" | grep -oE '[0-9]+')
       while true; do
-        if [ $page -eq 1 ]; then
-          echo -e "$info Latest $appName Uploads"
-        else
-          echo -e "$info Latest $appName Uploads - Page $page"
-          latestUploadsUrl="https://www.apkmirror.com/uploads/page/$page/$baseUploadsUrl"
-        fi
+        [ $page -eq 1 ] && echo -e "$info Latest $appName Uploads" || echo -e "$info Latest $appName Uploads - Page $page"
+        latestUploadsUrl="https://www.apkmirror.com/uploads/page/$page/$baseUploadsUrl"
         latestUploadsHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$latestUploadsUrl")
         grep -q "_cf_chl_" <<< "$latestUploadsHTML" && cf_chl_error && break
-        latestUploadsJSON=$(echo "$latestUploadsHTML" | grep -Eo '<a class="fontBlack"[^>]*href="[^"]+"[^>]*>[^<]+</a>' | head -n 30 | jq -R -s 'split("\n") | map(select(length > 0)) | map(capture("<a [^>]*href=\"(?<href_val>[^\"]+)\"[^>]*>(?<title_text>[^<]+)</a>") | {title: .title_text, link: ("https://www.apkmirror.com" + .href_val)})')
+        latestUploadsJSON=$(pup 'a.fontBlack json{}' <<< "$latestUploadsHTML" | jq '.[0:30] | map({title: .text, link: ("https://www.apkmirror.com" + .href)})')
         
         mapfile -t availableVersions < <(echo "$latestUploadsJSON" | jq -r '.[] | .title')
         if [ -n "$version" ]; then
