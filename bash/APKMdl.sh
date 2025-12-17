@@ -130,10 +130,8 @@ getLatestUploads() {
         mapfile -t availableVersions < <(jq -r '.[] | .title' <<< "$latestUploadsJson" | grep -o '[0-9].*')
         if [ -n "$version" ]; then
           for i in "${!availableVersions[@]}"; do
-            if [ "${availableVersions[$i]}" == "${appName} $version" ]; then
-              versionName=$(grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' <<< "${availableVersions[$i]}")
+            versionName=$(grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' <<< "${availableVersions[$i]}")
             [ "$versionName" == "$version" ] && availableVersions[$i]="${availableVersions[$i]} (Recommended)"
-            fi
           done
         fi
         [ $page -ge 3 ] && availableVersions+=(First)
