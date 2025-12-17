@@ -4,7 +4,7 @@ APKM_REST_API_URL="https://www.apkmirror.com/wp-json/apkm/v1/app_exists/"
 AUTH_TOKEN="YXBpLXRvb2xib3gtZm9yLWdvb2dsZS1wbGF5OkNiVVcgQVVMZyBNRVJXIHU4M3IgS0s0SCBEbmJL"
 
 cf_chl_error() {
-  echo -e "$bad ${Red}Cloudflare security challenge detected!${Reset}\n$notice ${Yellow}This webpage is protected by Cloudflare's anti-bot system.${Reset}\n ${Blue}Solutions${Reset}:\n   ${Blue}1{Reset}. ${Yellow}Please try again after some time.${Reset}\n   ${Blue}2{Reset}. ${Yellow}Disable your VPN if you are connected to one.${Reset}\n   ${Blue}3{Reset}. ${Yellow}Connect to a Cloudflare WARP proxy and try again.${Reset}"
+  echo -e "$bad ${Red}Cloudflare security challenge detected!${Reset}\n$notice ${Yellow}This webpage is protected by Cloudflare's anti-bot system.${Reset}\n ${Blue}Solutions${Reset}:\n   ${Blue}1${Reset}. ${Yellow}Please try again after some time.${Reset}\n   ${Blue}2${Reset}. ${Yellow}Disable your VPN if you are connected to one.${Reset}\n   ${Blue}3${Reset}. ${Yellow}Connect to a Cloudflare WARP proxy and try again.${Reset}"
   if [ $isAndroid -eq 1 ]; then
     am start -n com.cloudflare.onedotonedotonedotone/com.cloudflare.app.presentation.main.SplashActivity &> /dev/null || termux-open-url "https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone"
   elif [ $isMacOS -eq 1 ]; then
