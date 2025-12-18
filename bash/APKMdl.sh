@@ -128,7 +128,7 @@ breadcrumbsMenu() {
       fi
       [ -z "$breadcrumbsMenuAppLink" ] && breadcrumbsMenuAppLink=$(jq -r ".[0].link" <<< "$breadcrumbsMenuJSON")
       [ -n "$breadcrumbsMenuAppLink" ] && appLink="$breadcrumbsMenuAppLink"
-      echo "appLink: ${Blue}$appLink${Reset}"
+      echo -e "appLink: ${Blue}$appLink${Reset}"
     else
       echo "hasBreadcrumbsMenu: $hasBreadcrumbsMenu"
     fi
