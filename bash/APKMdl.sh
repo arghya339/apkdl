@@ -109,10 +109,39 @@ searchApp() {
   [ -z "$appLink" ] && return 1 || return 0
 }
 
+breadcrumbsMenu() {
+  appPageHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$appLink")
+  if ! grep -q "_cf_chl_" <<< "$appPageHTML"; then
+    hasBreadcrumbsMenu=$(pup '.breadcrumbs-menu json{}' <<< "$appPageHTML" | jq 'length > 0')
+    if [ "$hasBreadcrumbsMenu" == "true" ]; then
+      breadcrumbsMenuJSON=$(pup 'ul.breadcrumbs-menu li a json{}' <<< "$appPageHTML" | jq 'map({name: [..|.text?]|add|sub("^ +| +$";""), link: ("https://www.apkmirror.com"+.href)})')
+      mapfile -t names < <(jq -r '.[].name' <<< "$breadcrumbsMenuJSON")
+      links=($(jq -r '.[].link' <<< "$breadcrumbsMenuJSON"))
+      buttons=("<Select>" "<Back>")
+      if menu names buttons; then
+        breadcrumbsMenuAppName="${names[selected]}"
+        breadcrumbsMenuAppLink="${links[selected]}"
+        echo "selected: $breadcrumbsMenuAppName"
+      else
+        breadcrumbsMenuAppName=$(jq <<< "$breadcrumbsMenuJSON" | jq -r '.[] | select(.name | test("[()]") | not).name')
+        breadcrumbsMenuAppLink=$(jq <<< "$breadcrumbsMenuJSON" | jq -r '.[] | select(.name | test("[()]") | not).link')
+      fi
+      [ -z "$breadcrumbsMenuAppLink" ] && breadcrumbsMenuAppLink=$(jq -r ".[0].link" <<< "$breadcrumbsMenuJSON")
+      [ -n "$breadcrumbsMenuAppLink" ] && appLink="$breadcrumbsMenuAppLink"
+      echo "appLink: ${Blue}$appLink${Reset}"
+    else
+      echo "hasBreadcrumbsMenu: $hasBreadcrumbsMenu"
+    fi
+  else
+    cf_chl_error
+  fi
+}
+
 getLatestUploads() {
   unset versionLink
   echo -e "$running Get latest $appName uploads list from APKMirror.."
   page=1
+  breadcrumbsMenu
   appPageHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$appLink")
   if ! grep -q "_cf_chl_" <<< "$appPageHTML"; then
     latestUploadsUrl="https://www.apkmirror.com$(pup '#primary a:contains("See more uploads...") attr{href}' <<< "$appPageHTML")"
@@ -179,6 +208,7 @@ getLatestUploads() {
 getVersionLink() {
   unset versionLink
   echo -e "$running Searching for target app version in APKMirror's Latest Uploads page.."
+  breadcrumbsMenu
   appPageHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$appLink")
   if ! grep -q "_cf_chl_" <<< "$appPageHTML"; then
     latestUploadsUrl="https://www.apkmirror.com$(pup '#primary a:contains("See more uploads...") attr{href}' <<< "$appPageHTML")"
