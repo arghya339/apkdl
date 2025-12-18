@@ -126,8 +126,8 @@ breadcrumbsMenu() {
         breadcrumbsMenuAppName=$(jq <<< "$breadcrumbsMenuJSON" | jq -r '.[] | select(.name | test("[()]") | not).name')
         breadcrumbsMenuAppLink=$(jq <<< "$breadcrumbsMenuJSON" | jq -r '.[] | select(.name | test("[()]") | not).link')
       fi
-      [ -z "$breadcrumbsMenuAppLink" ] && breadcrumbsMenuAppLink=$(jq -r ".[0].link" <<< "$breadcrumbsMenuJSON")
-      [ -n "$breadcrumbsMenuAppLink" ] && appLink="$breadcrumbsMenuAppLink"
+      [ -z "$breadcrumbsMenuAppLink" ] && { breadcrumbsMenuAppLink=$(jq -r ".[0].link" <<< "$breadcrumbsMenuJSON"); breadcrumbsMenuAppName=$(jq -r ".[0].name" <<< "$breadcrumbsMenuJSON"); }
+      [ -n "$breadcrumbsMenuAppLink" ] && { appLink="$breadcrumbsMenuAppLink"; appName="$breadcrumbsMenuAppName"; }
       echo -e "appLink: ${Blue}$appLink${Reset}"
     else
       echo "hasBreadcrumbsMenu: $hasBreadcrumbsMenu"
