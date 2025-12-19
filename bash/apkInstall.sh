@@ -113,34 +113,32 @@ apkInstall() {
       [ $Android -le 10 ] && iCmd "settings put global package_verifier_enable 1" || iCmd "settings put global verifier_verify_adb_installs 1"  # Enabled Verify Adb Installs
     fi
     if [[ $output == *"Downgrade detected"* ]] && [ $KeepsData -eq 1 ]; then
-      echo -e "${Green}$appName uninstall successfully with keeps app data.${Reset}\n${Yellow}Don't forget to restart Simplify after reboot!${Reset}"
+      echo -e "${Green}$appName uninstall successfully with keeps app data.${Reset}\n${Yellow}Don't forget to restart apkdl after reboot!${Reset}"
       iCmd "cmd package uninstall -k $pkgName"
       cp "$outputAPK" "$POST_INSTALL"
-      sleep 12
+      echo; read -p "Press Enter to reboot..."
       iCmd "reboot"
     fi
-    am start -n "$activityClass" &> /dev/null  # launch app after update
+    am start -n "$activityClass" &> /dev/null  # launch app after install
     if [ $? != 0 ]; then
       iCmd "monkey -p $pkgName -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
     fi
     if [ $EnableRoolback -eq 1 ]; then
       buttons=("<Yes>" "<No>"); confirmPrompt "Is $appName app working correctly?" "buttons" && response=Yes || response=No
-      if [[ "$response" == [Yy]* ]]; then
-        echo "Great! The $appName app is working properly."
-      else
+      if [[ "$response" == [Nn]* ]]; then
         echo -e "$running Roolback to previous version.."
         iCmd "pm rollback-app $pkgName"
+        am start -n "$activityClass"
       fi
     fi
   else
     local activityClass="$activity"
     if [ $Android -le 6 ]; then
       am start -a android.intent.action.VIEW -t application/vnd.android.package-archive -d "file://$outputAPK" > /dev/null 2>&1  # Activity Manager
-      sleep 15 && am start -n "$activityClass" &> /dev/null  # launch app after update
     else
       termux-open --view "$outputAPK"  # install apk using Session installer
-      sleep 15 && am start -n "$activityClass" &> /dev/null  # launch app after update
     fi
+    sleep 15 && am start -n "$activityClass" &> /dev/null  # launch app after install
   fi
   if [ $su -eq 1 ]; then
     [ $writeSELinux -eq 1 ] && su -c "setenforce 1"

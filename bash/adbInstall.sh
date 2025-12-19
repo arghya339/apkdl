@@ -100,19 +100,20 @@ adbInstall() {
   fi
   
   if [[ $output == *"Downgrade detected"* ]] && [ $KeepsData -eq 1 ]; then
-    echo -e "${Green}$appName uninstall successfully with keeps app data.${Reset}\n${Yellow}Don't forget to restart Simplify after reboot!${Reset}"
+    echo -e "${Green}$appName uninstall successfully with keeps app data.${Reset}\n${Yellow}Don't forget to restart apkdl after reboot!${Reset}"
     adb -s $serial shell "cmd package uninstall -k $pkgName"
     cp "$outputAPK" "$POST_INSTALL"
-    sleep 12
+    echo; read -p "Press Enter to reboot..."
     adb -s $serial "reboot"
   fi
-  am start -n "$activityClass" &> /dev/null  # launch app after update
+  am start -n "$activityClass" &> /dev/null  # launch app after install
   [ $? != 0 ] && adb -s $serial shell "monkey -p $pkgName -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
   if [ $EnableRoolback -eq 1 ]; then
     buttons=("<Yes>" "<No>"); confirmPrompt "Is $appName app working correctly?" "buttons" && response=Yes || response=No
     if [[ "$response" == [Nn]* ]]; then
       echo -e "$running Roolback to previous version.."
       adb -s $serial shell "pm rollback-app $pkgName"
+      am start -n "$activityClass" &> /dev/null
     fi
   fi
   [ $RmFileAfterInstallation -eq 1 ] && rm -f "$outputAPK"
