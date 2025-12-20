@@ -101,6 +101,14 @@ apkInstall() {
     else
       iCmd "cp '$outputAPK' '/data/local/tmp/$outputFileName'"
       output=$(iCmd "pm install ${cmd} \"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
+      if [[ "$output" == *"signatures do not match"* ]]; then
+        echo -e "$notice The current app has a different signature than the patched one!"
+        buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to uninstall the current app and proceed?" "buttons" "1" && response=Yes || response=No
+        if [ "$response" == "Yes" ]; then
+          iCmd "pm uninstall $pkgName"
+          output=$(iCmd "pm install ${cmd} \"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
+        fi
+      fi
       iCmd "rm -f '/data/local/tmp/$outputFileName'"
       if [ $isGame -eq 1 ]; then
         iCmd "mkdir -p /sdcard/Android/obb/$pkgName"

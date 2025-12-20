@@ -84,6 +84,14 @@ adbInstall() {
   else
     adb -s $serial push "$outputAPK" "/data/local/tmp/$outputFileName" 2>/dev/null
     output=$(adb -s $serial shell pm install ${cmd} "\"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
+    if [[ "$output" == *"signatures do not match"* ]]; then
+      echo -e "$notice The current app has a different signature than the patched one!"
+      buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to uninstall the current app and proceed?" "buttons" "1" && response=Yes || response=No
+      if [ "$response" == "Yes" ]; then
+        adb -s $serial uninstall $pkgName
+        output=$(adb -s $serial shell pm install ${cmd} "\"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
+      fi
+    fi
     adb -s $serial shell rm -f "/data/local/tmp/$outputFileName"
     #adb -s $serial install ${cmd} "/data/local/tmp/$outputFileName" 2>&1
     #adb -s $serial shell cmd package install ${cmd} "/data/local/tmp/$outputFileName" > /dev/null 2>&1
