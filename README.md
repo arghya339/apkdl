@@ -33,11 +33,7 @@ apk downloader
 
 ## Usage
 ### ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)/ ![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
-  - Open [Termux](https://github.com/termux/termux-app/releases/) and type following command and press `Enter` key twice:
-```sh
-  pkg update && pkg install --only-upgrade apt bash coreutils openssl -y
-  ```
-  - Open macOS Terminal/ Android [Termux](https://github.com/termux/termux-app/releases/) & run script with following command:
+  Open macOS Terminal/ Android [Termux](https://github.com/termux/termux-app/releases/) & run script with following command:
   ```sh
   curl -L --progress-bar -o "$HOME/.apkdl.sh" https://raw.githubusercontent.com/arghya339/apkdl/main/bash/apkdl.sh && bash "$HOME/.apkdl.sh"
   ```
