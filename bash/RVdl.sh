@@ -29,7 +29,7 @@ else
     patchesJson=$(curl -sL "$requestUrl")
   elif [ "$organization" == "Morphe" ] || [ "$organization" == "RVX" ]; then
     [ $PreReleasePatches -eq 0 ] && branch="main" || branch="dev"
-    [ "$organization" == "Morphe" ] && patchesJson=$(curl -sL "https://github.com/MorpheApp/morphe-patches/blob/${branch}/patches-list.json") || patchesJson=$(curl -sL "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/${branch}/patches.json")
+    [ "$organization" == "Morphe" ] && patchesJson=$(curl -sL "https://github.com/MorpheApp/morphe-patches/blob/${branch}/patches-list.json" | jq -r '.patches') || patchesJson=$(curl -sL "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/${branch}/patches.json")
   fi
   result=$(jq '
   [.[] | select(.compatiblePackages != null) | .compatiblePackages | to_entries[]]
