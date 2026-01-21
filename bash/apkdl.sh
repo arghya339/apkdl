@@ -114,7 +114,7 @@ print_apkdl() {
 menu() {
   local -n menu_options=$1
   local -n menu_buttons=$2
-  items_per_page=$((rows - (5 + 10))
+  items_per_page=$((rows - (5 + 10)))
   
   selected_option=0
   selected_button=0
