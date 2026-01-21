@@ -5,9 +5,14 @@ organization=${1}
 if [ "$organization" == "ReVanced" ]; then
   [ $PreReleasePatches -eq 0 ] && requestUrl="https://api.revanced.app/v4/patches/version" || requestUrl="https://api.revanced.app/v4/patches/version?prerelease=true"
   current_patches_release_version=$(curl -sLX 'GET' "$requestUrl" -H 'accept: application/json' | jq -r '.version')  # Get current patches release version from ReVanced API
-elif [ "$organization" == "RVX" ]; then
+elif [ "$organization" == "Morphe" ] || [ "$organization" == "RVX" ]; then
   # Get current patches release version from GitHub API
-  [ $PreReleasePatches -eq 0 ] && current_patches_release_version=$(curl -s ${auth} "https://api.github.com/repos/anddea/revanced-patches/releases/latest" | jq -r '.tag_name') || current_patches_release_version=$(curl -sL ${auth} "https://api.github.com/repos/anddea/revanced-patches/releases" | jq -r '.[0].tag_name')
+  [ "$organization" == "Morphe" ] && { owner="MorpheApp"; repo="morphe-patches"; } || { owner="anddea"; repo="revanced-patches"; }
+  if [ $PreReleasePatches -eq 0 ]; then
+  current_patches_release_version=$(curl -s ${auth} "https://api.github.com/repos/$owner/$repo/releases/latest" | jq -r '.tag_name')
+  else
+    current_patches_release_version=$(curl -sL ${auth} "https://api.github.com/repos/$owner/$repo/releases" | jq -r '.[0].tag_name')
+  fi
 fi
 patches_release_version=$(jq -r --arg org "$organization" '.[$org]' "$apkdlJson" 2>/dev/null)
 
@@ -22,9 +27,9 @@ else
     # Get list of patches from current patches release using ReVanced API
     [ $PreReleasePatches -eq 0 ] && requestUrl="https://api.revanced.app/v4/patches/list" || requestUrl="https://api.revanced.app/v4/patches?prerelease=true"
     patchesJson=$(curl -sL "$requestUrl")
-  elif [ "$organization" == "RVX" ]; then
+  elif [ "$organization" == "Morphe" ] || [ "$organization" == "RVX" ]; then
     [ $PreReleasePatches -eq 0 ] && branch="main" || branch="dev"
-    patchesJson=$(curl -sL "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/${branch}/patches.json")
+    [ "$organization" == "Morphe" ] && patchesJson=$(curl -sL "https://github.com/MorpheApp/morphe-patches/blob/${branch}/patches-list.json") || patchesJson=$(curl -sL "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/${branch}/patches.json")
   fi
   result=$(jq '
   [.[] | select(.compatiblePackages != null) | .compatiblePackages | to_entries[]]

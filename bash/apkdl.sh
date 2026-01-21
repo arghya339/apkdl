@@ -81,6 +81,7 @@ fi
 
 [ ! -x $HOME/.apkdl.sh ] && chmod +x $HOME/.apkdl.sh  # give execute permission to apkdl
 
+read rows cols < <(stty size)
 cloudflareDOH="https://cloudflare-dns.com/dns-query"
 cloudflareIP="1.1.1.1,1.0.0.1"
 
@@ -113,7 +114,7 @@ print_apkdl() {
 menu() {
   local -n menu_options=$1
   local -n menu_buttons=$2
-  items_per_page=${3:-12}  # Default to 12 if items/page not provided
+  items_per_page=$((rows - 5))
   
   selected_option=0
   selected_button=0
@@ -231,7 +232,7 @@ confirmPrompt() {
   Prompt=${1}
   local -n prompt_buttons=$2
   Selected=${3:-0}  # :- set value as 0 if unset
-  maxLen=50
+  maxLen=$cols
   
   # breaks long prompts into multiple lines (50 characters per line)
   lines=()  # empty array
@@ -788,7 +789,7 @@ clearAppCaches() {
 
 declare -a apps applications hiddenApps enabledApps disabledApps uninstalledSystemApps
 while true; do
-  options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced RVX)
+  options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced Morphe RVX)
   if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
     options+=(manageApps)
   fi
@@ -1023,60 +1024,12 @@ while true; do
       curl -sL -o "$apkdl/otherSources.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/otherSources.sh"
       source $apkdl/otherSources.sh
       ;;
-    ReVanced)
+    ReVanced|Morphe|RVX)
       curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
       source $apkdl/APKMdl.sh
       
       curl -sL -o "$apkdl/RVdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/RVdl.sh"
-      source $apkdl/RVdl.sh "ReVanced"
-      [ $? -ne 0 ] && continue
-      
-      if [ -n "$version" ]; then
-        buttons=("<Auto>" "<Manual>"); confirmPrompt "Please select a method to get versionLink" "buttons" && opt=Auto || opt=Manual
-        if [ "$opt" == "Auto" ]; then
-          getVersionLink
-          [ $? -ne 0 ] && continue
-        elif [ "$opt" == "Manual" ]; then
-          getLatestUploads
-          [ $? -ne 0 ] && continue
-        fi
-      else
-        getLatestUploads
-        [ $? -ne 0 ] && continue
-      fi
-      
-      getVariant
-      [ $? -ne 0 ] && continue
-      
-      getDownloadLink
-      if [ $? -eq 0 ]; then
-        getAppDetails
-        appName=$(echo "${appName%%[:—(]*}" | xargs)
-        fileName="${appName}_v${version}-${arch}${file_ext}"
-        apkPath="$Download/$fileName"
-        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
-        [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
-        [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
-        if [ -f "$apkPath" ]; then
-          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
-          if [ "$opt" == "Yes" ]; then
-            if [ $isAndroid -eq 1 ]; then
-              sign "$apkPath" && apkInstall "$apkPath"
-            elif [ $isMacOS -eq 1 ]; then
-              ext="${fileName##*.}"
-              ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
-            fi
-          fi
-        fi
-        echo; read -p "Press Enter to continue..."
-      fi
-      ;;
-    RVX)
-      curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
-      source $apkdl/APKMdl.sh
-      
-      curl -sL -o "$apkdl/RVdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/RVdl.sh"
-      source $apkdl/RVdl.sh "RVX"
+      source $apkdl/RVdl.sh "$selected"
       [ $? -ne 0 ] && continue
       
       if [ -n "$version" ]; then
