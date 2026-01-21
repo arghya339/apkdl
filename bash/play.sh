@@ -147,7 +147,7 @@ gPlayApiSearchApps() {
         pkg="${pkgs[0]}"
         break
       else
-        buttons=("<Select>" "<Back>"); if menu "appInfo" "buttons" "10"; then selected=${selected}; else break; fi
+        buttons=("<Select>" "<Back>"); if menu appInfo buttons; then selected=${selected}; else break; fi
         if [ "${appInfo[selected]}" == "First" ]; then
           page=1
           continue
@@ -307,7 +307,7 @@ gPlayApiAppsUpdates() {
 gPlayApiShowUpdates() {
   buttons=("<Select>" "<Back>")
   if [ ${#apps[@]} -ge 1 ]; then
-    if menu "apps" "buttons"; then
+    if menu apps buttons; then
       appName="${anames[selected]}"
       pkg="${pnames[selected]}"
       offerType=${otypes[selected]}

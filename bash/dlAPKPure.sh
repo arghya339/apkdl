@@ -42,7 +42,7 @@ APKPureSearch() {
    
     if [ ${#titles[@]} -gt 0 ]; then
       buttons=("<Select>" "<Back>")
-      if menu "titles" "buttons" "10"; then
+      if menu titles buttons; then
         appName=${titles[$selected]}
         pkgName=${packages[$selected]}
         appLink=${urls[$selected]}
@@ -65,7 +65,7 @@ APKPureSearch() {
         results+=("${appNames[i]} by ${bys[i]}")
       done
       buttons=("<Select>" "<Back>")
-      if menu "results" "buttons" "10"; then
+      if menu results buttons; then
         appName="${appNames[$selected]}"
         by="${bys[$selected]}"
         appLink="${appLinks[$selected]}"
@@ -123,7 +123,7 @@ AllVersions() {
   done
   
   buttons=("<Select>" "<Back>")
-  if menu "versions" "buttons" "10"; then
+  if menu versions buttons; then
     versionName="${versionNames[$selected]}"
     fileSize="${fileSizes[$selected]}"
     updateOn="${updateOns[$selected]}"
@@ -181,7 +181,7 @@ APKPureVariant() {
   
   if [ "$variant" == "true" ]; then
     buttons=("<Select>" "<Back>")
-    menu "variants" "buttons" "10" || return 1
+    menu variants buttons || return 1
   elif [ "$variant" == "false" ]; then
     selected=0
   fi

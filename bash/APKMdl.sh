@@ -68,7 +68,7 @@ searchApp() {
         [ $page -ge 3 ] && availableApps+=(First)
         [ $page -ge 2 ] && availableApps+=(Prev)
         [ $page -ne $lastPage ] && { availableApps+=(Next); availableApps+=(Last); }
-        buttons=("<Select>" "<Back>"); if menu "availableApps" "buttons" "10"; then selected=${availableApps[$selected]}; else break; fi
+        buttons=("<Select>" "<Back>"); if menu availableApps buttons; then selected=${availableApps[$selected]}; else break; fi
         
         if [ "${selected}" == "First" ]; then
           echo
@@ -168,7 +168,7 @@ getLatestUploads() {
         [ $page -ne $lastPage ] && { availableVersions+=(Next); availableVersions+=(Last); }
         mapfile -t versionUrls < <(echo "$latestUploadsJSON" | jq -r '.[] | .link')
         
-        buttons=("<Select>" "<Back>"); menu "availableVersions" "buttons" "10" || break
+        buttons=("<Select>" "<Back>"); menu availableVersions buttons || break
         
         if [ "${availableVersions[$selected]}" == "First" ]; then
           echo
@@ -289,7 +289,7 @@ getVariant() {
     done
     
     buttons=("<Select>" "<Back>")
-    if menu "variantList" "buttons" "10"; then
+    if menu variantList buttons; then
       IFS=$'\t' read -r version vcode type arch os dpi link <<< "${variants_table_row[selected]}"
       
       echo -e "$notice Selected Variant: "
@@ -331,7 +331,7 @@ getDownloadLink() {
         downloadButtonTypes+=("${types[i]} | ${sizes[i]}")
       done
       buttons=("<Select>" "<Back>")
-      if menu "downloadButtonTypes" "buttons" "10"; then
+      if menu downloadButtonTypes buttons; then
         fileType="${types[selected]}"
         fileSize="${sizes[selected]}"
         downloadButtonLink="${urls[selected]}"

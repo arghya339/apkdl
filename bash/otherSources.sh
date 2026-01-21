@@ -31,7 +31,7 @@ codebergSearch() {
       [ $page -ne 1 ] && availableRepo+=(Previous)
       availableRepo+=(Next)
       buttons=("<Select>" "<Back>")
-      if menu "availableRepo" "buttons" "10"; then
+      if menu availableRepo buttons; then
         if [ "${availableRepo[selected]}" == "Previous" ]; then
           ((page--))
         elif [ "${availableRepo[selected]}" == "Next" ]; then
@@ -838,7 +838,7 @@ LITEAPKSdl() {
 
 options=(Codeberg IzzyOnDroid AppGallery SourceForge APKCombo Aptoide LITEAPKS)
 while true; do
-  buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
+  buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; else break; fi
   case "$selected" in
     Codeberg)
       codebergSearch

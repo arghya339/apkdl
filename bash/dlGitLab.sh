@@ -39,7 +39,7 @@ searchGLAB() {
       [ $page -ne 1 ] && availableRepo+=(Previous)
       availableRepo+=(Next)
       buttons=("<Select>" "<Back>")
-      if menu "availableRepo" "buttons" "10"; then
+      if menu availableRepo buttons; then
         selected=$selected;
         if [ $page -ne 1 ] && [ $selected -eq $((${#availableRepo[@]}-2)) ]; then
           ((page--))
@@ -110,7 +110,7 @@ glabReleases() {
     releases+=(Next)
     
     buttons=("<Select>" "<Back>")
-    if menu "releases" "buttons" "10"; then
+    if menu releases buttons; then
       if [ $page -ne 1 ] && [ $selected -eq $((${#releases[@]}-2)) ]; then
         ((page--))
         continue
@@ -147,7 +147,7 @@ glabReleases() {
           
           if [ ${#assets[@]} -gt 1 ]; then
             buttons=("<Select>" "<Back>")
-            if menu "assets" "buttons" "10"; then
+            if menu assets buttons; then
               selected=$selected
             else
               selected=

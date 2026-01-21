@@ -80,7 +80,7 @@ mapfile -t versions < <(echo "$apps_json" | jq -r '.[].version | if . == null th
 mapfile -t links < <(echo "$apps_json" | jq -r '.[].link')
 
 buttons=("<Select>" "<Back>")
-if menu "names" "buttons" "10"; then
+if menu names buttons; then
   selected=$selected
 else
   selected=

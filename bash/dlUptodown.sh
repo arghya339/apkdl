@@ -32,7 +32,7 @@ UptodownSearch() {
       [ $i -eq 0 ] && availableApps=("${names[$i]} - ${descriptions[$i]}") || availableApps+=("${names[$i]} - ${descriptions[$i]}")
     done
   
-    buttons=("<Select>" "<Back>"); if menu "availableApps" "buttons" "10"; then selected=$selected; else selected=""; fi
+    buttons=("<Select>" "<Back>"); if menu availableApps buttons; then selected=$selected; else selected=""; fi
   
     if [[ "$selected" =~ ^[0-9]+$ ]]; then
       appName="${names[$selected]}"
@@ -75,7 +75,7 @@ UptodownVersionLink() {
         done
         [ $page -ne 1 ] && availableVersions+=("SEE LESS")
         availableVersions+=("SEE MORE")
-        if menu "availableVersions" "buttons" "12"; then
+        if menu availableVersions buttons; then
           selected=$selected
           if [ $page -ne 1 ] && [ $selected -eq $((${#availableVersions[@]}-2)) ]; then
             ((page--))
@@ -143,7 +143,7 @@ UptodownDownloadLink() {
       echo -e "$info dlUrl: ${Blue}$dlLink${Reset}"
       return
     else
-      if menu "variants" "buttons" "12"; then
+      if menu variants buttons; then
         selected=$selected
         location_url="${location_urls[$selected]}"
         data_url=$(curl -sL -A "$USER_AGENT" "$location_url" | pup '#detail-download-button attr{data-url}')

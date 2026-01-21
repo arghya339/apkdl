@@ -107,7 +107,7 @@ getUpdates() {
 
 showUpdates() {
   buttons=("<Select>" "<Back>")
-  if menu "apps" "buttons"; then
+  if menu apps buttons; then
     appName="${appNames[selected]}"
     versionLink="${releaseLinks[selected]}"
     echo -e "releaseLink for ${pnames[selected]}: ${Blue}$versionLink${Reset}"
@@ -171,7 +171,7 @@ aptoideListAppsUpdates() {
 aptoideShowUpdates() {
   buttons=("<Select>" "<Back>")
   if [ ${#apps[@]} -ge 1 ]; then
-    if menu "apps" "buttons"; then
+    if menu apps buttons; then
       appName="${names[selected]}"
       versionName="${vernames[selected]}"
       versionCode="${vercodes[selected]}"
@@ -277,7 +277,7 @@ EOF
 
 blockInternet() {
   buttons=("<Select>" "<Back>")
-  if menu "applications" "buttons"; then
+  if menu applications buttons; then
     package="${packages[selected]}"
     appLabel="${application_labels[selected]}"
     echo -e "$running Blocking internet access for $package"
@@ -322,7 +322,7 @@ showFirewallBlocklist() {
 
 unblockInternet() {
   buttons=("<Select>" "<Back>")
-  if menu "firewallBlocklist" "buttons"; then
+  if menu firewallBlocklist buttons; then
     package="${blocked_pkgs[selected]}"
     uid="${uids[selected]}"
     appLabel="${labels[selected]}"
@@ -371,7 +371,7 @@ unblockInternet() {
 
 hideApps() {
   buttons=("<Select>" "<Back>")
-  if menu "applications" "buttons"; then
+  if menu applications buttons; then
     package="${packages[selected]}"
     appLabel="${application_labels[selected]}"
     runCmd "pm hide $package" && echo -e "$good Successfully hidden $appLabel." || echo -e "$notice Failed to hidden $appLabel!"
@@ -391,7 +391,7 @@ showHiddenApps() {
 
 unhideApps() {
   buttons=("<Select>" "<Back>")
-  if menu "hiddenApps" "buttons"; then
+  if menu hiddenApps buttons; then
     package="${hidden_pkgs[selected]}"
     echo -e "$running Unhidden $package"
     runCmd "pm unhide $package"
@@ -412,7 +412,7 @@ showEnabledApps() {
 
 disableApps() {
   buttons=("<Select>" "<Back>")
-  if menu "enabledApps" "buttons"; then
+  if menu enabledApps buttons; then
     package="${launchable_pkgs[selected]}"
     echo -e "$running Disabling $package"
     runCmd "pm disable-user --user 0 $package" && echo -e "$good Successfully disabled $package." || echo -e "$notice Failed to disabled $package!"
@@ -431,7 +431,7 @@ showDisabledApps() {
 
 enableApps() {
   buttons=("<Select>" "<Back>")
-  if menu "disabledApps" "buttons"; then
+  if menu disabledApps buttons; then
     package="${disabled_pkgs[selected]}"
     runCmd "pm enable $package"
   fi
@@ -439,7 +439,7 @@ enableApps() {
 
 packagesUninstall() {
   buttons=("<Select>" "<Back>")
-  if menu "applications" "buttons"; then
+  if menu applications buttons; then
     package="${packages[selected]}"
     appLabel="${application_labels[selected]}"
     echo -e "$running Uninstalling $package"
@@ -468,7 +468,7 @@ showUninstalledSystemApps() {
 
 recoverSystemApps() {
   buttons=("<Select>" "<Back>")
-  if menu "uninstalledSystemApps" "buttons"; then
+  if menu uninstalledSystemApps buttons; then
     package="${uninstalled_pkgs[selected]}"
     runCmd "cmd package install-existing $package"
   fi

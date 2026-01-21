@@ -37,7 +37,7 @@ searchGH() {
       [ $page -ne 1 ] && availableRepo+=(Previous)
       availableRepo+=(Next)
       buttons=("<Select>" "<Back>")
-      if menu "availableRepo" "buttons" "10"; then
+      if menu availableRepo buttons; then
         selected=$selected;
         if { [ $page -eq 1 ] && [ $selected -eq $((${#availableRepo[@]}-2)) ]; } || { [ $page -ne 1 ] && [ $selected -eq $((${#availableRepo[@]}-3)) ]; }; then
           read -r -p ">> Enter users name: " users
@@ -125,7 +125,7 @@ Latest() {
     assets+=("name: ${asset_names[$i]} | size: ${asset_sizes[$i]} bytes | download: ${asset_download_counts[$i]} | created: ${asset_created_ats[$i]} | updated: ${asset_updated_ats[$i]}")
   done
   buttons=("<Select>" "<Back>")
-    if menu "assets" "buttons" "10"; then
+    if menu assets buttons; then
       asset_name=${asset_names[$selected]}
       asset_size=${asset_sizes[$selected]}
       asset_digest=${asset_digests[$selected]}
@@ -168,7 +168,7 @@ Releases() {
     releases+=(Next)
 
     buttons=("<Select>" "<Back>")
-    if menu "releases" "buttons" "10"; then
+    if menu releases buttons; then
       if [ $page -ne 1 ] && [ $selected -eq $((${#releases[@]}-2)) ]; then
         ((page--))
         continue
@@ -205,7 +205,7 @@ Releases() {
 
         if [ ${#assets[@]} -gt 1 ]; then
           buttons=("<Select>" "<Back>")
-          if menu "assets" "buttons" "10"; then
+          if menu assets buttons; then
             selected=$selected
           else
             selected=

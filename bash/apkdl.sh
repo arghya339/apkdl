@@ -114,7 +114,7 @@ print_apkdl() {
 menu() {
   local -n menu_options=$1
   local -n menu_buttons=$2
-  items_per_page=$((rows - 5))
+  items_per_page=$((rows - (5 + 10))
   
   selected_option=0
   selected_button=0
@@ -796,7 +796,7 @@ while true; do
   if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
     options+=(Configuration)
   fi
-  buttons=("<Select>" "<Exit>"); if menu "options" "buttons" "${#options[@]}"; then selected=${options[selected]}; fi
+  buttons=("<Select>" "<Exit>"); if menu options buttons; then selected=${options[selected]}; fi
   case "$selected" in
     PlayStore)
       curl -sL -o "$apkdl/play.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/play.sh"
@@ -1083,7 +1083,7 @@ while true; do
         [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
       fi
       while true; do
-        buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
+        buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
           appUpdates)      
             if [ "$AppUpdatesSource" == "PlayStore" ]; then
@@ -1211,7 +1211,7 @@ while true; do
         if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
           options+=(ShowSystemApps)
         fi
-        buttons=("<Select>" "<Back>"); if menu "options" "buttons" "${#options[@]}"; then selected="${options[$selected]}"; else break; fi
+        buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; else break; fi
         case "$selected" in
           RipLocale) if [ $RipLocale -eq 1 ]; then echo "RipLocale == true"; else echo "RipLocale == false"; fi
             m1="Device specific locale will be kept in apk file"
@@ -1252,7 +1252,7 @@ while true; do
               Reinstall=$(jq -r '.Reinstall' "$apkdlJson" 2>/dev/null)
               EnableRoolback=$(jq -r '.EnableRoolback' "$apkdlJson" 2>/dev/null)
               options=("Install Package for *user" "Allow Downgrade with keeps App data (reboot required)" "Grant All Runtime/ Requested Permissions" Installed\ as\ test-only\ app Bypass\ Low\ Target\ SDK\ Bolck Disable\ Play\ Protect\ Package\ Verification Disable\ Verify\ Adb\ Installs Installer "Reinstall (Replace/ Upgrade) Existing Installed Package" Enable\ Version\ Roolback)
-              buttons=("<Select>" "<Back>"); if menu "options" "buttons" "10"; then selected="${options[$selected]}"; else break; fi
+              buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; else break; fi
               case "$selected" in
                 "Install Package for *user")
                   if [ "$InstallPackageFor" -eq 0 ]; then echo "InstallPackageFor == 0 (default-user)"; else echo "InstallPackageFor == 1 (all-users)"; fi
@@ -1307,7 +1307,7 @@ while true; do
                     "adb") echo "Installer == adb" ;;
                   esac
                   options=(Play\ Store Package\ Installer Shell ADB)
-                  buttons=("<Select>" "<Back>"); if menu "options" "buttons" "4"; then selected="${options[$selected]}"; fi
+                  buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; fi
                   if [ -n "$selected" ]; then
                     case "$selected" in
                       Play\ Store) config "Installer" "com.android.vending" && echo -e "$good ${Green}Successfully set Installer as 'com.android.vending' (PlayStore)${Reset}" ;;
@@ -1360,7 +1360,7 @@ while true; do
               sleep 0.5  # wait 500 milliseconds
             done
             # Select JDK versions
-            buttons=("<Select>" "<Back>"); if menu "jdkVersion" "buttons"; then version="${jdkVersion[$selected]}"; fi
+            buttons=("<Select>" "<Back>"); if menu jdkVersion buttons; then version="${jdkVersion[$selected]}"; fi
             # Set JDK versions
             if [ -n "$version" ]; then
               echo -e "$info Selected: openjdk-$version"
@@ -1389,7 +1389,7 @@ while true; do
           AppUpdatesSource)
             if [ "$AppUpdatesSource" == "PlayStore" ]; then echo "AppUpdatesSource == PlayStore"; elif [ "$AppUpdatesSource" == "APKMirror" ]; then echo "AppUpdatesSource == APKMirror"; else echo "AppUpdatesSource == Aptoide"; fi
             options=(PlayStore APKMirror Aptoide)
-            buttons=("<Select>" "<Back>"); if menu "options" "buttons" "3"; then source="${options[$selected]}"; fi
+            buttons=("<Select>" "<Back>"); if menu options buttons; then source="${options[$selected]}"; fi
             if [ -n "$source" ]; then
               case "$source" in
                 PlayStore) config "AppUpdatesSource" "PlayStore" && echo -e "$good ${Green}AppUpdatesSource as PlayStore set successfully!${Reset}" ;;

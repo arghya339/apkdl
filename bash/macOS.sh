@@ -71,7 +71,7 @@
         devices+=("$model ($serial)")
       done
       buttons=("<Select>" "<Back>")
-      if menu "devices" "buttons"; then
+      if menu devices buttons; then
         serial="${serials[$selected]}"
       fi
     fi
