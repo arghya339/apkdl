@@ -232,27 +232,29 @@ confirmPrompt() {
   Prompt=${1}
   local -n prompt_buttons=$2
   Selected=${3:-0}  # :- set value as 0 if unset
-  maxLen=$cols
+  [[ "$Selected" =~ ^(0|true|on|enable)$ ]] && Selected=0 || Selected=1
   
-  # breaks long prompts into multiple lines (50 characters per line)
-  lines=()  # empty array
-  while [ -n "$Prompt" ]; do
-    lines+=("${Prompt:0:$maxLen}")  # take first 50 characters from $Prompt starting at index 0
-    Prompt="${Prompt:$maxLen}"  # removes first 50 characters from $Prompt by starting at 50 to 0
-  done
+  # breaks long prompts into multiple lines
+  mapfile -t lines < <(fmt -w "$cols" <<< "$Prompt")
   
   # print all-lines except last-line
   last_line_index=$(( ${#lines[@]} - 1 ))  # ${#lines[@]} = number of elements in lines array
   for (( i=0; i<last_line_index; i++ )); do
     echo -e "${lines[i]}"
   done
+  
   last_line="${lines[$last_line_index]}"
+  llcc=${#last_line}
+  bcc=$((${#prompt_buttons[0]} + ${#prompt_buttons[1]}))
+  pbcc=$((bcc + 8))
+  
+  [ $((cols - llcc)) -ge $pbcc ] && fits_on_last=true || { fits_on_last=false; echo -e "$last_line"; }
   
   echo -ne '\033[?25l'  # Hide cursor
   while true; do
     show_prompt() {
       echo -ne "\r\033[K"  # n=noNewLine r=returnCursorToStartOfLine \033[K=clearLine
-      echo -ne "$last_line "
+      [ $fits_on_last == true ] && echo -ne "$last_line "
       [ $Selected -eq 0 ] && echo -ne "${whiteBG}➤ ${prompt_buttons[0]} $Reset   ${prompt_buttons[1]}" || echo -ne "  ${prompt_buttons[0]}  ${whiteBG}➤ ${prompt_buttons[1]} $Reset"  # highlight selected bt with white bg
     }; show_prompt
 
