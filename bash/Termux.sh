@@ -154,7 +154,7 @@
   pkgInstall "sed"  # sed update
   pkgInstall "findutils"  # find utils update
   pkgInstall "glow"  # glow install/update
-  pkgInstall "protobuf-static"  # protoc install/update
+  pkgInstall "protobuf"  # protoc install/update
   pkgInstall "xxd"  # xxd install/update
   
   all_key=("CheckTermuxUpdate" "openjdk")

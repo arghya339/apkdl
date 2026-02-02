@@ -3,7 +3,7 @@
 apk downloader
 <br>
 <br>
-<img src="docs/images/Main.png">
+<img src="docs/.images/Main.png">
 <br>
 
 ## Purpose
