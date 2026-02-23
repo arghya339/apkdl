@@ -7,7 +7,7 @@ decodeHTML() {
 UptodownSearch() {
   while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
   if [ -n "$appName" ]; then
-    app_name=$(echo "$appName" | tr '[:upper:]' '[:lower:]')
+    app_name=$(echo "$appName" | tr '[:upper:]' '[:lower:]' | sed 's/ /+/g')
     
     page=1
     index=0
@@ -26,7 +26,7 @@ UptodownSearch() {
         descriptions[$index]="$description"
         ((index++))
       fi
-    done < <(curl -sL -A "$USER_AGENT" -X POST "https://en.uptodown.com/android/search" -d "q=${app_name}" -d "page=$page" | pup '.item json{}' | jq -c '.[] | {name: .children[1].children[0].text, description: .children[2].text, url: .children[1].children[0].href}')
+    done < <(curl -sL -A "$USER_AGENT" "https://en.uptodown.com/android/search?query=${app_name}&page=$page" | pup '.item json{}' | jq -c '.[] | {name: .children[1].children[0].children[0].text, description: .children[2].text, url: .children[1].children[0].href}')
   
     for i in "${!names[@]}"; do
       [ $i -eq 0 ] && availableApps=("${names[$i]} - ${descriptions[$i]}") || availableApps+=("${names[$i]} - ${descriptions[$i]}")
