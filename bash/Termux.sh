@@ -168,7 +168,7 @@
   jq -e '.openjdk != null' "$apkdlJson" >/dev/null 2>&1 && jdkVersion=$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null) || jdkVersion="$isJdkVersion"
   
   aapt2="$HOME/aapt2"
-  [ ! -f "$aapt2" ] && { curl -sL "https://github.com/arghya339/aapt2/releases/download/all/aapt2_$cpuAbi" --progress-bar -o "$aapt2" && chmod +x "$aapt2"; }
+  [[ $(~/aapt2 version 2>&1 | awk '{print $NF}') =~ ^(2.19-1023|2.19-3401)$ ]] || { rm -f ~/aapt2 && curl -L --progress-bar -C - -o ~/aapt2 $(curl -sL https://api.github.com/repos/ReVanced/aapt2/releases/latest | jq -r --arg arch "$cpuAbi" '.assets[] | select(.name == "aapt2-" + $arch) | .browser_download_url') && chmod +x ~/aapt2 && ~/aapt2 version 2>&1; }
 
   curl -sL -o "$apkdl/apkInstall.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/apkInstall.sh"
   source $apkdl/apkInstall.sh
