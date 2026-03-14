@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 searchGH() {
   while true; do read -r -p ">> Enter repoName: " repoName; [[ "$repoName" =~ ^[Qq] ]] && repoName=; break; [ -n "$repoName" ] && break || echo -e "$notice Please enter a valid repoName!"; done
   repoName=$(echo $repoName  | sed 's/ /%20/g')
@@ -300,8 +302,7 @@ ghActions() {
           asset_browser_download_url=$(curl -sL -I -H "Authorization: Bearer ${ghToken}" "$archive_download_url" | grep -i "location:" | head -1 | sed 's/location: //i' | tr -d '\r')
           return 0
         else
-          [ $isAndroid -eq 1 ] && termux-open-url "$browser_download_url"
-          [ $isMacOS -eq 1 ] && open "$browser_download_url"
+          if [ $isAndroid == true ]; then termux-open-url "$browser_download_url"; elif [ $isMacOS == true ]; then open "$browser_download_url"; else xdg-open "$browser_download_url"; fi
           return 1
         fi
       else
@@ -317,14 +318,14 @@ ghActions() {
 
 dlGH() {
   while true; do
-    if [ $isAndroid -eq 1 ]; then
-      aria2c -x 16 -s 16 --console-log-level=error --summary-interval=0 --download-result=hide -c -o "$fileName" -d "$Download" "$asset_browser_download_url"
-      aria2c_exit_status=$?
-    elif [ $isMacOS -eq 1 ]; then
+    if [ $isMacOS == true ]; then
       aria2c -x 16 -s 16 --console-log-level=error --summary-interval=0 --download-result=hide -c -o "$fileName" -d "$Download" --ca-certificate="/etc/ssl/cert.pem" "$asset_browser_download_url"
+      aria2c_exit_status=$?
+    else
+      aria2c -x 16 -s 16 --console-log-level=error --summary-interval=0 --download-result=hide -c -o "$fileName" -d "$Download" "$asset_browser_download_url"
       aria2c_exit_status=$?
     fi
     [ $aria2c_exit_status -eq 0 ] && { echo; break; } || sleep 5
   done
 }
-###########################################################################################################################################################
+#############################################################################################################################################################

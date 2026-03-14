@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 decodeHTML() {
   echo "$1" | sed -e 's/&amp;/\&/g' -e 's/&lt;/</g' -e 's/&gt;/>/g' -e "s/&#39;/'/g" -e 's/&quot;/"/g' -e 's/&nbsp;/ /g'
 }
@@ -163,11 +165,11 @@ UptodownAppInfo() {
   version=$(pup 'div.version json{}' <<< "$variantHTML" | jq -r '.[0].text')
   pkgName=$(grep -A1 "Package Name" <<< "$variantHTML" | tail -1 | sed -e 's/<[^>]*>//g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
   size=$(grep -A1 "Size" <<< "$variantHTML" | tail -1 | sed -e 's/<[^>]*>//g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-  downloads=$(grep -A1 "Downloads" <<< "$variantHTML" | tail -1 | sed -e 's/<[^>]*>//g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+  downloads=$(grep -A1 "<th>Downloads</th>" <<< "$variantHTML" | tail -1 | sed -e 's/<[^>]*>//g' -e 's/[[:space:]]//g')
   Type=$(grep -A1 "File type" <<< "$variantHTML" | tail -1 | sed -e 's/<[^>]*>//g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-  arch=$(grep -A1 "Architecture" <<< "$variantHTML" | tail -1 | sed -e 's/<[^>]*>//g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-  SHA256=$(grep -A1 "SHA256" <<< "$variantHTML" | tail -1 | sed -e 's/<[^>]*>//g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-  requirements=$(awk '/<th[^>]*>Requirements<\/th>/{flag=1;next} flag && /<li>/{gsub(/.*<li>|<\/li>.*/,"");print;exit}' <<< "$variantHTML" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  arch=$(grep -A1 "<th scope=\"row\">Architecture</th>" <<< "$variantHTML" | tail -1 | sed -e 's/<[^>]*>//g' -e 's/[[:space:]]//g')
+  SHA256=$(grep -A2 "SHA256" <<< "$variantHTML" | tail -1 | sed -e 's/<[^>]*>//g' -e 's/[[:space:]]//g')
+  requirements=$(grep -m1 "sdkVersion" <<< "$variantHTML" | sed -e 's/<[^>]*>//g' -e 's/^[[:space:]]*//')
   [ "$Type" == "XAPK" ] && file_ext=".apks" || file_ext=".apk"
 
   echo -e "Information about $appName $version"
@@ -179,4 +181,4 @@ UptodownAppInfo() {
   echo -e "${info} fileSHA256    : ${Reset}${SHA256}"
   echo -e "${info} reqOS         : ${Reset}${requirements}\n"
 }
-#####################################################################################################################################################################################
+#######################################################################################################################################

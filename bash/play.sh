@@ -2,56 +2,59 @@
 
 # Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
 
-curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/auth.sh -o $apkdl/auth.sh
-source $apkdl/auth.sh
+PlayVariables() {
+  # src: https://gitlab.com/AuroraOSS/gplayapi/-/tree/master/lib/src/main/java/com/aurora/gplayapi/GooglePlayApi.kt  # src: https://github.com/whyorean/GPlayApi/blob/master/src%2Fmain%2Fjava%2Fcom%2Faurora%2Fgplayapi%2FGooglePlayApi.kt
+  baseURL="https://android.clients.google.com"
+  fdfeURL="$baseURL/fdfe"
+  tocURL="$fdfeURL/toc"
+  acceptTosURL="$fdfeURL/acceptTos"
+  searchURL="$fdfeURL/search"
+  searchListURL="$fdfeURL/searchList"
+  detailsURL="$fdfeURL/details"
+  bulkDetailsURL="$fdfeURL/bulkDetails"
+  acquireURL="$fdfeURL/acquire"
+  purchaseURL="$fdfeURL/purchase"
+  purchaseHistoryURL="$fdfeURL/purchaseHistory"
+  deliveryURL="$fdfeURL/delivery"
 
-# src: https://gitlab.com/AuroraOSS/gplayapi/-/tree/master/lib/src/main/java/com/aurora/gplayapi/GooglePlayApi.kt  # src: https://github.com/whyorean/GPlayApi/blob/master/src%2Fmain%2Fjava%2Fcom%2Faurora%2Fgplayapi%2FGooglePlayApi.kt
-baseUrl="https://android.clients.google.com"
-fdfeUrl="$baseUrl/fdfe"
-tocUrl="$fdfeUrl/toc"
-acceptTosUrl="$fdfeUrl/acceptTos"
-searchUrl="$fdfeUrl/search"
-searchListUrl="$fdfeUrl/searchList"
-detailsUrl="$fdfeUrl/details"
-bulkDetailsUrl="$fdfeUrl/bulkDetails"
-acquireUrl="$fdfeUrl/acquire"
-purchaseUrl="$fdfeUrl/purchase"
-purchaseHistoryUrl="$fdfeUrl/purchaseHistory"
-deliveryUrl="$fdfeUrl/delivery"
-
-# src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/data/providers/HeaderProvider.kt
-Headers=(
-  -H "Authorization: Bearer $authToken"
-  -H "User-Agent: $userAgentString"
-  -H "X-DFE-Device-Id: $gsfId"
-  -H "Accept-Language: en_US"
-  -H "X-DFE-Client-Id: am-android-google"
-  -H "X-DFE-Network-Type: 4"
-  -H "X-DFE-Content-Filters: "
-  -H "X-Limit-Ad-Tracking-Enabled: false"
-  -H "X-Ad-Id: "
-  -H "X-DFE-UserLanguages: en_US"
-  -H "X-DFE-Request-Params: timeoutMs=4000"
-  -H "app: com.google.android.gms"
-  -H "X-DFE-Locale: $Locales"
-)
-# -H "app: com.android.vending"
-# -H "app: com.google.android.gms"
+  # src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/data/providers/HeaderProvider.kt
+  Headers=(
+    -H "Authorization: Bearer $authToken"
+    -H "User-Agent: $userAgentString"
+    -H "X-DFE-Device-Id: $gsfId"
+    -H "Accept-Language: en_US"
+    -H "X-DFE-Client-Id: am-android-google"
+    -H "X-DFE-Network-Type: 4"
+    -H "X-DFE-Content-Filters: "
+    -H "X-Limit-Ad-Tracking-Enabled: false"
+    -H "X-Ad-Id: "
+    -H "X-DFE-UserLanguages: en_US"
+    -H "X-DFE-Request-Params: timeoutMs=4000"
+    -H "app: com.google.android.gms"
+    -H "X-DFE-Locale: $Locales"
+  )
+  # -H "app: com.android.vending"
+  # -H "app: com.google.android.gms"
+}
 
 # Request toc (Table of Contents) to initialize a session and get session cookies
-echo -e "$running Initializing fdfe session.."
-[ -f $apkdl/cookies.txt ] && rm -f $apkdl/cookies.txt
-curl -sL -c "$apkdl/cookies.txt" "$tocUrl" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "toc.protobuf"
-protoc --decode_raw < toc.protobuf > toc.txt && rm -f toc.protobuf
-tosToken=$(awk -F'"' '/1 \{/{f1=1} f1&&/6 \{/{f6=1} f6&&/7: "/{print $2; exit}' toc.txt)  # tosToken (Terms of Service Token) is usually in field 7 of tocResponse
-# Accept Google Play's Terms of Service
-if [ -n "$tosToken" ]; then
-  echo -e "$notice Terms of Service found! Accepting.."
-  curl -sL -X POST "$acceptTosUrl" "${Headers[@]}" -b "$apkdl/cookies.txt" -d "tost=$tosToken" -d "toscme=false" -o /dev/null
-  echo -e "$good Terms of Service accepted."
-fi
-rm -f toc.txt
-Headers+=(-b "$apkdl/cookies.txt")
+toc() {
+  playAuth
+  PlayVariables
+  echo -e "$running Initializing fdfe session.."
+  [ -f $apkdl/cookies.txt ] && rm -f $apkdl/cookies.txt
+  curl -sL -c "$apkdl/cookies.txt" "$tocURL" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "toc.protobuf"
+  protoc --decode_raw < toc.protobuf > toc.txt && rm -f toc.protobuf
+  tosToken=$(awk -F'"' '/1 \{/{f1=1} f1&&/6 \{/{f6=1} f6&&/7: "/{print $2; exit}' toc.txt)  # tosToken (Terms of Service Token) is usually in field 7 of tocResponse
+  # Accept Google Play's Terms of Service
+  if [ -n "$tosToken" ]; then
+    echo -e "$notice Terms of Service found! Accepting.."
+    curl -sL -X POST "$acceptTosURL" "${Headers[@]}" -b "$apkdl/cookies.txt" -d "tost=$tosToken" -d "toscme=false" -o /dev/null
+    echo -e "$good Terms of Service accepted."
+  fi
+  rm -f toc.txt
+  Headers+=(-b "$apkdl/cookies.txt")
+}
 
 # src: https://gitlab.com/AuroraOSS/AuroraStore/-/blob/master/app/src/main/java/com/aurora/store/util/CommonUtil.kt
 humanReadableForm() {
@@ -80,8 +83,8 @@ detailsList() {
     [ -n "$offeredBy" ] && offeredBys+=("$offeredBy") || offeredBys+=("N/A")
     offerType=$(grep -A 20 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '8 {' | grep -m 1 '8:' | tr -d ' ' | cut -d':' -f2)
     [ -n "$offerType" ] && offerTypes+=($offerType) || offerTypes+=("N/A")
-    appIconUrl=$(awk -v p="${pkgs[i]}" '$0~"1: \""p"\""{f=1} /1: ".*"/&&!($0~p){f=0} f&&/10 \{/{b=1;i=0} f&&b&&/1: 4/{i=1} f&&i&&/5: "/{gsub(/.*5: "|"[[:space:]]*$/,"");print;exit}' <<< "$rawProto")
-    [ -n "$appIconUrl" ] && appIconUrls+=("$appIconUrl") || appIconUrls+=("N/A")
+    appIconURL=$(awk -v p="${pkgs[i]}" '$0~"1: \""p"\""{f=1} /1: ".*"/&&!($0~p){f=0} f&&/10 \{/{b=1;i=0} f&&b&&/1: 4/{i=1} f&&i&&/5: "/{gsub(/.*5: "|"[[:space:]]*$/,"");print;exit}' <<< "$rawProto")
+    [ -n "$appIconURL" ] && appIconURLs+=("$appIconURL") || appIconURLs+=("N/A")
     versionCode=$(grep -A 200 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '13 {' | grep -A 2 '1 {' | grep -m 1 '3:' | tr -d ' ' | cut -d':' -f2)
     [ -n "$versionCode" ] && versionCodes+=("$versionCode") || versionCodes+=("N/A")
     versionName=$(grep -A 300 "${pkgs[i]}" <<< "$rawProto" | grep -A 5 '13 {' | grep -m 1 '4: "' | cut -d'"' -f2)
@@ -111,14 +114,15 @@ detailsList() {
 
 # src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/helpers/SearchHelper.kt
 gPlayApiSearchApps() {
+  toc
   while true; do read -r -p ">> Enter appName: " inputAppName; [[ "$inputAppName" =~ ^[Qq] ]] && inputAppName=; break; [ -n "$inputAppName" ] && break || echo -e "$notice Please enter a valid appName!"; done
   
   if [ -n "$inputAppName" ]; then
     query=$(echo "$inputAppName" | sed 's/ /+/g')
     page=1
-    searchAppsUrl=("$searchUrl?q=${query}&c=3&ksm=1")
+    searchAppsURL=("$searchURL?q=${query}&c=3&ksm=1")
     while true; do
-      curl -sL "${searchAppsUrl[$((page-1))]}" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "search.protobuf"
+      curl -sL "${searchAppsURL[$((page-1))]}" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "search.protobuf"
       search=$(protoc --decode_raw < search.protobuf) && rm -f search.protobuf
       detailsList "$search"
       declare -a appInfo offerTypesS containsAdsS
@@ -134,12 +138,12 @@ gPlayApiSearchApps() {
       fi
       nextPage=$(awk -F'"' '/getCluster\?enpt=/ {print $2}' <<< "$search")  # nextPage start with getCluster?enpt=
       if [ -n "$nextPage" ]; then
-        nextPageUrl="$searchUrl/$nextPage"
-        curl -sL "$nextPageUrl" "${Headers[@]}" -H "Accept: application/x-protobuf" -o nextPage.protobuf
+        nextPageURL="$searchURL/$nextPage"
+        curl -sL "$nextPageURL" "${Headers[@]}" -H "Accept: application/x-protobuf" -o nextPage.protobuf
         protoc --decode_raw < nextPage.protobuf > nextPage.txt && rm -f nextPage.protobuf
         if ! grep -q "Server busy, please try again later." nextPage.txt; then
           appInfo+=(Next)
-          searchAppsUrl[page]="$nextPageUrl"
+          searchAppsURL[page]="$nextPageURL"
         fi
         rm -f nextPage.txt
       fi
@@ -171,14 +175,14 @@ gPlayApiSearchApps() {
 
 # src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/helpers/AppDetailsHelper.kt
 gPlayApiAppDetails() {
-  curl -sL "$detailsUrl?doc=${pkg}" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "details.protobuf"
+  curl -sL "$detailsURL?doc=${pkg}" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "details.protobuf"
   protoc --decode_raw < details.protobuf > details.txt && rm -f details.protobuf && details=$(cat details.txt) && rm -f details.txt
   packageName=$(awk -F'"' '/ *1: "/ {print $2; exit}' <<< "$details")  # packageName
   appName=$(awk -F'"' '/ *5: "/ {print $2; exit}' <<< "$details")  # appName
   offeredBy=$(awk -F'"' '/ *6: "/ {print $2; exit}' <<< "$details")  # offeredBy
   #awk -F'"' '/ *7: "/ {print $2; exit}' <<< "$details"  # Description
   offerType=$(awk '/^      8 {/ {f=1} f && /8: / {print $2; exit}' <<< "$details")  # offerType: 1=free
-  appIconUrl=$(awk '/10 \{/{in_block=1; is_icon=0} in_block && /1:[[:space:]]*4/{is_icon=1} in_block && is_icon && /5:[[:space:]]*"/{gsub(/.*5:[[:space:]]*"|"[[:space:]]*$/, ""); print; exit}' <<< "$details")  # appIcon Url
+  appIconURL=$(awk '/10 \{/{in_block=1; is_icon=0} in_block && /1:[[:space:]]*4/{is_icon=1} in_block && is_icon && /5:[[:space:]]*"/{gsub(/.*5:[[:space:]]*"|"[[:space:]]*$/, ""); print; exit}' <<< "$details")  # appIcon Url
   versionCode=$(awk '/13 {/{found=1} found && /3: [0-9]+/{print $2; exit}' <<< "$details")  # versionCode
   versionName=$(awk -F'"' '/ *4: "/ {print $2; exit}' <<< "$details")  # versionName
   #awk -F'"' '/ *10: "/ {print $2}' <<< "$details"  # permission
@@ -216,7 +220,7 @@ gPlayApiAppDetails() {
   contentRating=$(awk '/ *15 \{/ { in_15=1 } in_15 && / *29 \{/ { in_29=1 } in_29 && / *1: "/ { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print s; in_29=0 }' <<< "$details")  # contentRating
   #awk '/ *39 \{/ { in_39=1; depth=0; next } in_39 { if ($0 ~ /\{/) depth++; if ($0 ~ /\}/) { if (depth == 0) in_39=0; else depth-- } if (depth == 0) { if ($0 ~ / *1: "/) { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print "Type: " s } if ($0 ~ / *4: "/) { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print "Note: " s } } }' <<< "$details"  # featureTag & featureDescription
   #awk '/ *65 \{/ { in_65=1; depth=0; next } in_65 { if ($0 ~ /\{/) depth++; if ($0 ~ /\}/) { if (depth == 0) in_65=0; else depth-- } if (depth == 0 && $0 ~ / *1: "/) { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print s } }' <<< "$details"  # trandingTag
-  appUrl=$(awk '/ *17: "https/ { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print s }' <<< "$details")  # appUrl
+  appURL=$(awk '/ *17: "https/ { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print s }' <<< "$details")  # appUrl
   #awk '/ *25 \{/ { in_25=1 } in_25 && / *2 \{/ { in_2=1 } in_2 && / *1: "/ { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print s } / *\}/ { if (in_2) in_2=0; else if (in_25) in_25=0 }' <<< "$details"  # In-appPurchases
   releasedOn=$(awk '/ *25 \{/ { in_25=1 } in_25 && / *2 \{/ { in_item=1; is_target=0 } in_item && / *1: "Released on"/ { is_target=1 } in_item && is_target && / *3 \{/ { in_val=1 } in_val && / *2: "/ { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print s; exit }' <<< "$details")  # releasedOn
   shortDescription=$(awk '/ *27: "/ { s=$0; sub(/.*: "/, "", s); sub(/"$/, "", s); print s }' <<< "$details")  # shortDescription
@@ -234,13 +238,13 @@ gPlayApiAppDetails() {
   echo -e "$info Changelog: $Changelog"
   echo -e "$info shortDescription: $shortDescription"
   [ -n "$GAME" ] && echo -e "$info TYPE: $GAME" || echo -e "$info TYPE: APPLICATION"
-  filenames=("${Files[0]}.${versionCode}.apk")
+  fileNames=("${Files[0]}.${versionCode}.apk")
   for ((i=1; i<${#Files[@]}; i++)); do
-    filenames+=(${Files[i]}.${versionCode}.$ext)
+    fileNames+=(${Files[i]}.${versionCode}.$ext)
   done
   echo -e "$info FilesInfo:"
   for ((i=0; i<${#Files[@]}; i++)); do
-    echo "${filenames[i]} | $(humanReadableForm ${filesSize[i]})"
+    echo "${fileNames[i]} | $(humanReadableForm ${filesSize[i]})"
   done
   [ -n "$containsAds" ] && echo -e "$info containsAds: Yes" || echo -e "$info containsAds: No"
   echo -e "$info contentRating: $contentRating"
@@ -250,16 +254,15 @@ gPlayApiAppDetails() {
 
   { [ -n $developerWebsite ] && grep -q "http" <<< "$developerWebsite"; } && echo -e "$info developerWebsite: ${Blue}$developerWebsite${Reset}"
   echo -e "$info developerEmail: $developerEmail"
-  echo -e "$info appUrl: ${Blue}$appUrl${Reset}"
+  echo -e "$info appURL: ${Blue}$appURL${Reset}"
 }
 
 gPlayApiAppsDetails() {
+  toc
   pkgnames=("$@")  # collect all arguments as pkgnames array
   echo -e "$running Get Installed packages updates.."
-  curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/genProtoBin.sh -o "$apkdl/genProtoBin.sh"
-  source $apkdl/genProtoBin.sh
   genBulkDetailsProtoBin
-  curl -sL -X POST "$bulkDetailsUrl" "${Headers[@]}" -H "Content-Type: application/x-protobuf" --data-binary @bulkDetails.bin -o "bulkDetails.protobuf"  # Send Request
+  curl -sL -X POST "$bulkDetailsURL" "${Headers[@]}" -H "Content-Type: application/x-protobuf" --data-binary @bulkDetails.bin -o "bulkDetails.protobuf"  # Send Request
   rm -f bulkDetails.bin
   bulkDetails=$(protoc --decode_raw < bulkDetails.protobuf) && rm -f bulkDetails.protobuf  # Decode Response
   detailsList "$bulkDetails"
@@ -267,8 +270,6 @@ gPlayApiAppsDetails() {
 }
 
 gPlayApiAppsUpdates() {
-  curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh -o "$apkdl/myApps.sh"
-  source $apkdl/myApps.sh
   packagesList
   packagesInfo "packages"
   gPlayApiAppsDetails "${packages[@]}"
@@ -294,7 +295,7 @@ gPlayApiAppsUpdates() {
       anames+=("${names[i]}")
       pnames+=(${pkgs[i]})
       otypes+=(${offerTypes[i]})
-      appicons+=(${appIconUrls[i]})
+      appicons+=(${appIconURLs[i]})
       vnames+=(${versionNames[i]})
       vcodes+=(${versionCodes[i]})
       targetapis+=(${targetAPILevels[i]})
@@ -311,7 +312,7 @@ gPlayApiShowUpdates() {
       appName="${anames[selected]}"
       pkg="${pnames[selected]}"
       offerType=${otypes[selected]}
-      appIconUrl="${appicons[selected]}"
+      appIconURL="${appicons[selected]}"
       versionName="${vnames[selected]}"
       versionCode="${vcodes[selected]}"
       targetAPILevel=${targetapis[selected]}
@@ -326,9 +327,9 @@ gPlayApiShowUpdates() {
         ext="apk"
       fi
       filesSize=($(awk -v p="${pkg}" '$0~"1: \""p"\""{f=1} $0~/1: "com\./&&$0!~p&&$0!~/gms|vending/{f=0} /17 \{/{b=1} /}/{b=0} f&&b&&/3:/{print $2}' <<< "$bulkDetails"))
-      filenames=("${Files[0]}.${versionCode}.apk")
+      fileNames=("${Files[0]}.${versionCode}.apk")
       for ((i=1; i<${#Files[@]}; i++)); do
-        filenames+=(${Files[i]}.${versionCode}.$ext)
+        fileNames+=(${Files[i]}.${versionCode}.$ext)
       done
       return
     else
@@ -361,7 +362,7 @@ genManifestJson() {
     "Android 16 and up") minSDK=36 ;;
   esac
 comment
-  curl -sL $appIconUrl -H "User-Agent: $userAgentString" -o $HOME/icon.png  # dlAppIcon
+  curl -sL $appIconURL -H "User-Agent: $userAgentString" -o $HOME/icon.png  # dlAppIcon
   cat > manifest.json << EOF
 {
   "xapk_version":2,
@@ -384,11 +385,9 @@ EOF
 # src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/helpers/PurchaseHelper.kt
 gPlayApiDownloadApp() {
   reqPatch=${1:-0}
-  curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/genProtoBin.sh -o "$apkdl/genProtoBin.sh"
-  source $apkdl/genProtoBin.sh
   genAcquireProtoBin
   # Acquire request (associate specific app with specific Google account)
-  curl -sL -X POST "$acquireUrl" "${Headers[@]}" -H "Content-Type: application/x-protobuf" --data-binary @acquire.bin -o acquire.protobuf
+  curl -sL -X POST "$acquireURL" "${Headers[@]}" -H "Content-Type: application/x-protobuf" --data-binary @acquire.bin -o acquire.protobuf
   rm -f acquire.bin
   # Acquire call will fail (return DF-DFERH-01) if already own the app
   protoc --decode_raw < acquire.protobuf > acquire.txt && rm -f acquire.protobuf
@@ -397,7 +396,7 @@ gPlayApiDownloadApp() {
   
   # Google's servers check their records. "Does this account have an entitlement for this app?" If acquire step was successful (or happened in past), answer is yes, and a delivery token is generated.
   # get Delivery Token using purchase endpoint
-  curl -sL -X POST "$purchaseUrl" "${Headers[@]}" -H "Accept: application/x-protobuf" -d "doc=$pkg&ot=$offerType&vc=$versionCode" -o "purchase.protobuf"
+  curl -sL -X POST "$purchaseURL" "${Headers[@]}" -H "Accept: application/x-protobuf" -d "doc=$pkg&ot=$offerType&vc=$versionCode" -o "purchase.protobuf"
   protoc --decode_raw < purchase.protobuf > purchase.txt && rm -f purchase.protobuf && purchase=$(cat purchase.txt) && rm -f purchase.txt
   # download credentials
   cookie=$(awk -F'"' '/^    55: "/ {print $2; exit}' <<< "$purchase")  # ANDROIDSECURE cookie (download cookie)
@@ -405,30 +404,30 @@ gPlayApiDownloadApp() {
   { [ -n "$cookie" ] && [ -n "$token" ]; } && echo -e "$info cookie: $cookie\n$info token: $token"
   
   #echo -e "$notice purchaseHistory"
-  #curl -sL -X GET "$purchaseHistoryUrl?o=0" "${Headers[@]}" -o "purchaseHistory.protobuf"  # offset=0 to start from beginning of purchase history
+  #curl -sL -X GET "$purchaseHistoryURL?o=0" "${Headers[@]}" -o "purchaseHistory.protobuf"  # offset=0 to start from beginning of purchase history
   #protoc --decode_raw < purchaseHistory.protobuf && rm -f purchaseHistory.protobuf
 
   # Request Delivery Data (URLs and File names)
   if [ $reqPatch -eq 0 ]; then
-    dlUrl="$deliveryUrl?doc=${pkg}&ot=${offerType}&vc=${versionCode}&delivery_token=${token}"
+    dlURL="$deliveryURL?doc=${pkg}&ot=${offerType}&vc=${versionCode}&delivery_token=${token}"
   else
-    dlUrl="$deliveryUrl?doc=$pkg&ot=$offerType&vc=$versionCode&bvc=$installedVersionCode&pf=1&delivery_token=$token"  # Receive a smaller patch file instead of full APK for app update. pf=patchFormat (GZIPPED_BSDIFF)
+    dlURL="$deliveryURL?doc=$pkg&ot=$offerType&vc=$versionCode&bvc=$installedVersionCode&pf=1&delivery_token=$token"  # Receive a smaller patch file instead of full APK for app update. pf=patchFormat (GZIPPED_BSDIFF)
   fi
-  curl -sL "$dlUrl" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "delivery.protobuf"
+  curl -sL "$dlURL" "${Headers[@]}" -H "Accept: application/x-protobuf" -o "delivery.protobuf"
   protoc --decode_raw < delivery.protobuf > delivery.txt && rm -f delivery.protobuf
   
   # Extract File Size, Download Url and File SHA-1 from delivery.txt
-  sizes=($(awk '/2 \{/ {in_block=1} in_block && /1: [0-9]+/ {print $2; exit}' delivery.txt | tr -d '"'))  # base.apk fileSize
-  urls=($(awk '/2 \{/ {in_block=1} in_block && /3:/ {print $2; exit}' delivery.txt | tr -d '"'))  # base.apk dlUrl
+  Sizes=($(awk '/2 \{/ {in_block=1} in_block && /1: [0-9]+/ {print $2; exit}' delivery.txt | tr -d '"'))  # base.apk fileSize
+  URLs=($(awk '/2 \{/ {in_block=1} in_block && /3:/ {print $2; exit}' delivery.txt | tr -d '"'))  # base.apk dlUrl
   Base64SHA=("$(awk '/2 \{/ {in_block=1} in_block && /2:/ {print $2; exit}' delivery.txt | tr -d '"')=")  # base.apk base64-encoded shasum1
   for ((c=1; c<${#Files[@]}; c++)); do
     if [ -n "$GAME" ]; then
-      sizes+=("${filesSize[c]}")  # apk fileSize
-      urls+=($(awk -v s="${filesSize[c]}" '$2==s {k=$1; gsub(/:/,"",k); t=k+1} t && $1==t":" {split($0,p,"\""); print p[2]; exit}' delivery.txt))  # obb dlUrl
+      Sizes+=("${filesSize[c]}")  # apk fileSize
+      URLs+=($(awk -v s="${filesSize[c]}" '$2==s {k=$1; gsub(/:/,"",k); t=k+1} t && $1==t":" {split($0,p,"\""); print p[2]; exit}' delivery.txt))  # obb dlUrl
       Base64SHA+=("$(grep -A 10 "${filesSize[c]}" delivery.txt | grep -m 1 "8: " | cut -d'"' -f2)=")  # obb base64-encoded shasum1
     else
-      sizes+=($(awk -v target="${Files[c]}" '$0 ~ "1: \"" target "\"" {found=1} found && /2:/{print $2; exit}' delivery.txt))  # apk fileSize
-      urls+=($(awk -v target="${Files[c]}" '$0 ~ "1: \"" target "\"" {found=1} found && /5: "https/ {split($0, a, "\""); print a[2]; exit}' delivery.txt))  # apk dlUrl
+      Sizes+=($(awk -v target="${Files[c]}" '$0 ~ "1: \"" target "\"" {found=1} found && /2:/{print $2; exit}' delivery.txt))  # apk fileSize
+      URLs+=($(awk -v target="${Files[c]}" '$0 ~ "1: \"" target "\"" {found=1} found && /5: "https/ {split($0, a, "\""); print a[2]; exit}' delivery.txt))  # apk dlUrl
       Base64SHA+=("$(grep -A 5 "1: \"${Files[c]}\"" delivery.txt | grep -m 1 "4: " | cut -d'"' -f2)=")  # apk base64-encoded shasum1
     fi
   done
@@ -440,27 +439,27 @@ gPlayApiDownloadApp() {
   filePath="$Download/$fileName"
   if [ ! -f "$filePath" ]; then
     for ((i=0; i<${#Files[@]}; i++)); do
-      echo -e "$running Downloading ${Red}${filenames[i]}${Reset} from ${Blue}${urls[i]}${Reset} fileSize ${Cyan}$(humanReadableForm ${sizes[i]})${Reset}"
+      echo -e "$running Downloading ${Red}${fileNames[i]}${Reset} from ${Blue}${URLs[i]}${Reset} fileSize ${Cyan}$(humanReadableForm ${Sizes[i]})${Reset}"
       while true; do
-        if [ $(( ${sizes[i]} / 1048576 )) -le 25 ]; then
-          curl --progress-bar -L -C -  "${urls[i]}" --doh-url "$cloudflareDOH" -H "User-Agent: $userAgentString" --cookie "ANDROIDSECURE=${cookie}" -o "$HOME/${filenames[i]}"
+        if [ $(( ${Sizes[i]} / 1048576 )) -le 25 ]; then
+          curl --progress-bar -L -C -  "${URLs[i]}" --doh-url "$cloudflareDOH" -H "User-Agent: $userAgentString" --cookie "ANDROIDSECURE=${cookie}" -o "$HOME/${fileNames[i]}"
           [ $? -eq 0 ] && break || sleep 5
         else
-          if [ $isAndroid -eq 1 ]; then
-            aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$HOME" -o "${filenames[i]}" -U "User-Agent: $userAgentString" --header="Cookie: ANDROIDSECURE=${cookie}" --async-dns=true  --async-dns-server="$cloudflareIP" "${urls[i]}"
+          if [ $isMacOS == true ]; then
+            aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$HOME" -o "${fileNames[i]}" -U "User-Agent: $userAgentString" --header="Cookie: ANDROIDSECURE=${cookie}" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true  --async-dns-server="$cloudflareIP" "${URLs[i]}"
             aria2ExitStatus=$?
-          elif [ $isMacOS -eq 1 ]; then
-            aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$HOME" -o "${filenames[i]}" -U "User-Agent: $userAgentString" --header="Cookie: ANDROIDSECURE=${cookie}" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true  --async-dns-server="$cloudflareIP" "${urls[i]}"
+          else
+            aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$HOME" -o "${fileNames[i]}" -U "User-Agent: $userAgentString" --header="Cookie: ANDROIDSECURE=${cookie}" --async-dns=true  --async-dns-server="$cloudflareIP" "${URLs[i]}"
             aria2ExitStatus=$?
           fi
           [ $aria2ExitStatus -eq 0 ] && { echo; break; } || sleep 5
         fi
       done
       remoteFileSHA=$(echo -n "${Base64SHA[i]}" | tr '_-' '/+' | base64 -d | xxd -p)  # convert Base64 SHA-1 to Hex SHA-1
-      if [ $isAndroid -eq 1 ]; then
-        downloadedFileSHA=$(sha1sum "${filenames[i]}" | cut -d' ' -f1)
-      elif [ $isMacOS -eq 1 ]; then
-        downloadedFileSHA=$(shasum -a 1 "${filenames[i]}" | cut -d' ' -f1)  # downloaded file hex sha1
+      if [ $isMacOS == true ]; then
+        downloadedFileSHA=$(shasum -a 1 "$HOME/${fileNames[i]}" | cut -d' ' -f1)  # downloaded file hex sha1
+      else
+        downloadedFileSHA=$(sha1sum "$HOME/${fileNames[i]}" | cut -d' ' -f1)
       fi
       if [ "$remoteFileSHA" == "$downloadedFileSHA" ]; then
         echo -e "$good Downloaded file appears in the original state."
@@ -470,17 +469,17 @@ gPlayApiDownloadApp() {
       fi
     done
   
-    app_info=$($aapt2 dump badging "$HOME/${filenames[0]}" 2>/dev/null)
-    minSdkVersion=$(awk -F"'" '/minSdkVersion/ {print $2}' <<< $app_info)
-    targetSdkVersion=$(awk -F"'" '/^targetSdkVersion/ {print $2}' <<< $app_info)
+    appInfo=$($aapt2 dump badging "$HOME/${fileNames[0]}" 2>/dev/null)
+    minSdkVersion=$(awk -F"'" '/minSdkVersion/ {print $2}' <<< $appInfo)
+    targetSdkVersion=$(awk -F"'" '/^targetSdkVersion/ {print $2}' <<< $appInfo)
 
     mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}"
     if [ -n "$GAME" ]; then
       # Create XAPK
       genManifestJson
       mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}"
-      mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/${packageName}.apk"
-      mv $HOME/${filenames[1]} "$HOME/${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}/main.${versionCode}.${packageName}.obb"
+      mv $HOME/${fileNames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/${packageName}.apk"
+      mv $HOME/${fileNames[1]} "$HOME/${appName}_v${versionName}-${versionCode}/Android/obb/${packageName}/main.${versionCode}.${packageName}.obb"
       mv $HOME/manifest.json "$HOME/${appName}_v${versionName}-${versionCode}/manifest.json"
       mv $HOME/icon.png "$HOME/${appName}_v${versionName}-${versionCode}/icon.png"
       echo -e "$running Creating XAPK archive.."
@@ -491,19 +490,18 @@ gPlayApiDownloadApp() {
       mv "$HOME/${appName}_v${versionName}-${versionCode}.xapk" "$Download/${appName}_v${versionName}-${versionCode}.xapk"
     elif [ ${#Files[@]} -ge 2 ]; then
       # Create APKS
-      curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/genTocPb.sh -o "$apkdl/genTocPb.sh"
-      source $apkdl/genTocPb.sh
+      genTocPb
       mkdir -p "$HOME/${appName}_v${versionName}-${versionCode}/splits"
-      mv $HOME/${filenames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/splits/base-master.$ext"
+      mv $HOME/${fileNames[0]} "$HOME/${appName}_v${versionName}-${versionCode}/splits/base-master.$ext"
       for ((i=1; i<${#Files[@]}; i++)); do
-        mv $HOME/${filenames[i]} "$HOME/${appName}_v${versionName}-${versionCode}/splits/base-$(cut -d'.' -f2 <<< ${Files[i]}).$ext"
+        mv $HOME/${fileNames[i]} "$HOME/${appName}_v${versionName}-${versionCode}/splits/base-$(cut -d'.' -f2 <<< ${Files[i]}).$ext"
       done
       mv $HOME/toc.pb "$HOME/${appName}_v${versionName}-${versionCode}/toc.pb"
       echo -e "$running Creating APKS archive.."
       bsdtar --format=zip -c -f - -C "$HOME/${appName}_v${versionName}-${versionCode}" . | pv -t -b -r > "$HOME/${appName}_v${versionName}-${versionCode}.apks"
       mv "$HOME/${appName}_v${versionName}-${versionCode}.apks" "$Download/${appName}_v${versionName}-${versionCode}.apks"
     else
-      mv $HOME/${filenames[0]} "$Download/${appName}_v${versionName}-${versionCode}.$ext"
+      mv $HOME/${fileNames[0]} "$Download/${appName}_v${versionName}-${versionCode}.$ext"
     fi
     rm -rf "$HOME/${appName}_v${versionName}-${versionCode}"
   else
@@ -512,12 +510,11 @@ gPlayApiDownloadApp() {
 }
 
 APKS2APK() {
-  dlAPKEditor
-  if [ $isMacOS -eq 1 ]; then
-    java -jar $APKEditorPath m -i "$filePath" -o "${filePath%.*}.apk"
-  elif [ $isAndroid -eq 1 ]; then
+  if [ $isAndroid == true ]; then
     $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $APKEditorPath m -i "$filePath" -o "${filePath%.*}.apk"
+  else
+    java -jar $APKEditorPath m -i "$filePath" -o "${filePath%.*}.apk"
   fi
   rm -f "$filePath"
 }
-###############################################################################################################################################################################################################
+###############################################################################################################################################################

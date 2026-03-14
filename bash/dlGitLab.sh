@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 searchGLAB() {
   while true; do read -r -p ">> Enter repoName: " repoName; [[ "$repoName" =~ ^[Qq] ]] && repoName=; break; [ -n "$repoName" ] && break || echo -e "$notice Please enter a valid repoName!"; done
   repoName=$(echo $repoName | sed 's/ /+/g')
@@ -183,11 +185,11 @@ glabReleases() {
 
 dlGLAB() {
   while true; do
-    if [ $isAndroid -eq 1 ]; then
-      aria2c -x 16 -s 16 --console-log-level=error --summary-interval=0 --download-result=hide -c -o "$fileName" -d "$Download" "$dlUrl"
-      aria2c_exit_status=$?
-    elif [ $isMacOS -eq 1 ]; then
+    if [ $isMacOS == true ]; then
       aria2c -x 16 -s 16 --console-log-level=error --summary-interval=0 --download-result=hide -c -o "$fileName" -d "$Download" --ca-certificate="/etc/ssl/cert.pem" "$dlUrl"
+      aria2c_exit_status=$?
+    else
+      aria2c -x 16 -s 16 --console-log-level=error --summary-interval=0 --download-result=hide -c -o "$fileName" -d "$Download" "$dlUrl"
       aria2c_exit_status=$?
     fi
     [ $aria2c_exit_status -eq 0 ] && { echo; break; } || sleep 5

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 shopt -s extglob
 
-# --- Colored log indicators ---
 good="\033[92;1m[✔]\033[0m"
 bad="\033[91;1m[✘]\033[0m"
 info="\033[94;1m[i]\033[0m"
@@ -10,7 +11,6 @@ running="\033[37;1m[~]\033[0m"
 notice="\033[93;1m[!]\033[0m"
 question="\033[93;1m[?]\033[0m"
 
-# ANSI Color Code
 Green="\033[92m"
 Red="\033[91m"
 Blue="\033[94m"
@@ -22,389 +22,143 @@ Yellow="\033[93m"
 Orange="\e[38;5;208m"
 Reset="\033[0m"
 
-# --- Checking Internet Connection ---
-if ! ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1 ; then
-  echo -e "${bad} ${Red}Oops! No Internet Connection available.\nConnect to the Internet and try again later."
-  exit 1
+checkInternet() {
+  if ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
+    return
+  else
+    echo -e "$bad ${Red}No Internet Connection available!${Reset}"
+    return 1
+  fi
+}
+
+if [[ "$(uname)" == "Darwin" ]]; then
+  isMacOS=true; isAndroid=false; isFedora=false
+elif [[ -d "/sdcard" ]] && [[ -d "/system" ]]; then
+  isAndroid=true; isMacOS=false; isFedora=false
+elif [[ -f "/etc/os-release" ]]; then
+  if grep -qi "fedora" /etc/os-release 2>/dev/null; then
+    isFedora=true; isAndroid=false; isMacOS=false
+  fi
 fi
 
-curl -sL -o "$HOME/.apkdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/apkdl.sh"
-
 apkdl="$HOME/apkdl"
+[ $isAndroid == true ] && Download="/sdcard/Download" || Download="$HOME/Downloads"
 mkdir -p $apkdl
+apkdlJson="$apkdl/apkdl.json"
+read rows cols < <(stty size)
+eButtons=("<Select>" "<Exit>")
+bButtons=("<Select>" "<Back>")
+ynButtons=("<Yes>" "<No>")
+tfButtons=("<true>" "<false>")
+cloudflareDOH="https://cloudflare-dns.com/dns-query"
+cloudflareIP="1.1.1.1,1.0.0.1"
+checkInternet && crVersion=$(curl -sL "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1" | jq -r '.[0].version') || crVersion="146.0.0.0"
 
-apkdlJson="$apkdl/apkdl.json"  # Configuration file to store apkdl settings
-
-isRipLocale=1  # Default value (true/on/1) for RipLocale, it's delete locale from apk file except device specific locale by default
-isRipDpi=1  # Default value (true/on/1) for RipDpi, it's delete dpi from apk file except device specific dpi by default
-isRipLib=1  # Default value (true/on/1) for RipLib, it's delete lib dir from apk file except device specific arch lib by default
-isRmFile=1  # Remove downloaded file after installation 1 (true)
-isPreRelease=0  # Default value (false/off/0) for isPreRelease, it's enabled latest release for Patches source
-isShowSystemApps=0
-isAppUpdatesSource="PlayStore"
-isU=0  # Install Package for 0 (default-user), possible 1 (all-users)
-isK=0  # Allow Downgrade with keeps App data 0 (false) because it's required reboot after pkg install, possible 1 (true)
-isG=0  # Grant All Runtime Permissions 0 (false) due to Security Risk, possible 1
-isT=0  # Installed as test-only app 0, possible 1
-isL=1  # Bypass Low Target SDK Bolck 1 (true) it's allow Android 14+ to install apps that target below API level 23 (Android 6 and below), possible value 0
-isV=1  # Disable Play Protect Package Verification 1 (true), possible 0
-isA=0  # 'Disable Play Protect' is Enabled; this makes Enabling 'Disable Verify ADB installs' unnecessary
-isI="com.android.vending"  # default: PlayStore | possible Installer: com.android.packageinstaller (PackageInstaller), com.android.shell (Shell), adb
-isR=1  # Reinstall Existing Installed Package 1 (true) because without this app can't be installed if installed and to-be-installed version are same, possible 0
-isB=0  # Enable Version Roolback 0, possible 1
-
-# Config creation function
 config() {
   local key="$1"
   local value="$2"
-  local jsonFile="$3"
-  [ -z "$jsonFile" ] && jsonFile="$apkdlJson"
+  local jsonFile="${3:-$apkdlJson}"
   
   [ ! -f "$jsonFile" ] && jq -n "{}" > "$jsonFile"
   jq --arg key "$key" --arg value "$value" '.[$key] = $value' "$jsonFile" > temp.json && mv temp.json "$jsonFile"
 }
 
-# Detect platform and set defaults
-if [ "$(uname)" == "Darwin" ]; then
-  isMacOS=1
-  isAndroid=0
-elif [ -d "/sdcard" ] && [ -d "/system" ]; then
-  isMacOS=0
-  isAndroid=1
+[ $isAndroid == true ] && scripts=(apkInstall Termux deviceInfo)
+[ $isMacOS == true ] && scripts=(macOS adbInstall adbDeviceInfo)
+[ $isFedora == true ] && scripts=(Fedora adbInstall adbDeviceInfo)
+scripts+=(auth genProtoBin genTocPb play dlGitHub dlGitLab dlFDroid APKMdl dlAPKPure dlUptodown RVdl otherSources myApps)
+
+run() { source $apkdl/menu.sh; source $apkdl/confirmPrompt.sh; for ((c=0; c<${#scripts[@]}; c++)); do source $apkdl/${scripts[c]}.sh; done; }
+
+[ -f "$apkdl/.version" ] && localVersion=$(cat "$apkdl/.version") || localVersion=
+checkInternet &>/dev/null && remoteVersion=$(curl -sL "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/.version") || remoteVersion="$localVersion"
+updates() {
+  curl -sL -o "$apkdl/.version" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/.version"
+  curl -sL -o "$HOME/.apkdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/apkdl.sh"
+  curl -sL -o $apkdl/menu.sh https://raw.githubusercontent.com/arghya339/Simplify/refs/heads/next/bash/menu.sh && source $apkdl/menu.sh
+  curl -sL -o $apkdl/confirmPrompt.sh https://raw.githubusercontent.com/arghya339/Simplify/refs/heads/next/bash/confirmPrompt.sh && source $apkdl/confirmPrompt.sh
+  if [ $isAndroid == true ]; then
+    [ ! -f "$PREFIX/bin/apkdl" ] && ln -s ~/.apkdl.sh $PREFIX/bin/apkdl
+  elif [ $isMacOS == true ]; then
+    [ ! -f "/usr/local/bin/apkdl" ] && ln -s $HOME/.apkdl.sh /usr/local/bin/apkdl
+  else
+    [ ! -f "/usr/local/bin/apkdl" ] && sudo ln -s $HOME/.apkdl.sh /usr/local/bin/apkdl
+  fi
+  [ ! -x $HOME/.apkdl.sh ] && chmod +x $HOME/.apkdl.sh
+  for ((c=0; c<${#scripts[@]}; c++)); do
+    curl -sL -o "$apkdl/${scripts[c]}.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/${scripts[c]}.sh"
+    source $apkdl/${scripts[c]}.sh
+  done
+}
+
+[ -f "$apkdlJson" ] && AutoUpdatesScript=$(jq -r '.AutoUpdatesScript' "$apkdlJson" 2>/dev/null) || AutoUpdatesScript=true
+if [ $AutoUpdatesScript == true ]; then
+  [ "$remoteVersion" != "$localVersion" ] && { checkInternet && updates && localVersion="$remoteVersion"; } || run
+else
+  run
 fi
 
-if [ $isMacOS -eq 1 ]; then
-  [ ! -f "/usr/local/bin/apkdl" ] && ln -s $HOME/.apkdl.sh /usr/local/bin/apkdl  # symlink (shortcut of apkdl.sh)
-elif [ $isAndroid -eq 1 ]; then
-  [ ! -f "$PREFIX/bin/apkdl" ] && ln -s ~/.apkdl.sh $PREFIX/bin/apkdl
-fi
-
-[ ! -x $HOME/.apkdl.sh ] && chmod +x $HOME/.apkdl.sh  # give execute permission to apkdl
-
-read rows cols < <(stty size)
-cloudflareDOH="https://cloudflare-dns.com/dns-query"
-cloudflareIP="1.1.1.1,1.0.0.1"
-
-if [ $isMacOS -eq 1 ]; then
-  Download="$HOME/Downloads"
-  [ $(uname -m) == "x86_64" ] && Arch=amd64 || Arch=arm64
-elif [ $isAndroid -eq 1 ]; then
-  Download="/sdcard/Download"
-  cpuAbi=$(getprop ro.product.cpu.abi)
-  Android=$(getprop ro.build.version.release)
-  Model=$(getprop ro.product.model)
-  Build=$(getprop ro.build.id)
-  K="$Model Build/$Build"
-fi
-
-# --- Construct apkdl shape using string concatenation (ANSI Lean Font) ---
 print_apkdl() {
-  printf "${Blue}            https://github.com/arghya339/apkdl${Reset}\n"                                                           
+  printf '\033[2J\033[3J\033[H'                                                        
   printf "${Orange}                       _/   ${Reset}    ${White}     _/    ${Reset}${Cyan}         _/  _/${Reset}\n"   
   printf "${Orange}    _/_/_/  _/_/_/    _/  _/${Reset}    ${White}      _/   ${Reset}${Cyan}    _/_/_/  _/ ${Reset}\n"   
   printf "${Orange} _/    _/  _/    _/  _/_/   ${Reset}    ${White}       _/  ${Reset}${Cyan} _/    _/  _/  ${Reset}\n"   
   printf "${Orange}_/    _/  _/    _/  _/  _/  ${Reset}    ${White}    _/     ${Reset}${Cyan}_/    _/  _/   ${Reset}\n"   
   printf "${Orange} _/_/_/  _/_/_/    _/    _/ ${Reset}    ${White} _/        ${Reset}${Cyan} _/_/_/  _/    ${Reset}\n"   
   printf "${Orange}        _/                  ${Reset}    ${White}           ${Reset}${Cyan}               ${Reset}\n"  
-  printf "${Orange}       _/ ${Reset}${skyBlue}𝒟𝑒𝓋𝑒𝓁𝑜𝓅𝑒𝓇: @𝒶𝓇𝑔𝒽𝓎𝒶𝟥𝟥9${Reset} ${White}_/_/_/_/_/${Reset}${Cyan}               ${Reset}\n"
-  #printf '\n'
+  printf "${Orange}       _/                   ${Reset}   ${White}_/_/_/_/_/  ${Reset}${Cyan}               ${Reset}\n"
   echo
 }
 
-menu() {
-  local -n menu_options=$1
-  local -n menu_buttons=$2
-  items_per_page=$((rows - (5 + 10)))
-  
-  selected_option=0
-  selected_button=0
-  
-  current_page=0
-  total_pages=$(( (${#menu_options[@]} + items_per_page - 1) / items_per_page ))  # Convert to integer from floating point page number
+all_key=(printArt AutoUpdatesScript AutoUpdatesDependencies "RipLocale" "RipDpi" "RipLib" "RmFileAfterInstallation" "PreReleasePatches" "AppUpdatesSource")
+all_value=(true true true true true true true false "PlayStore")
 
-  show_menu() {
-    printf '\033[2J\033[3J\033[H'
-    print_apkdl  # call print_apkdl function
-    # Display guide
-    echo -n "Navigate with [↑] [↓] [←] [→]"
-    [ $total_pages -gt 1 ] && echo -n " [PGUP] [PGDN]"
-    echo -e "\nSelect with [↵]\n"
-    
-    # Calculate start and end indices for current page
-    start_index=$(( current_page * items_per_page ))
-    end_index=$(( start_index + (items_per_page - 1) ))
-    [ $end_index -ge ${#menu_options[@]} ] && end_index=$((${#menu_options[@]} - 1))
-    
-    # Display menu options for current page
-    for ((i=start_index; i<=end_index; i++)); do
-      if [ $i -eq $selected_option ]; then
-        echo -e "${whiteBG}➤ ${menu_options[$i]} $Reset"
-      else
-        [ $(($i + 1)) -le 9 ] && echo " $(($i + 1)). ${menu_options[$i]}" || echo "$(($i + 1)). ${menu_options[$i]}"
-      fi
-    done
-    
-    for ((i=end_index+1; i < start_index + items_per_page; i++)); do echo; done  # Fill remaining lines if current page has fewer than items/page options
-    
-    [ $total_pages -gt 1 ] && echo -e "\nPage: $((current_page + 1))/$total_pages\n" || echo  # Display page info if multiple pages exist
-    
-    # Display buttons
-    for ((i=0; i<=$((${#menu_buttons[@]} - 1)); i++)); do
-      if [ $i -eq $selected_button ]; then
-        [ $i -eq 0 ] && echo -ne "${whiteBG}➤ ${menu_buttons[$i]} $Reset" || echo -ne "  ${whiteBG}➤ ${menu_buttons[$i]} $Reset"
-      else
-        [ $i -eq 0 ] && echo -n "  ${menu_buttons[$i]}" || echo -n "   ${menu_buttons[$i]}"
-      fi
-    done
-  }
-
-  printf '\033[?25l'
-  while true; do
-    show_menu
-    read -rsn1 key
-    case $key in
-      $'\E')  # ESC
-        # /bin/bash -c 'read -r -p "Type any ESC key: " input && printf "You Entered: %q\n" "$input"'  # q=safelyQuoted
-        read -rsn2 -t 0.1 key2
-        case "$key2" in
-          '[A')  # Up arrow
-            selected_option=$((selected_option - 1))
-            [ $selected_option -lt 0 ] && selected_option=$((${#menu_options[@]} - 1))
-            current_page=$((selected_option / items_per_page))  # Auto switch page
-            ;;
-          '[B')  # Down arrow
-            selected_option=$((selected_option + 1))
-            [ $selected_option -ge ${#menu_options[@]} ] && selected_option=0
-            current_page=$((selected_option / items_per_page))  # Auto switch page
-            ;;
-          '[C')  # Right arrow
-            [ $selected_button -lt $((${#menu_buttons[@]} - 1)) ] && selected_button=$((selected_button + 1))
-            ;;
-          '[D')  # Left arrow
-            [ $selected_button -gt 0 ] && selected_button=$((selected_button - 1))
-            ;;
-          '[5') # Page Up
-            read -rsn1 -t 0.1 key3
-            if [ "$key3" == "~" ]; then
-              current_page=$((current_page - 1))
-              [ $current_page -lt 0 ] && current_page=$((total_pages - 1))
-              selected_option=$((current_page * items_per_page))  # Update selected option to start indices on new page
-            fi
-            ;;
-          '[6') # Page Down
-            read -rsn1 -t 0.1 key3
-            if [ "$key3" == "~" ]; then
-              current_page=$((current_page + 1))
-              [ $current_page -ge $total_pages ] && current_page=0
-              selected_option=$((current_page * items_per_page))  # Update selected option to start indices on new page
-            fi
-            ;;
-        esac
-        ;;
-      '')  # Enter key
-        break
-        ;;
-      [0-9])
-        read -rsn2 -t0.5 key2
-        [[ "$key2" == [0-9] ]] && { key="${key}${key2}"; key=$((10#$key)); }  # Convert to integer (decimal) from strings
-        if [ $key -eq 0 ]; then
-          selected_option=$((${#menu_options[@]} - 1))
-        elif [ $key -gt ${#menu_options[@]} ]; then
-          selected_option=0
-        else
-          selected_option=$(($key - 1))
-        fi
-        current_page=$((selected_option / items_per_page))  # Auto switch page
-        show_menu; sleep 0.5; break
-       ;;
-    esac
-  done
-  printf '\033[?25h'
-
-  [ $selected_button -eq 0 ] && { printf '\033[2J\033[3J\033[H'; selected=$selected_option; }
-  if [ $selected_button -eq $((${#menu_buttons[@]} - 1)) ]; then
-    [ "${menu_buttons[$((${#menu_buttons[@]} - 1))]}" == "<Back>" ] && { printf '\033[2J\033[3J\033[H'; return 1; } || { [ $isOverwriteTermuxProp -eq 1 ] && sed -i '/allow-external-apps/s/^/# /' "$HOME/.termux/termux.properties"; printf '\033[2J\033[3J\033[H'; echo "Script exited !!"; exit 0; }
-  fi
-}
-
-# Y/n prompt function
-confirmPrompt() {
-  Prompt=${1}
-  local -n prompt_buttons=$2
-  Selected=${3:-0}  # :- set value as 0 if unset
-  [[ "$Selected" =~ ^(0|true|on|enable)$ ]] && Selected=0 || Selected=1
-  
-  # breaks long prompts into multiple lines
-  mapfile -t lines < <(fmt -w "$cols" <<< "$Prompt")
-  
-  # print all-lines except last-line
-  last_line_index=$(( ${#lines[@]} - 1 ))  # ${#lines[@]} = number of elements in lines array
-  for (( i=0; i<last_line_index; i++ )); do
-    echo -e "${lines[i]}"
-  done
-  
-  last_line="${lines[$last_line_index]}"
-  llcc=${#last_line}
-  bcc=$((${#prompt_buttons[0]} + ${#prompt_buttons[1]}))
-  pbcc=$((bcc + 8))
-  
-  [ $((cols - llcc)) -ge $pbcc ] && fits_on_last=true || { fits_on_last=false; echo -e "$last_line"; }
-  
-  echo -ne '\033[?25l'  # Hide cursor
-  while true; do
-    show_prompt() {
-      echo -ne "\r\033[K"  # n=noNewLine r=returnCursorToStartOfLine \033[K=clearLine
-      [ $fits_on_last == true ] && echo -ne "$last_line "
-      [ $Selected -eq 0 ] && echo -ne "${whiteBG}➤ ${prompt_buttons[0]} $Reset   ${prompt_buttons[1]}" || echo -ne "  ${prompt_buttons[0]}  ${whiteBG}➤ ${prompt_buttons[1]} $Reset"  # highlight selected bt with white bg
-    }; show_prompt
-
-    read -rsn1 key
-    case $key in
-      $'\E')
-      # /bin/bash -c 'read -r -p "Type any ESC key: " input && printf "You Entered: %q\n" "$input"'  # q=safelyQuoted
-        read -rsn2 -t 0.1 key2  # -r=readRawInput -s=silent(noOutput) -t=timeout -n2=readTwoChar | waits upto 0.1s=100ms to read key 
-        case $key2 in 
-          '[C') Selected=1 ;;  # right arrow key
-          '[D') Selected=0 ;;  # left arrow key
-        esac
-        ;;
-      [Yy]*) Selected=0; show_prompt; break ;;
-      [Nn]*) Selected=1; show_prompt; break ;;
-      "") break ;;  # Enter key
-    esac
-  done
-  echo -e '\033[?25h' # Show cursor
-  return $Selected  # return Selected int index from this fun
-}
-
-tfConfig() {
-  local tfKey=${1}
-  local defaultValue=$2
-  local m1=${3}
-  local m2=${4}
-  [ $defaultValue -eq 0 ] && defaultValue=1 || defaultValue=0  # if defaultValue=0 then Select button1 (False) else Select button0 (True) 
-
-    buttons=("<True>" "<False>"); confirmPrompt "$tfKey" "buttons" "$defaultValue" && opt=True || opt=False
-    case "$opt" in
-      True)
-        config "$tfKey" "1"
-        echo -e "$good ${Green}$tfKey is True! $m1.${Reset}"
-        ;;
-      False)
-        config "$tfKey" "0"
-        echo -e "$good ${Green}$tfKey is False! $m2.${Reset}"
-        ;;
-    esac
-    sleep 2
-}
-
-printf '\033[2J\033[3J\033[H' && echo -e "🚀 ${Yellow}Please wait! starting apkdl...${Reset}"
-
-if [ $isMacOS -eq 1 ]; then
-  curl -sL -o "$apkdl/macOS.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/macOS.sh"
-  source $apkdl/macOS.sh
-elif [ $isAndroid -eq 1 ]; then
-  curl -sL -o "$apkdl/Termux.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/Termux.sh"
-  source $apkdl/Termux.sh
+if { [ $isAndroid == false ] && [ -n "$serial" ]; } || [ $isAndroid == true ]; then
+  all_key+=("ShowSystemApps" "InstallPackageFor" "KeepsData" "GrantAllRuntimePermissions" "InstalledAsTestOnly" "BypassLowTargetSdkBolck" "DisablePlayProtect" "DisableVerifyAdbInstalls" "Installer" "Reinstall" "EnableRoolback")
+  all_value+=(false "0" false false false true true false "com.android.vending" true false)
 fi
 
-crVersion=$(curl -sL "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1" | jq -r '.[0].version')
-if [ $isMacOS -eq 1 ]; then
-  USER_AGENT="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$crVersion Mobile Safari/537.36"
-elif [ $isAndroid -eq 1 ]; then
-  USER_AGENT="Mozilla/5.0 (Linux; Android $Android; $K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${crVersion} Mobile Safari/537.36"
-fi
+[ $isAndroid == true ] && { all_key+=("CheckTermuxUpdate" "openjdk"); all_value+=(true "21"); }
 
-if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
-  # Create apkdl config
-  all_key=("ShowSystemApps")
-  all_key+=("InstallPackageFor" "KeepsData" "GrantAllRuntimePermissions" "InstalledAsTestOnly" "BypassLowTargetSdkBolck" "DisablePlayProtect" "DisableVerifyAdbInstalls" "Installer" "Reinstall" "EnableRoolback")
-  all_value=("$isShowSystemApps")
-  all_value+=("$isU" "$isK" "$isG" "$isT" "$isL" "$isV" "$isA" "$isI" "$isR" "$isB")
-  # Loop through all keys and set values if they don't exist
-  for i in "${!all_key[@]}"; do
-    ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
-  done
-  # Get ShowSystemApps value from json
-  jq -e '.ShowSystemApps != null' "$apkdlJson" >/dev/null 2>&1 && ShowSystemApps="$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)" || ShowSystemApps="$isShowSystemApps"
+for i in "${!all_key[@]}"; do
+  ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
+done
 
-  # Build locale & lcd_dpi
-  if [ $isAndroid -eq 1 ]; then
-    locale=$(getprop persist.sys.locale | cut -d'-' -f1)  # Get System Languages
-    [ -z $locale ] && locale=$(getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
-    density=$(getprop ro.sf.lcd_density)  # Get the device screen density
-  elif [ $isMacOS -eq 1 ]; then
-    cpuAbi=$(adb -s $serial shell getprop ro.product.cpu.abi)
-    locale=$(adb -s $serial shell getprop persist.sys.locale | cut -d'-' -f1)  # Get System Languages
-    [ -z $locale ] && locale=$(adb -s $serial shell getprop ro.product.locale | cut -d'-' -f1)  # Get Languages
-    density=$(adb -s $serial shell getprop ro.sf.lcd_density)  # Get the device screen density
-    
-    config "ABI" "$cpuAbi"
-    config "LOCALE" "$locale"
-    config "DENSITY" "$density"
-  fi
+reloadConfig() {
+  printArt=$(jq -r '.printArt' "$apkdlJson" 2>/dev/null)
+  AutoUpdatesScript=$(jq -r '.AutoUpdatesScript' "$apkdlJson" 2>/dev/null)
+  AutoUpdatesDependencies=$(jq -r '.AutoUpdatesDependencies' "$apkdlJson" 2>/dev/null)
+  [ $isAndroid == true ] && CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null)
+  ([ $isAndroid == true ] || [ -n $serial ]) && ShowSystemApps=$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)
+  RipLocale=$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)
+  RipDpi=$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)
+  RipLib=$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)
+  RmFileAfterInstallation=$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)
+  PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
+  AppUpdatesSource=$(jq -r '.AppUpdatesSource' "$apkdlJson" 2>/dev/null)
+}; reloadConfig
 
-  POST_INSTALL="$apkdl/POST_INSTALL"; mkdir -p "$POST_INSTALL"
-  InstallPackageFor=$(jq -r '.InstallPackageFor' "$apkdlJson" 2>/dev/null)
-  KeepsData=$(jq -r '.KeepsData' "$apkdlJson" 2>/dev/null)
-  GrantAllRuntimePermissions=$(jq -r '.GrantAllRuntimePermissions' "$apkdlJson" 2>/dev/null)
-  InstalledAsTestOnly=$(jq -r '.InstalledAsTestOnly' "$apkdlJson" 2>/dev/null)
-  BypassLowTargetSdkBolck=$(jq -r '.BypassLowTargetSdkBolck' "$apkdlJson" 2>/dev/null)
-  DisablePlayProtect=$(jq -r '.DisablePlayProtect' "$apkdlJson" 2>/dev/null)
-  DisableVerifyAdbInstalls=$(jq -r '.DisableVerifyAdbInstalls' "$apkdlJson" 2>/dev/null)
-  Installer=$(jq -r '.Installer' "$apkdlJson" 2>/dev/null)
-  Reinstall=$(jq -r '.Reinstall' "$apkdlJson" 2>/dev/null)
-  EnableRoolback=$(jq -r '.EnableRoolback' "$apkdlJson" 2>/dev/null)
-
-  if [ $InstallPackageFor -eq 0 ]; then
-    [ $isAndroid -eq 1 ] && cmd="--user $(am get-current-user)"
-    [ $isMacOS -eq 1 ] && cmd="--user $(adb -s $serial shell "pm list users | grep running | grep -o 'UserInfo{[0-9]*' | grep -o '[0-9]'")"
-  else
-    cmd="--user all"
-  fi
-  [ $GrantAllRuntimePermissions -eq 1 ] && cmd+=" -g"
-  [ $InstalledAsTestOnly -eq 1 ] && cmd+=" -t"
-  [ $BypassLowTargetSdkBolck -eq 1 ] && cmd+=" --bypass-low-target-sdk-block"
-  case "$Installer" in
-    "com.android.vending") cmd+=" -i com.android.vending" ;;
-    "com.android.packageinstaller") cmd+=" -i com.android.packageinstaller" ;;
-    "com.android.shell") cmd+=" -i com.android.shell" ;;
-    "adb") cmd+=" -i adb" ;;
-  esac
-  [ $Reinstall -eq 1 ] && cmd+=" -r"
-  [ $EnableRoolback -eq 1 ] && cmd+=" --enable-rollback"
-fi
-
-if [ $isMacOS -eq 1 ]; then
+if [ $isAndroid == false ]; then
   jq -e '.ABI != null' "$apkdlJson" >/dev/null 2>&1 && cpuAbi="$(jq -r '.ABI' "$apkdlJson" 2>/dev/null)" || cpuAbi=
   jq -e '.LOCALE != null' "$apkdlJson" >/dev/null 2>&1 && locale="$(jq -r '.LOCALE' "$apkdlJson" 2>/dev/null)" || locale=
   jq -e '.DENSITY != null' "$apkdlJson" >/dev/null 2>&1 && density="$(jq -r '.DENSITY' "$apkdlJson" 2>/dev/null)" || density=
 fi
 
-all_key=("RipLocale" "RipDpi" "RipLib" "RmFileAfterInstallation" "PreReleasePatches" "AppUpdatesSource")
-all_value=("$isRipLocale" "$isRipDpi" "$isRipLib" "$isRmFile" "$isPreRelease" "$isAppUpdatesSource")
-for i in "${!all_key[@]}"; do
-  ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
-done
-# Get RipLocale value from json
-jq -e '.RipLocale != null' "$apkdlJson" >/dev/null 2>&1 && RipLocale="$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)" || RipLocale=1
-# Get RipDpi value from json
-jq -e '.RipDpi != null' "$apkdlJson" >/dev/null 2>&1 && RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)" || RipDpi=1
-# Get RipLib value from json
-jq -e '.RipLib != null' "$apkdlJson" >/dev/null 2>&1 && RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)" || RipLib=1
-# Get RmFileAfterInstallation value from json
-jq -e '.RmFileAfterInstallation != null' "$apkdlJson" >/dev/null 2>&1 && RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)" || RmFileAfterInstallation=1
-# Get PreReleasePatches value from json
-jq -e '.PreReleasePatches != null' "$apkdlJson" >/dev/null 2>&1 && PreReleasePatches="$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)" || PreReleasePatches=0
-# Get AppUpdatesSource value from json
-jq -e '.AppUpdatesSource != null' "$apkdlJson" >/dev/null 2>&1 && AppUpdatesSource="$(jq -r '.AppUpdatesSource' "$apkdlJson" 2>/dev/null)" || AppUpdatesSource="$isAppUpdatesSource"
-
-if { [ $isMacOS -eq 1 ] && [ -n "$locale" ] && [ -n "$density" ]; } || [ $isAndroid -eq 1 ]; then
-  if [ $RipLocale -eq 0 ]; then
+ripLocaleGen() {
+  if [ $RipLocale == true ] && [ -n "$locale" ]; then
+    if [ $isAndroid == true ]; then
+      locale=$(getprop persist.sys.locale | cut -d'-' -f1)
+      [ -z $locale ] && locale=$(getprop ro.product.locale | cut -d'-' -f1)
+    else
+      locale="$(jq -r '.LOCALE' "$apkdlJson" 2>/dev/null)"
+    fi
+  else
     locale="[a-z][a-z]"
   fi
-  if [ $RipDpi -eq 1 ]; then
-    # Check and categorize the density
+}; ripLocaleGen
+
+ripDpiGen() {
+  if [ $RipDpi == true ] && [ -n "$density" ]; then
     if [ "$density" -le "120" ]; then
       lcd_dpi="ldpi"  # Low Density
     elif [ "$density" -le "160" ]; then
@@ -422,24 +176,61 @@ if { [ $isMacOS -eq 1 ] && [ -n "$locale" ] && [ -n "$density" ]; } || [ $isAndr
     else
       lcd_dpi="*dpi"
     fi
-  elif [ $RipDpi -eq 0 ]; then
+  else
     lcd_dpi="*dpi"
   fi
-fi
+}; ripDpiGen
+
+genPMCmd() {
+  InstallPackageFor=$(jq -r '.InstallPackageFor' "$apkdlJson" 2>/dev/null)
+  KeepsData=$(jq -r '.KeepsData' "$apkdlJson" 2>/dev/null)
+  GrantAllRuntimePermissions=$(jq -r '.GrantAllRuntimePermissions' "$apkdlJson" 2>/dev/null)
+  InstalledAsTestOnly=$(jq -r '.InstalledAsTestOnly' "$apkdlJson" 2>/dev/null)
+  if [ -n "$Android" ]; then
+    [ $Android -ge 14 ] && BypassLowTargetSdkBolck=$(jq -r '.BypassLowTargetSdkBolck' "$apkdlJson" 2>/dev/null)
+  fi
+  DisablePlayProtect=$(jq -r '.DisablePlayProtect' "$apkdlJson" 2>/dev/null)
+  DisableVerifyAdbInstalls=$(jq -r '.DisableVerifyAdbInstalls' "$apkdlJson" 2>/dev/null)
+  Installer=$(jq -r '.Installer' "$apkdlJson" 2>/dev/null)
+  Reinstall=$(jq -r '.Reinstall' "$apkdlJson" 2>/dev/null)
+  EnableRoolback=$(jq -r '.EnableRoolback' "$apkdlJson" 2>/dev/null)
+  
+  if [ $InstallPackageFor -eq 0 ]; then
+    if [ $isAndroid == true ]; then
+      pmCmd="--user $(am get-current-user)"
+    elif [ $isAndroid == false ] && [ -n "$serial" ]; then
+      pmCmd="--user $(adb -s $serial shell am get-current-user)"
+    fi
+  else
+    pmCmd="--user all"
+  fi
+  [ $GrantAllRuntimePermissions == true ] && pmCmd+=" -g"
+  [ $InstalledAsTestOnly == true ] && pmCmd+=" -t"
+  if [ -n "$Android" ] && [ $Android -ge 14 ]; then
+    [ $BypassLowTargetSdkBolck == true ] && pmCmd+=" --bypass-low-target-sdk-block"
+  fi
+  case "$Installer" in
+    "com.android.vending") pmCmd+=" -i com.android.vending" ;;
+    "com.android.packageinstaller") pmCmd+=" -i com.android.packageinstaller" ;;
+    "com.android.shell") pmCmd+=" -i com.android.shell" ;;
+    "adb") pmCmd+=" -i adb" ;;
+  esac
+  [ $Reinstall == true ] && pmCmd+=" -r"
+  [ $EnableRoolback == true ] && pmCmd+=" --enable-rollback"
+}
+([ $isAndroid == true ] || [ -n "$serial" ]) && genPMCmd
 
 sign() {
   apkPath="${1}"
   fileName=$(basename "$apkPath")
-  wo_ext="${apkPath%.*}"
-  outApkPath="$wo_ext-signed.apk"
+  outApkPath="${apkPath%.*}-signed.apk"
   verify() {
-    if [ $isAndroid -eq 1 ]; then
+    if [ $isAndroid == true ]; then
       echo -e "$running Checking $fileName Certificate.."
       certs=$($PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar verify --print-certs "${apkPath}" 2>/dev/null)
       apksigner_exit_status=$?
       grep -oP 'Signer #1 certificate DN: \K.*' <<< "$certs"
-    elif [ $isMacOS -eq 1 ]; then
-      apksigner=("$HOME/Library/Android/sdk/build-tools/"*/apksigner) && apksigner="${apksigner[-1]}"
+    else
       echo -e "$running Checking $fileName Certificate.."
       certs=$($apksigner verify --print-certs "${apkPath}" 2>/dev/null)
       apksigner_exit_status=$?
@@ -447,13 +238,13 @@ sign() {
     fi
   }; verify
   if [ $apksigner_exit_status -ne 0 ]; then
-    if [ $isAndroid -eq 1 ]; then
+    if [ $isAndroid == true ]; then
       [ ! -f $apkdl/ks.keystore ] && { echo -e "$running Create a ${Red}ks.keystore${Reset} for Signing apk.."; $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; echo -e "$running Checking details about keystore entries.."; $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/keytool -list -v -keystore $apkdl/ks.keystore -storepass 123456 | grep -oP '(?<=Owner:).*' | xargs; }
       echo -e "$running Signing apk.."
       $PREFIX/lib/jvm/java-$jdkVersion-openjdk/bin/java -jar $PREFIX/share/java/apksigner.jar sign --ks $apkdl/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
       signing_exit_status=$?
-    elif [ $isMacOS -eq 1 ]; then
-      [ ! -f $apkdl/ks.keystore ] && { keytool="/usr/local/opt/openjdk/bin/keytool"; echo -e "$running Create a ${Red}ks.keystore${Reset} for Signing apk.."; $keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; echo -e "$running Checking details about keystore entries.."; $keytool -list -v -keystore $apkdl/ks.keystore -storepass 123456 | grep "Owner:" | cut -d: -f2- | xargs; }
+    else
+      [ ! -f $apkdl/ks.keystore ] && { echo -e "$running Create a ${Red}ks.keystore${Reset} for Signing apk.."; $keytool -genkey -v -storetype pkcs12 -keystore $apkdl/ks.keystore -alias ReVancedKey -keyalg RSA -keysize 2048 -validity 36050 -dname "CN=arghya339, OU=Android Development Team, O=ReVanced, L=Kolkata, S=West Bengal, C=In" -storepass 123456 -keypass 123456; echo -e "$running Checking details about keystore entries.."; $keytool -list -v -keystore $apkdl/ks.keystore -storepass 123456 | grep "Owner:" | cut -d: -f2- | xargs; }
       echo -e "$running Signing apk.."
       $apksigner sign --ks $apkdl/ks.keystore --ks-pass pass:123456 --ks-key-alias ReVancedKey --key-pass pass:123456 --out "${outApkPath}" "${apkPath}"
       signing_exit_status=$?
@@ -463,22 +254,24 @@ sign() {
 }
 
 downloadAPK() {
+  Referer=${1}
+  [ -n "$Referer" ] && aria2Arg=("--header=\"Referer: $Referer\"") || aria2Arg=()
   while true; do
-    if [ $isAndroid -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" --header="Referer: https://www.apkmirror.com/" --async-dns=true --async-dns-server="$cloudflareIP" "$dlLink"
+    if [ $isMacOS == true ]; then
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" "${aria2Arg[@]}" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server=$cloudflareIP "$dlLink"
       exitStatus=$?
-    elif [ $isMacOS -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" --header="Referer: $variantLink" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server=$cloudflareIP "$dlLink"
+    else
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" -U "User-Agent: $USER_AGENT" "${aria2Arg[@]}" --async-dns=true --async-dns-server="$cloudflareIP" "$dlLink"
       exitStatus=$?
     fi
     echo
     [ $exitStatus -eq 0 ] && break || sleep 5
   done 
   
-  if [ $isAndroid -eq 1 ]; then
-    sha256sum=$(sha256sum "$apkPath" | cut -d' ' -f1)
-  elif [ $isMacOS -eq 1 ]; then
+  if [ $isMacOS == true ]; then
     sha256sum=$(shasum -a 256 "$apkPath" | cut -d' ' -f1)
+  else
+    sha256sum=$(sha256sum "$apkPath" | cut -d' ' -f1)
   fi
   if [ "$sha256sum" == "$SHA256" ]; then
     echo -e "$good Downloaded file appears in the original state."
@@ -511,17 +304,16 @@ dlAPKEditor() {
       [ $? -eq 0 ] && break || sleep 5
     done
   fi
-}
+}; dlAPKEditor
 
 apks2apk() {
-  dlAPKEditor
-  if [ $isMacOS -eq 1 ]; then
+  if [ $isMacOS == true ]; then
     if [ -n "$cpuAbi" ]; then
       mkdir -p "$Download/${appName}_v${version}-${arch}"
-      if [ $RipLib -eq 1 ]; then
+      if [ $RipLib == true ]; then
         pv "$apkPath" | tar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.${cpuAbi//-/_}.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
         tar_exit_status=$?
-      elif [ $RipLib -eq 0 ]; then
+      elif [ $RipLib == false ]; then
         pv "$apkPath" | tar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.arm64_v8a.apk" "config.armeabi_v7a.apk" "config.x86_64.apk" "config.x86.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
         tar_exit_status=$?
       fi
@@ -535,13 +327,13 @@ apks2apk() {
     else
       java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
     fi
-  elif [ $isAndroid -eq 1 ]; then
+  else
     mkdir -p "$Download/${appName}_v${version}-${arch}"
     termux-wake-lock
-    if [ $RipLib -eq 1 ]; then
+    if [ $RipLib == true ]; then
       pv "$apkPath" | bsdtar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.${cpuAbi//-/_}.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
       bsdtar_exit_status=$?
-    elif [ $RipLib -eq 0 ]; then
+    elif [ $RipLib == false ]; then
       pv "$apkPath" | bsdtar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "$pkgName.apk" "config.arm64_v8a.apk" "config.armeabi_v7a.apk" "config.x86_64.apk" "config.x86.apk" "config.${locale}.apk" "config.${lcd_dpi}.apk"
       bsdtar_exit_status=$?
     fi
@@ -560,8 +352,7 @@ pat() {
   echo -e "${running} Creating Personal Access Token.."
   # Create a PAT with scope `public_repo` / `read_repository` | `read_user` scope provides username for token validation
   [ "$userInput" == "GitHub" ] && url="https://github.com/settings/tokens/new?scopes=public_repo&description=apkdl" || url="https://gitlab.com/-/user_settings/personal_access_tokens?name=apkdl&scopes=read_user,read_repository"
-  [ $isAndroid -eq 1 ] && termux-open-url "$url"
-  [ $isMacOS -eq 1 ] && open "$url"
+  if [ $isAndroid == true ]; then termux-open-url "$url"; elif [ $isMacOS == true ]; then open "$url"; else xdg-open "$url"; fi
   echo -n "PAT: "  # Display prompt
   # Read characters one by one
   while IFS= read -rsn 1 char; do
@@ -659,8 +450,7 @@ auth() {
               url="https://gitlab.com/-/user_settings/personal_access_tokens"
             fi
           fi
-          [ $isAndroid -eq 1 ] && termux-open-url "$url"
-          [ $isMacOS -eq 1 ] && open "$url"
+          if [ $isAndroid == true ]; then termux-open-url "$url"; elif [ $isMacOS == true ]; then open "$url"; else xdg-open "$url"; fi
           echo -e "$good ${Green}Successfully deleted your $userInput token!${Reset}"
           ;;
       esac
@@ -675,8 +465,7 @@ auth() {
               buttons=("<GH>" "<PAT>"); confirmPrompt "Select a method to create a GitHub access token: (GH) GitHub CLI or (PAT) Personal Access Token?" "buttons" "1" && method=GH || method=PAT
               case "$method" in
                 [Gg]*)
-                  [ $isAndroid -eq 1 ] && pkgInstall "gh"  # gh install/update
-                  [ $isMacOS -eq 1 ] && formulaeInstall "gh"  # gh install/update
+                  if [ $isAndroid == true ]; then pkgInstall "gh"; elif [ $isMacOS == true ]; then formulaeInstall "gh"; elif [ $isFedora == true ]; then dnfInstall "gh"; fi # gh install/update
                   echo -e "${running} Creating GitHub access token using GitHub CLI.."
                   gh auth login  # Authenticate gh cli with GitHub account
                   #gh api "repos/desktop/desktop/releases/latest" | cat | jq -r '.tag_name'
@@ -700,8 +489,7 @@ auth() {
               buttons=("<GLAB>" "<PAT>"); confirmPrompt "Select a method to create a GitLab access token: (GLAB) GitLab CLI or (PAT) Personal Access Token?" "buttons" "1" && method=GLAB || method=PAT
               case "$method" in
                 [Gg]*)
-                  [ $isAndroid -eq 1 ] && pkgInstall "glab-cli"  # glab-cli install/update
-                  [ $isMacOS -eq 1 ] && formulaeInstall "glab"  # glab install/update
+                  if [ $isAndroid == true ]; then pkgInstall "glab-cli" ; elif [ $isMacOS == true ]; then formulaeInstall "glab"; elif [ $isFedora == true ]; then dnfInstall "glab"; fi  # glab install/update
                   echo -e "${running} Creating GitLab access token using GitLab CLI.."
                   glab auth login  # Authenticate glab cli with GitLab account
                   glab api "projects/gitlab-org%2Fcli/releases?per_page=1" | cat | jq -r '.[0].tag_name'
@@ -753,7 +541,7 @@ clearAppCaches() {
       echo -e "$good Free space: ${freeSizeB}B"
     fi
   }
-  if [ $isAndroid -eq 1 ]; then
+  if [ $isAndroid == true ]; then
     #size=$(su -c "du -bsh /data/data/com.termux/cache/" | cut -f1) && echo "cache size of com.termux: $size"
     #su -c "echo \"Removing cache of com.termux\"; rm -rf /data/data/com.termux/cache/* 2>/dev/null"
     
@@ -766,7 +554,7 @@ clearAppCaches() {
     currentTotalSizeB=$(su -c "du -bsc /data/data/*/cache 2>/dev/null | grep total | cut -f1")
     freeSizeB=$((totalSizeB - currentTotalSizeB))
     humanReadableForm
-  elif [ $isMacOS -eq 1 ]; then
+  else
     #size=$(adb -s $serial shell 'su -c "du -bsh /data/data/com.termux/cache/"' | cut -f1) && echo "cache size of com.termux: $size"
     #adb -s $serial shell 'su -c "
     #  echo \"Removing cache of com.termux\"
@@ -789,19 +577,21 @@ clearAppCaches() {
   fi
 }
 
+[ $printArt == true ] && { printf '\033[?25l' && print_apkdl && sleep 3 && printf '\033[?25h'; }
+
 declare -a apps applications hiddenApps enabledApps disabledApps uninstalledSystemApps
+selected_option=0
 while true; do
   options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced Morphe RVX)
-  if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
+  if { [ $isAndroid == false ] && [ -n "$serial" ]; } || { [ $isAndroid == true ] && { [ $su == true ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
     options+=(manageApps)
   fi
-  if { [ "$isMacOS" -eq 1 ] || [ -n "$serial" ]; } || [ "$isAndroid" -eq 1 ]; then
+  if { [ $isAndroid == false ] || [ -n "$serial" ]; } || [ $isAndroid == true ]; then
     options+=(Configuration)
   fi
-  buttons=("<Select>" "<Exit>"); if menu options buttons; then selected=${options[selected]}; fi
-  case "$selected" in
+  menu options eButtons "" "" $selected_option && selected_option=$selected
+  case "${options[selected_option]}" in
     PlayStore)
-      curl -sL -o "$apkdl/play.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/play.sh"
       source $apkdl/play.sh
       
       gPlayApiSearchApps
@@ -810,7 +600,7 @@ while true; do
         buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
         if [ "$opt" == "Yes" ]; then
           [ -n "$serial" ] && adbInstall "$filePath"
-          [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+          [ $isAndroid == true ] && apkInstall "$filePath"
         else
           [ "$apk_ext" == "apks" ] && APKS2APK && sign "${filePath%.*}.apk"
         fi
@@ -818,9 +608,6 @@ while true; do
       echo; read -p "Press Enter to continue..."
       ;;
     GitHub)
-      curl -sL -o "$apkdl/dlGitHub.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlGitHub.sh"
-      source $apkdl/dlGitHub.sh
-
       searchGH
       [ $? -ne 0 ] && continue
 
@@ -850,25 +637,26 @@ while true; do
       ext="${fileName##*.}"
       [ ! -f "$filePath" ] && dlGH
       if [ -f "$filePath" ]; then
-        if { [[ $isMacOS -eq 1 && ( ( $ext == "apk" && -n $serial ) || $ext == "dmg" || $ext == "pkg" ) ]]; } || [[ $isAndroid -eq 1 ]]; then
+        if { [[ $isMacOS == true && ( ( $ext == "apk" && -n $serial ) || $ext == "dmg" || $ext == "pkg" ) ]]; } || { [ $isFedora == true ] && [ "$ext" == "rpm" ]; } || [[ $isAndroid == true ]]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
-            if [ $isAndroid -eq 1 ]; then
+            if [ $isAndroid == true ]; then
               apkInstall "$filePath"
-            elif [ $isMacOS -eq 1 ]; then
+            elif [ $isMacOS == true ]; then
               ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
               ([ "$ext" == "dmg" ] || [ "$ext" == "pkg" ]) && open "$filePath"
+            else
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
+              [ "$ext" == "rpm" ] && xdg-open "$filePath"
             fi
           fi
         fi
       fi
       echo; read -p "Press Enter to continue..."
-      { [[ $isMacOS -eq 1 && ( "$ext" == "dmg" || "$ext" == "pkg" ) && $RmFileAfterInstallation -eq 1 ]]; } && rm -f "$filePath"
+      { [[ $isMacOS == true && ( "$ext" == "dmg" || "$ext" == "pkg" ) && $RmFileAfterInstallation == true ]]; } && rm -f "$filePath"
+      ([ $isFedora == true ] && [ "$ext" == "rpm" ] && [ $RmFileAfterInstallation == true ]) && rm -f "$filePath"
       ;;
     GitLab)
-      curl -sL -o "$apkdl/dlGitLab.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlGitLab.sh"
-      source $apkdl/dlGitLab.sh
-
       searchGLAB
       [ $? -ne 0 ] && continue
 
@@ -880,25 +668,26 @@ while true; do
       ext="${fileName##*.}"
       [ ! -f "$filePath" ] && dlGLAB
       if [ -f "$filePath" ]; then
-        if { [[ $isMacOS -eq 1 && ( ( $ext == "apk" && -n $serial ) || $ext == "dmg" || $ext == "pkg" ) ]]; } || [[ $isAndroid -eq 1 ]]; then
+        if { [[ $isMacOS == true && ( ( $ext == "apk" && -n $serial ) || $ext == "dmg" || $ext == "pkg" ) ]]; } || { [ $isFedora == true ] && [ "$ext" == "rpm" ]; } || [[ $isAndroid == true ]]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
-            if [ $isAndroid -eq 1 ]; then
+            if [ $isAndroid == true ]; then
               apkInstall "$filePath"
-            elif [ $isMacOS -eq 1 ]; then
+            elif [ $isMacOS == true ]; then
               ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
               ([ "$ext" == "dmg" ] || [ "$ext" == "pkg" ]) && open "$filePath"
+            else
+              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
+              [ "$ext" == "rpm" ] && xdg-open "$filePath"
             fi
           fi
         fi
       fi
       echo; read -p "Press Enter to continue..."
-      { [[ $isMacOS -eq 1 && ( "$ext" == "dmg" || "$ext" == "pkg" ) && $RmFileAfterInstallation -eq 1 ]]; } && rm -f "$filePath"
+      { [[ $isMacOS == true && ( "$ext" == "dmg" || "$ext" == "pkg" ) && $RmFileAfterInstallation == true ]]; } && rm -f "$filePath"
+      ([ $isFedora == true ] && [ "$ext" == "rpm" ] && [ $RmFileAfterInstallation == true ]) && rm -f "$filePath"
       ;;
     F-Droid)
-      curl -sL -o "$apkdl/dlFDroid.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlFDroid.sh"
-      source $apkdl/dlFDroid.sh
-
       FDroidSearch
       [ $? -ne 0 ] && continue
 
@@ -907,16 +696,12 @@ while true; do
         buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
         if [ "$opt" == "Yes" ]; then
           [ -n "$serial" ] && adbInstall "$filePath"
-          [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+          [ $isAndroid == true ] && apkInstall "$filePath"
         fi
         echo; read -p "Press Enter to continue..."
       fi
       ;;
     APKMirror)
-      curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
-      
-      source $apkdl/APKMdl.sh
-      
       buttons=("<appName>" "<pkgName>"); confirmPrompt "Please select a method to get appLink" "buttons" && opt=appName || opt=pkgName
      
       if [ "$opt" == "appName" ]; then
@@ -939,15 +724,15 @@ while true; do
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
-        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
+        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK "https://www.apkmirror.com/"
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
         [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
         if [ -f "$apkPath" ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
-            if [ $isAndroid -eq 1 ]; then
+            if [ $isAndroid == true ]; then
               sign "$apkPath" && apkInstall "$apkPath"
-            elif [ $isMacOS -eq 1 ]; then
+            else
               ext="${fileName##*.}"
               ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
             fi
@@ -957,10 +742,6 @@ while true; do
       fi
       ;;
     Uptodown)
-      curl -sL -o "$apkdl/dlUptodown.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlUptodown.sh"
-      
-      source $apkdl/dlUptodown.sh
-      
       UptodownSearch
       [ $? -ne 0 ] && continue
 
@@ -979,9 +760,9 @@ while true; do
         if [ -f "$apkPath" ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
-            if [ $isAndroid -eq 1 ]; then
+            if [ $isAndroid == true ]; then
               sign "$apkPath" && apkInstall "$apkPath"
-            elif [ $isMacOS -eq 1 ]; then
+            else
               ext="${fileName##*.}"
               ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
             fi
@@ -991,9 +772,6 @@ while true; do
       fi
       ;;
     APKPure)
-      curl -sL -o "$apkdl/dlAPKPure.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/dlAPKPure.sh"
-      source $apkdl/dlAPKPure.sh
-
       APKPureSearch
       [ $? -ne 0 ] && continue
 
@@ -1011,9 +789,9 @@ while true; do
         if [ -f "$apkPath" ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
-            if [ $isAndroid -eq 1 ]; then
+            if [ $isAndroid == true ]; then
               sign "$apkPath" && apkInstall "$apkPath"
-            elif [ $isMacOS -eq 1 ]; then
+            else
               ext="${fileName##*.}"
               ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
             fi
@@ -1022,16 +800,9 @@ while true; do
         echo; read -p "Press Enter to continue..."
       fi
       ;;
-    otherSources)
-      curl -sL -o "$apkdl/otherSources.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/otherSources.sh"
-      source $apkdl/otherSources.sh
-      ;;
+    otherSources) oSources ;;
     ReVanced|Morphe|RVX)
-      curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
-      source $apkdl/APKMdl.sh
-      
-      curl -sL -o "$apkdl/RVdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/RVdl.sh"
-      source $apkdl/RVdl.sh "$selected"
+      RVdl "${options[selected_option]}"
       [ $? -ne 0 ] && continue
       
       if [ -n "$version" ]; then
@@ -1057,15 +828,15 @@ while true; do
         appName=$(echo "${appName%%[:—(]*}" | xargs)
         fileName="${appName}_v${version}-${arch}${file_ext}"
         apkPath="$Download/$fileName"
-        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
+        [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK "https://www.apkmirror.com/"
         [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
         [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
         if [ -f "$apkPath" ]; then
           buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
           if [ "$opt" == "Yes" ]; then
-            if [ $isAndroid -eq 1 ]; then
+            if [ $isAndroid == true ]; then
               sign "$apkPath" && apkInstall "$apkPath"
-            elif [ $isMacOS -eq 1 ]; then
+            else
               ext="${fileName##*.}"
               ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
             fi
@@ -1075,21 +846,19 @@ while true; do
       fi
       ;;
     manageApps)
-      curl -sL -o "$apkdl/myApps.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/myApps.sh"
-      source $apkdl/myApps.sh
-      options=(appUpdates disableApps enableApps uninstallApps recoverSystemApps)
-      if { [ $isMacOS -eq 1 ] && [ -n "$serial" ] && [ $shellSU -eq 1 ]; } || { [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; }; then
-        options+=(clearAppCaches blockInternet unblockInternet hideApps unhideApps)
+      selected_ma=0
+      ma_options=(appUpdates disableApps enableApps uninstallApps recoverSystemApps)
+      if { [ $isAndroid == false ] && [ -n "$serial" ] && [ $su == true ]; } || { [ $isAndroid == true ] && [ $su == true ]; }; then
+        ma_options+=(clearAppCaches blockInternet unblockInternet hideApps unhideApps)
       fi
-      if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+      if [ $isAndroid == true ] && [ $su == true ]; then
         [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
       fi
       while true; do
-        buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; else break; fi
-        case "$selected" in
+        menu ma_options bButtons "" "" $selected_ma && selected_ma="$selected" || break
+        case "${ma_options[selected_ma]}" in
           appUpdates)      
             if [ "$AppUpdatesSource" == "PlayStore" ]; then
-              curl -sL -o "$apkdl/play.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/play.sh"
               source $apkdl/play.sh
               [ ${#apps[@]} -eq 0 ] && gPlayApiAppsUpdates
               gPlayApiShowUpdates
@@ -1099,14 +868,12 @@ while true; do
                 buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
                 if [ "$opt" == "Yes" ]; then
                   [ -n "$serial" ] && adbInstall "$filePath"
-                  [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+                  [ $isAndroid == true ] && apkInstall "$filePath"
                 else
                   [ "$apk_ext" == "apks" ] && APKS2APK && sign "${filePath%.*}.apk"
                 fi
               fi
             elif [ "$AppUpdatesSource" == "APKMirror" ]; then
-              curl -sL -o "$apkdl/APKMdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/APKMdl.sh"
-              source $apkdl/APKMdl.sh
               [ ${#apps[@]} -eq 0 ] && getUpdates
               showUpdates
               [ $? -ne 0 ] && continue
@@ -1118,15 +885,15 @@ while true; do
                 appName=$(echo "${appName%%[:—(]*}" | xargs)
                 fileName="${appName}_v${version}-${arch}${file_ext}"
                 apkPath="$Download/$fileName"
-                [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK
+                [ ! -f "$Download/${appName}_v${version}-${arch}.apk" ] && downloadAPK "https://www.apkmirror.com/"
                 [ -f "$Download/${appName}_v${version}-${arch}.apkm" ] && apkm2apk
                 [ -f "$Download/${appName}_v${version}-${arch}.apk" ] && apkPath="$Download/${appName}_v${version}-${arch}.apk"
                 if [ -f "$apkPath" ]; then
                   buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt=Yes || opt=No
                   if [ "$opt" == "Yes" ]; then
-                    if [ $isAndroid -eq 1 ]; then
+                    if [ $isAndroid == true ]; then
                       sign "$apkPath" && apkInstall "$apkPath"
-                    elif [ $isMacOS -eq 1 ]; then
+                    else
                       ext="${fileName##*.}"
                       ([[ "$ext" =~ ^apk.*$ ]] && [ -n "$serial" ]) && { sign "$apkPath" && adbInstall "$apkPath"; }
                     fi
@@ -1176,161 +943,133 @@ while true; do
         esac
         echo; read -p "Press Enter to continue..."
       done
-      if [ $isAndroid -eq 1 ] && [ $su -eq 1 ]; then
+      if [ $isAndroid == true ] && [ $su == true ]; then
         [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
       fi
       ;;
     Configuration)
+      selected_settings=0
       while true; do
-        RipLocale="$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)"
-        RipDpi="$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)"
-        RipLib="$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)"
-        RmFileAfterInstallation="$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)"
-        PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
-        ShowSystemApps="$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)"
-        AppUpdatesSource="$(jq -r '.AppUpdatesSource' "$apkdlJson" 2>/dev/null)"
-        options=(RmFileAfterInstallation PreReleasePatches "Add gh/ glab PAT (increases gh/ glab api rate limit)" AppUpdatesSource)
-        if [ $isAndroid -eq 1 ] || { [ $isMacOS -eq 1 ] && [ -n "$cpuAbi" ]; }; then
-          options+=(RipLocale RipDpi RipLib)
+        reloadConfig
+        s_options=(printArt AutoUpdatesScript AutoUpdatesDependencies CheckUpdates About RmFileAfterInstallation PreReleasePatches "Add gh/ glab PAT (increases gh/ glab api rate limit)" AppUpdatesSource)
+        if [ $isAndroid == true ] || { [ $isAndroid == false ] && [ -n "$cpuAbi" ]; }; then
+          s_options+=(RipLocale RipDpi RipLib)
         fi
-        if [ $isAndroid -eq 1 ]; then
+        if [ $isAndroid == true ]; then
           CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null)
           jdkVersion="$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null)"
-          if [ $su -eq 1 ]; then
-            options+=("SU Installation Options")
+          if [ $su == true ]; then
+            s_options+=("SU Installation Options")
           elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-            options+=("SUI Installation Options")
+            s_options+=("SUI Installation Options")
           elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-            options+=("ADB Installation Options")
+            s_options+=("ADB Installation Options")
           fi
           if [ "$(getprop ro.product.manufacturer)" == "Genymobile" ] && ! "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-            options+=(Pair\ ADB)
+            s_options+=(Pair\ ADB)
           fi
-          options+=("Check Termux update on startup" "Change Java version")
-        elif [ $isMacOS -eq 1 ] && [ -n "$serial" ]; then
-          options+=("ADB Installation Options")
+          s_options+=("Check Termux update on startup" "Change Java version")
+        elif [ $isAndroid == false ] && [ -n "$serial" ]; then
+          s_options+=("ADB Installation Options")
         fi
-        if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || { [ $isAndroid -eq 1 ] && { [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
-          options+=(ShowSystemApps)
+        if { [ $isAndroid == false ] && [ -n "$serial" ]; } || { [ $isAndroid == true ] && { [ $su == true ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
+          s_options+=(ShowSystemApps)
         fi
-        buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; else break; fi
-        case "$selected" in
-          RipLocale) if [ $RipLocale -eq 1 ]; then echo "RipLocale == true"; else echo "RipLocale == false"; fi
-            m1="Device specific locale will be kept in apk file"
-            m2="All locale will be kept in apk file"
-            tfConfig "RipLocale" "$isRipLocale" "$m1" "$m2"
+        menu s_options bButtons "" "" $selected_settings && selected_settings="$selected" || break
+        case "${s_options[selected_settings]}" in
+          printArt)
+            confirmPrompt "Show apkdl branding on launch" tfButtons "$printArt" && printArt=true || printArt=false
+            config "printArt" "$printArt"
             ;;
-          RipDpi) if [ $RipDpi -eq 1 ]; then echo "RipDpi == true"; else echo "RipDpi == false"; fi
-            m1="Device specific dpi will be kept in apk file"
-            m2="All dpi will be kept in apk file"
-            tfConfig "RipDpi" "$isRipDpi" "$m1" "$m2"
+          AutoUpdatesScript)
+            confirmPrompt "Auto updates Script on launch" tfButtons "$AutoUpdatesScript" && AutoUpdatesScript=true || AutoUpdatesScript=false
+            config "AutoUpdatesScript" "$AutoUpdatesScript"
             ;;
-          RipLib) if [ $RipLib -eq 1 ]; then echo "RipLib == true"; else echo "RipLib == false"; fi
-            m1="Device specific arch lib will be kept in apk file"
-            m2="All lib dir will be kept in apk file"
-            tfConfig "RipLib" "$isRipLib" "$m1" "$m2"
+          AutoUpdatesDependencies)
+            confirmPrompt "Auto updates dependencies on launch" tfButtons "$AutoUpdatesDependencies" && AutoUpdatesDependencies=true || AutoUpdatesDependencies=false
+            config "AutoUpdatesDependencies" "$AutoUpdatesDependencies"
             ;;
-          RmFileAfterInstallation) [ $RmFileAfterInstallation -eq 1 ] && echo "RmFileAfterInstallation == true" || echo "RmFileAfterInstallation == false"
-            m1="Remove downloaded file after installation"
-            m2="Keep downloaded file after installation"
-            tfConfig "RmFileAfterInstallation" "$isRmFile" "$m1" "$m2"
+          CheckUpdates) checkInternet && { updates; dependencies; } ;;
+          About)
+            printf '\033[?25l' && print_apkdl
+            echo "Script Version: $localVersion"
+            echo; read -p "Press Enter to continue..."; printf '\033[?25h'
+            ;;
+          RipLocale)
+            confirmPrompt "RipLocale" tfButtons "$RipLocale" && RipLocale=true || RipLocale=false
+            config "RipLocale" "$RipLocale"
+            ripLocaleGen
+            ;;
+          RipDpi)
+            confirmPrompt "RipDpi" tfButtons "$RipDpi" && RipDpi=true || RipDpi=false
+            config "RipDpi" "$RipDpi"
+            ripDpiGen
+            ;;
+          RipLib)
+            confirmPrompt "RipLib" tfButtons "$RipLib" && RipLib=true || RipLib=false
+            config "RipLib" "$RipLib"
+            ;;
+          RmFileAfterInstallation)
+            confirmPrompt "RmFileAfterInstallation" tfButtons "$RmFileAfterInstallation" && RmFileAfterInstallation=true || RmFileAfterInstallation=false
+            config "RmFileAfterInstallation" "$RmFileAfterInstallation"
             ;;
           PreReleasePatches)
-            [ $PreReleasePatches -eq 0 ] && echo "PreReleasePatches == false" || echo "PreReleasePatches == true"
-            m1="Fetch Pre-Release Patches"
-            m2="Fetch Latest Release Patches"
-            tfConfig "PreReleasePatches" "$isPreRelease" "$m1" "$m2"
+            confirmPrompt "PreReleasePatches" tfButtons "$PreReleasePatches" && PreReleasePatches=true || PreReleasePatches=false
+            config "PreReleasePatches" "$PreReleasePatches"
             ;;
           "SU Installation Options"|"SUI Installation Options"|"ADB Installation Options")
+            selected_io=0
             while true; do
-              InstallPackageFor=$(jq -r '.InstallPackageFor' "$apkdlJson" 2>/dev/null)
-              KeepsData=$(jq -r '.KeepsData' "$apkdlJson" 2>/dev/null)
-              GrantAllRuntimePermissions=$(jq -r '.GrantAllRuntimePermissions' "$apkdlJson" 2>/dev/null)
-              InstalledAsTestOnly=$(jq -r '.InstalledAsTestOnly' "$apkdlJson" 2>/dev/null)
-              BypassLowTargetSdkBolck=$(jq -r '.BypassLowTargetSdkBolck' "$apkdlJson" 2>/dev/null)
-              DisablePlayProtect=$(jq -r '.DisablePlayProtect' "$apkdlJson" 2>/dev/null)
-              DisableVerifyAdbInstalls=$(jq -r '.DisableVerifyAdbInstalls' "$apkdlJson" 2>/dev/null)
-              Installer=$(jq -r '.Installer' "$apkdlJson" 2>/dev/null)
-              Reinstall=$(jq -r '.Reinstall' "$apkdlJson" 2>/dev/null)
-              EnableRoolback=$(jq -r '.EnableRoolback' "$apkdlJson" 2>/dev/null)
-              options=("Install Package for *user" "Allow Downgrade with keeps App data (reboot required)" "Grant All Runtime/ Requested Permissions" Installed\ as\ test-only\ app Bypass\ Low\ Target\ SDK\ Bolck Disable\ Play\ Protect\ Package\ Verification Disable\ Verify\ Adb\ Installs Installer "Reinstall (Replace/ Upgrade) Existing Installed Package" Enable\ Version\ Roolback)
-              buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; else break; fi
-              case "$selected" in
+              genPMCmd
+              io_options=("Install Package for *user" "Allow Downgrade with keeps App data (reboot required)" "Grant All Runtime/ Requested Permissions" Installed\ as\ test-only\ app Bypass\ Low\ Target\ SDK\ Bolck Disable\ Play\ Protect\ Package\ Verification Disable\ Verify\ Adb\ Installs Installer "Reinstall (Replace/ Upgrade) Existing Installed Package" Enable\ Version\ Roolback)
+              menu io_options bButtons "" "" $selected_io && selected_io="$selected" || break
+              case "${io_options[selected_io]}" in
                 "Install Package for *user")
-                  if [ "$InstallPackageFor" -eq 0 ]; then echo "InstallPackageFor == 0 (default-user)"; else echo "InstallPackageFor == 1 (all-users)"; fi
-                  buttons=("<default-user>" "<all-users>"); confirmPrompt "InstallPackageFor" "buttons" "$isU" && u=default-user || u=all-users
-                  if [ -n "$u" ]; then
-                    case "$u" in
-                      [Dd]*) config "InstallPackageFor" "0" && echo -e "$good ${Green}Install Package for default-user set successfully!${Reset}" ;;
-                      [Aa]*) config "InstallPackageFor" "1" && echo -e "$good ${Green}Install Package for all-user set successfully!${Reset}" ;;
-                    esac
-                    sleep 2
-                  fi
+                  buttons=("<default-user>" "<all-users>"); confirmPrompt "InstallPackageFor" buttons "$InstallPackageFor" && InstallPackageFor=0 || InstallPackageFor=1
+                  config "InstallPackageFor" "$InstallPackageFor"
                   ;;
                 "Allow Downgrade with keeps App data (reboot required)")
-                  if [ "$KeepsData" -eq 0 ]; then echo "KeepsData == false"; else echo "KeepsData == true"; fi
-                  m1="Allow Downgrade with keeps App data Enabled"
-                  m2="Allow Downgrade with keeps App data Disabled"
-                  tfConfig "KeepsData" "$isK" "$m1" "$m2"
+                  confirmPrompt "KeepsData" tfButtons "$KeepsData" && KeepsData=true || KeepsData=false
+                  config "KeepsData" "$KeepsData"
                   ;;
                 "Grant All Runtime/ Requested Permissions")
-                  if [ "$GrantAllRuntimePermissions" -eq 0 ]; then echo "GrantAllRuntimePermissions == false"; else echo "GrantAllRuntimePermissions == true"; fi
-                  m1="Grant All Runtime Permissions Enabled"
-                  m2="Grant All Runtime Permissions Disabled"
-                  tfConfig "GrantAllRuntimePermissions" "$isG" "$m1" "$m2"
+                  confirmPrompt "GrantAllRuntimePermissions" tfButtons "$GrantAllRuntimePermissions" && GrantAllRuntimePermissions=true || GrantAllRuntimePermissions=false
+                  config "GrantAllRuntimePermissions" "$GrantAllRuntimePermissions"
                   ;;
                 Installed\ as\ test-only\ app)
-                  if [ "$InstalledAsTestOnly" -eq 0 ]; then echo "InstalledAsTestOnly == false"; else echo "InstalledAsTestOnly == true"; fi
-                  m1="Installed as test-only Enabled"
-                  m2="Installed as test-only Disabled"
-                  tfConfig "InstalledAsTestOnly" "$isT" "$m1" "$m2"
+                  confirmPrompt "InstalledAsTestOnly" tfButtons "$InstalledAsTestOnly" && InstalledAsTestOnly=true || InstalledAsTestOnly=false
+                  config "InstalledAsTestOnly" "$InstalledAsTestOnly"
                   ;;
                 Bypass\ Low\ Target\ SDK\ Bolck)
-                  if [ "$BypassLowTargetSdkBolck" -eq 1 ]; then echo "BypassLowTargetSdkBolck == true"; else echo "BypassLowTargetSdkBolck == false"; fi
-                  m1="Bypass Low Target SDK Bolck Enabled"
-                  m2="Bypass Low Target SDK Bolck Disabled"
-                  tfConfig "BypassLowTargetSdkBolck" "$isL" "$m1" "$m2"
+                  confirmPrompt "BypassLowTargetSdkBolck" tfButtons "$BypassLowTargetSdkBolck" && BypassLowTargetSdkBolck=true || BypassLowTargetSdkBolck=false
+                  config "BypassLowTargetSdkBolck" "$BypassLowTargetSdkBolck"
                   ;;
                 Disable\ Play\ Protect\ Package\ Verification)
-                  if [ "$DisablePlayProtect" -eq 1 ]; then echo "DisablePlayProtect == true"; else echo "DisablePlayProtect == false"; fi
-                  m1="Play Protect Package Verification Disabled"
-                  m2="Play Protect Package Verification Enabled"
-                  tfConfig "DisablePlayProtect" "$isV" "$m1" "$m2"
+                  confirmPrompt "DisablePlayProtect" tfButtons "$DisablePlayProtect" && DisablePlayProtect=true || DisablePlayProtect=false
+                  config "DisablePlayProtect" "$DisablePlayProtect"
                   ;;
                 Disable\ Verify\ Adb\ Installs)
-                  [ $DisableVerifyAdbInstalls -eq 1 ] && echo "DisableVerifyAdbInstalls == true" || echo "DisableVerifyAdbInstalls == false"
-                  m1="Verify Adb Installs Disabled"; m2="Verify Adb Installs Enabled"; tfConfig "DisableVerifyAdbInstalls" "$isA" "$m1" "$m2"
+                  confirmPrompt "DisableVerifyAdbInstalls" tfButtons "$DisableVerifyAdbInstalls" && DisableVerifyAdbInstalls=true || DisableVerifyAdbInstalls=false
+                  config "DisableVerifyAdbInstalls" "$DisableVerifyAdbInstalls"
                   ;;
                 Installer)
                   case "$Installer" in
-                    "com.android.vending") echo "Installer == com.android.vending (PlayStore)" ;;
-                    "com.android.packageinstaller") echo "Installer == com.android.packageinstaller (PackageInstaller)" ;;
-                    "com.android.shell") echo "Installer == com.android.shell (Shell)" ;;
-                    "adb") echo "Installer == adb" ;;
+                    "com.android.vending") selected_option=0 ;;
+                    "com.android.packageinstaller") selected_option=1 ;;
+                    "com.android.shell") selected_option=2 ;;
+                    "adb") selected_option=3 ;;
                   esac
-                  options=(Play\ Store Package\ Installer Shell ADB)
-                  buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; fi
-                  if [ -n "$selected" ]; then
-                    case "$selected" in
-                      Play\ Store) config "Installer" "com.android.vending" && echo -e "$good ${Green}Successfully set Installer as 'com.android.vending' (PlayStore)${Reset}" ;;
-                      Package\ Installer) config "Installer" "com.android.packageinstaller" && echo -e "$good ${Green}Successfully set Installer as 'com.android.packageinstaller' (PackageInstaller)${Reset}" ;;
-                      Shell) config "Installer" "com.android.shell" && echo -e "$good ${Green}Successfully set Installer as 'com.android.shell' (Shell)${Reset}" ;;
-                      ADB) config "Installer" "adb" && echo -e "$good ${Green}Successfully set Installer as 'adb'${Reset}" ;;
-                    esac
-                    sleep 2
-                  fi
+                  installerName=(Play\ Store Package\ Installer Shell ADB)
+                  installerPackage=("com.android.vending" "com.android.packageinstaller" "com.android.shell" "adb")
+                  menu installerName bButtons installerPackage "" $selected_option && { Installer="${installerPackage[selected]}"; config "Installer" "$Installer"; }
                   ;;
                 "Reinstall (Replace/ Upgrade) Existing Installed Package")
-                  if [ "$Reinstall" -eq 1 ]; then echo "Reinstall == true"; else echo "Reinstall == false"; fi
-                  m1="Reinstall Existing Installed Package Enabled"
-                  m2="Reinstall Existing Installed Package Disabled"
-                  tfConfig "Reinstall" "$isR" "$m1" "$m2"
+                  confirmPrompt "Reinstall" tfButtons "$Reinstall" && Reinstall=true || Reinstall=false
+                  config "Reinstall" "$Reinstall"
                   ;;
                 Enable\ Version\ Roolback)
-                  if [ "$EnableRoolback" -eq 0 ]; then echo "EnableRoolback == false"; else echo "EnableRoolback == true"; fi
-                  m1="Version Roolback Enabled"
-                  m2="Version Roolback Disabled"
-                  tfConfig "EnableRoolback" "$isB" "$m1" "$m2"
+                  confirmPrompt "EnableRoolback" tfButtons "$EnableRoolback" && EnableRoolback=true || EnableRoolback=false
+                  config "EnableRoolback" "$EnableRoolback"
                   ;;
               esac
             done
@@ -1345,10 +1084,9 @@ while true; do
             host_port=$(echo "$input" | awk '{print $1}'); pairing_code=$(echo "$input" | awk '{print $2}')
             ~/adb pair "$host_port" "$pairing_code"
             ;;
-          Check\ Termux\ update\ on\ startup) [ $CheckTermuxUpdate -eq 1 ] && echo "CheckTermuxUpdate == true" || echo "CheckTermuxUpdate == false"
-            m1="Check for Termux app updates on startup"
-            m2="Never check for Termux app updates on startup"
-            tfConfig "CheckTermuxUpdate" "$isCheckTermuxUpdate" "$m1" "$m2"
+          Check\ Termux\ update\ on\ startup)
+            confirmPrompt "CheckTermuxUpdate" tfButtons "$CheckTermuxUpdate" && CheckTermuxUpdate=true || CheckTermuxUpdate=false
+            config "CheckTermuxUpdate" "$CheckTermuxUpdate"
             ;;
           Change\ Java\ version)
             echo "openjdkVersion == $jdkVersion"
@@ -1362,7 +1100,7 @@ while true; do
               sleep 0.5  # wait 500 milliseconds
             done
             # Select JDK versions
-            buttons=("<Select>" "<Back>"); if menu jdkVersion buttons; then version="${jdkVersion[$selected]}"; fi
+            menu jdkVersion bButtons && version="${jdkVersion[$selected]}"
             # Set JDK versions
             if [ -n "$version" ]; then
               echo -e "$info Selected: openjdk-$version"
@@ -1389,27 +1127,21 @@ while true; do
             auth  # Call the auth function to create GitHub/ GitLab token
             ;;
           AppUpdatesSource)
-            if [ "$AppUpdatesSource" == "PlayStore" ]; then echo "AppUpdatesSource == PlayStore"; elif [ "$AppUpdatesSource" == "APKMirror" ]; then echo "AppUpdatesSource == APKMirror"; else echo "AppUpdatesSource == Aptoide"; fi
-            options=(PlayStore APKMirror Aptoide)
-            buttons=("<Select>" "<Back>"); if menu options buttons; then source="${options[$selected]}"; fi
-            if [ -n "$source" ]; then
-              case "$source" in
-                PlayStore) config "AppUpdatesSource" "PlayStore" && echo -e "$good ${Green}AppUpdatesSource as PlayStore set successfully!${Reset}" ;;
-                APKMirror) config "AppUpdatesSource" "APKMirror" && echo -e "$good ${Green}AppUpdatesSource as APKMirror set successfully!${Reset}" ;;
-                Aptoide) config "AppUpdatesSource" "Aptoide" && echo -e "$good ${Green}AppUpdatesSource as Aptoide set successfully!${Reset}" ;;
-              esac
-              sleep 2
-            fi
+            case "$AppUpdatesSource" in
+              "PlayStore") selected_up=0 ;;
+              "APKMirror") selected_up=1 ;;
+              "Aptoide") selected_up=2 ;;
+            esac
+            Sources=(PlayStore APKMirror Aptoide)
+            menu Sources bButtons "" "" $selected_up && { AppUpdatesSource="${Sources[selected]}"; config "AppUpdatesSource" "$AppUpdatesSource"; }
             ;;
           ShowSystemApps)
-            [ $ShowSystemApps -eq 0 ] && echo "ShowSystemApps == false" || echo "ShowSystemApps == true"
-            m1="Show System apps"
-            m2="Hide System apps"
-            tfConfig "ShowSystemApps" "$isShowSystemApps" "$m1" "$m2"
+            confirmPrompt "ShowSystemApps" tfButtons "$ShowSystemApps" && ShowSystemApps=true || ShowSystemApps=false
+            config "ShowSystemApps" "$ShowSystemApps"
             ;;
         esac
       done
       ;;
   esac
 done
-#########################################################################################################################
+######################################################################################################################

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 CONTENT_TYPE="application/octet-stream"  # octet-stream = binary data being sent
 ACCEPT_LANGUAGE="en-US,en;q=0.9"  # client language prefers US-English with 90% quality rating
 CONNECTION="keep-alive"  # requests to keep TCP connection open for multiple requests
@@ -85,37 +87,29 @@ AllVersions() {
   AllVersions="$appLink/versions"
   aria2c -q -o apkpure_page.html -d "$HOME" "${ALL_HEADER[@]}" --connect-timeout=30 --save-cookies=cookies.txt --load-cookies=cookies.txt --check-certificate=false --referer="$appLink" --async-dns=true --async-dns-server="$cloudflareIP" "$AllVersions" && allVersionsHTML=$(cat "$HOME/apkpure_page.html") && rm -f ~/apkpure_page.html
   allVersionsJSON=$(pup 'ul.ver-wrap li json{}' <<< "$allVersionsHTML")
-
+  
   json_data=$(jq -r '
   [
-    .[]
-    | .children[]
-    | select(.class == "ver_download_link")
+    .[] 
+    | .children[]? 
+    | select(.class? | contains("ver_download_link")) 
     | {
         versionName: (
-          [.children[]?.children[]? | select(.class=="ver-item-n")?.text][0]
-          | split("\n")
-          | map(gsub("\\s+"; ""))
-          | join(" ")
+          [.. | select(.class? == "ver-item-n dt-version-name-link")? | .text][0] 
+          | sub("\\n\\s+"; " ") | gsub("\\s+"; " ") | sub("^\\s+"; "")
         ),
-        fileSize: (
-          [.children[]?.children[]?.children[]? | select(.class=="ver-item-s")?.text][0]
-        ),
-        updateOn: (
-          [.children[]?.children[]?.children[]? | select(.class=="update-on")?.text][0]
-        ),
-        variant: (
-          .["data-dt-variant"] // ""
-        ),
-        versionLink: .href
+        fileSize: [.. | select(.class? == "ver-item-s")? | .text][0],
+        updateOn: [.. | select(.class? | contains("update-on"))? | .text][0],
+        variant: .["data-dt-variant"],
+        versionLink: [.. | select(.tag? == "a" and .href?)? | .href][0]
       }
   ]' <<< "$allVersionsJSON")
   
-  readarray -t versionNames < <(echo "$json_data" | jq -r '.[].versionName')
-  readarray -t fileSizes < <(echo "$json_data" | jq -r '.[].fileSize')
-  readarray -t updateOns < <(echo "$json_data" | jq -r '.[].updateOn')
-  readarray -t variants < <(echo "$json_data" | jq -r '.[].variant')
-  readarray -t versionLinks < <(echo "$json_data" | jq -r '.[].versionLink')
+  readarray -t versionNames < <(jq -r '.[].versionName' <<< "$json_data")
+  readarray -t fileSizes < <(jq -r '.[].fileSize' <<< "$json_data")
+  readarray -t updateOns < <(jq -r '.[].updateOn' <<< "$json_data")
+  readarray -t variants < <(jq -r '.[].variant' <<< "$json_data")
+  readarray -t versionLinks < <(jq -r '.[].versionLink' <<< "$json_data")
   
   versions=()
   for i in "${!versionNames[@]}"; do
@@ -230,21 +224,21 @@ APKPureVariant() {
 
 dlAPKPure() {
   while true; do
-    if [ $isAndroid -eq 1 ]; then
-      aria2c  -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" "${ALL_HEADER[@]}" --connect-timeout=30 --save-cookies=cookies.txt --load-cookies=cookies.txt --check-certificate=false --referer="$versionLink" --async-dns=true  --async-dns-server="$cloudflareIP" "$dlLink"
-      exitStatus=$?
-    elif [ $isMacOS -eq 1 ]; then
+    if [ $isMacOS == true ]; then
       aria2c  -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" "${ALL_HEADER[@]}" --connect-timeout=30 --save-cookies=cookies.txt --load-cookies=cookies.txt --check-certificate=false --referer="$versionLink" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true  --async-dns-server="$cloudflareIP" "$dlLink"
+      exitStatus=$?
+    else
+      aria2c  -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" "${ALL_HEADER[@]}" --connect-timeout=30 --save-cookies=cookies.txt --load-cookies=cookies.txt --check-certificate=false --referer="$versionLink" --async-dns=true  --async-dns-server="$cloudflareIP" "$dlLink"
       exitStatus=$?
     fi
     echo
     [ $exitStatus -eq 0 ] && { rm -f cookies.txt; break; } || sleep 5
   done 
   
-  if [ $isAndroid -eq 1 ]; then
-    sha1sum=$(sha1sum "$apkPath" | cut -d' ' -f1)
-  elif [ $isMacOS -eq 1 ]; then
+  if [ $isMacOS == true ]; then
     sha1sum=$(shasum -a 1 "$apkPath" | cut -d' ' -f1)
+  else
+    sha1sum=$(sha1sum "$apkPath" | cut -d' ' -f1)
   fi
   if [ "$fileSHA1" == "$sha1sum" ]; then
     echo -e "$good Downloaded file appears in the original state.\n"
@@ -253,4 +247,4 @@ dlAPKPure() {
     echo -e "$notice SHA1 SUM Diffs - Expected: ${Cyan}$fileSHA1${Reset} ~ Result: ${Cyan}$sha1sum${Reset}"
   fi
 }
-#######################################################################################################
+###########################################################################################################

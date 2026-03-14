@@ -1,40 +1,42 @@
 #!/bin/bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 runCmd() {
   command=${1}
-  if [ $isAndroid -eq 1 ]; then
-    if [ $su -eq 1 ]; then
+  if [ $isAndroid == true ]; then
+    if [ $su == true ]; then
       su -c "$command"
     elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
       ~/rish -c "$command"
     elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
       ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$command"
     fi
-  elif [ $isMacOS -eq 1 ]; then
+  else
     adb -s $serial shell "$command"
   fi
 }
 
 packagesList() {
   echo -e "$running Get Installed packages list.."
-  [ $ShowSystemApps -eq 0 ] && runCmdOut=$(runCmd "pm list packages -3") || runCmdOut=$(runCmd "pm list packages")
+  [ $ShowSystemApps == false ] && runCmdOut=$(runCmd "pm list packages -3") || runCmdOut=$(runCmd "pm list packages")
   packages=($(sed 's/package://g' <<< "$runCmdOut")) && unset runCmdOut
 }
 
 packagesInfo() {
   local -n packages_name=$1
-  reqAppName=${2:-0}
+  reqAppName=${2:-false}
   
-if [ $reqAppName -eq 1 ]; then
-  if [ $isAndroid -eq 1 ]; then
-    if [ $su -eq 1 ]; then
+if [ $reqAppName == true ]; then
+  if [ $isAndroid == true ]; then
+    if [ $su == true ]; then
       su -c "[ ! -f /data/local/tmp/aapt2 ] && { cp $HOME/aapt2 /data/local/tmp/ && chmod +x /data/local/tmp/aapt2; }"
     elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
       ~/rish -c "[ ! -f /data/local/tmp/aapt2 ] && { cp $HOME/aapt2 /data/local/tmp/ && chmod +x /data/local/tmp/aapt2; }"
     elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
       ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell [ ! -f "/data/local/tmp/aapt2" ] && { ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) push ~/aapt2 /data/local/tmp/ >/dev/null 2>&1 && ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell chmod +x /data/local/tmp/aapt2; }
     fi
-  elif [ $isMacOS -eq 1 ]; then
+  else
     [ ! -f "$apkdl/aapt2" ] && curl -sL --progress-bar -o "$apkdl/aapt2_$cpuAbi" "https://github.com/arghya339/aapt2/releases/download/all/aapt2_$cpuAbi"
     adb -s "$serial" shell "[ ! -f '/data/local/tmp/aapt2' ]" && { adb -s "$serial" push "$apkdl/aapt2_$cpuAbi" /data/local/tmp/aapt2 >/dev/null 2>&1 && adb -s "$serial" shell "chmod +x /data/local/tmp/aapt2"; }
   fi
@@ -53,7 +55,7 @@ fi
     installerPackageNames[i]=$(grep "installerPackageName" <<< "$appInfo" | awk -F'=' '{print $2}')
     codePaths[i]=$(echo "$appInfo" | grep "codePath" | sed 's/.*codePath=//')
     basePaths[i]="${codePaths[$i]}/base.apk"
-    if [ $reqAppName -eq 1 ]; then
+    if [ $reqAppName == true ]; then
       runCmdOut=$(runCmd "$aapt2 dump badging ${basePaths[$i]}")
       application_labels[i]=$(grep "application-label:" <<< "$runCmdOut" | cut -d"'" -f2) && unset runCmdOut
     fi
@@ -237,12 +239,12 @@ done
 
 [ $writeSELinux -eq 1 ] && setenforce 1
 EOF
-  if [ $su -eq 1 ]; then
+  if [ $isAndroid == true ] && [ $su == true ]; then
     su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin /data/adb/script.apkdl.firewall/utils/lib"
     su -c "[ ! -f /data/adb/script.apkdl.firewall/utils/bin/jq ] && { cp $PREFIX/bin/jq /data/adb/script.apkdl.firewall/utils/bin/jq; chmod +x /data/adb/script.apkdl.firewall/utils/bin/jq; cp $PREFIX/lib/libjq.so /data/adb/script.apkdl.firewall/utils/lib/libjq.so; cp $PREFIX/lib/libonig.so /data/adb/script.apkdl.firewall/utils/lib/libonig.so; }"
     su -c "mv $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
     su -c "mv $apkdl/script.apkdl.firewall.sh /data/adb/service.d/script.apkdl.firewall.sh && chmod 0755 /data/adb/service.d/script.apkdl.firewall.sh"
-  elif [ $shellSU -eq 1 ]; then
+  elif [ $isAndroid == false ] && [ $su == true ]; then
     adb -s $serial shell su -c "mkdir -p /data/adb/script.apkdl.firewall/utils/bin /data/adb/script.apkdl.firewall/utils/lib"
     if [ "$cpuAbi" == "arm64-v8a" ]; then arch="aarch64"; elif [ "$cpuAbi" == "armeabi-v7a" ]; then arch="arm"; elif [ "$cpuAbi" == "x86" ]; then arch="i686"; else arch="$cpuAbi"; fi
     urls=("https://packages.termux.dev/apt/termux-main/pool/main/j/jq" "https://packages.termux.dev/apt/termux-main/pool/main/o/oniguruma")
@@ -284,13 +286,13 @@ blockInternet() {
     runCmdOut=$(runCmd "pm list packages -U")
     uid=$(grep $package <<< "$runCmdOut" | awk -F'uid:' '{print $2}') && unset runCmdOut
     firewallService
-    if [ $su -eq 1 ]; then
+    if [ $isAndroid == true ] && [ $su == true ]; then
       runCmd "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       runCmd "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
       sleep 0.5
       status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
-    elif [ $shellSU -eq 1 ]; then
+    elif [ $isAndroid == false ] && [ $su == true ]; then
       adb -s $serial shell su -c "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       adb -s $serial shell su -c "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       sleep 0.5
@@ -301,9 +303,9 @@ blockInternet() {
 }
 
 showFirewallBlocklist() {
-  if [ $isAndroid -eq 1 ]; then
+  if [ $isAndroid == true ]; then
     su -c "[ -f /data/adb/script.apkdl.firewall/firewallBlocklist.json ]" && firewallBlocklistJson=$(su -c "cat /data/adb/script.apkdl.firewall/firewallBlocklist.json") || firewallBlocklistJson=
-  elif [ $isMacOS -eq 1 ]; then
+  else
     adb -s $serial shell su -c "[ -f /data/adb/script.apkdl.firewall/firewallBlocklist.json ]" && firewallBlocklistJson=$(adb -s $serial shell su -c "cat /data/adb/script.apkdl.firewall/firewallBlocklist.json") || firewallBlocklistJson=
   fi
   if [ -n "$firewallBlocklistJson" ]; then
@@ -330,21 +332,21 @@ unblockInternet() {
     echo "$firewallBlocklistJson" > $apkdl/firewallBlocklist.json
     jq --arg package "$package" 'map(select(.package != $package))' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
     if [ $(jq 'length' $apkdl/firewallBlocklist.json) -ge 1 ]; then
-      if [ $su -eq 1 ]; then
+      if [ $isAndroid == true ] && [ $su == true ]; then
         su -c "mv $apkdl/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
-      elif [ $shellSU -eq 1 ]; then
+      elif [ $isAndroid == false ] && [ $su == true ]; then
         adb -s $serial push $apkdl/firewallBlocklist.json /data/local/tmp/firewallBlocklist.json >/dev/null 2>&1 && rm -f $apkdl/firewallBlocklist.json
         adb -s $serial shell su -c "mv /data/local/tmp/firewallBlocklist.json /data/adb/script.apkdl.firewall/firewallBlocklist.json"
       fi
     else
       rm -f $apkdl/firewallBlocklist.json
-      if [ $su -eq 1 ]; then
+      if [ $isAndroid == true ] && [ $su == true ]; then
         su -c "rm -rf /data/adb/script.apkdl.firewall /data/adb/service.d/script.apkdl.firewall.sh"
-      elif [ $shellSU -eq 1 ]; then
+      elif [ $isAndroid == false ] && [ $su == true ]; then
         adb -s $serial shell su -c "rm -rf /data/adb/script.apkdl.firewall /data/adb/service.d/script.apkdl.firewall.sh"
       fi
     fi
-    if [ $su -eq 1 ]; then
+    if [ $isAndroid == true ] && [ $su == true ]; then
       runCmd "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       runCmd "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       sleep 0.5
@@ -352,7 +354,7 @@ unblockInternet() {
       ip6status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
       runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
       ip4status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
-    elif [ $shellSU -eq 1 ]; then
+    elif [ $isAndroid == false ] && [ $su == true ]; then
       adb -s $serial shell su -c "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       adb -s $serial shell su -c "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       sleep 1
@@ -473,4 +475,4 @@ recoverSystemApps() {
     runCmd "cmd package install-existing $package"
   fi
 }
-############################################################################################################################################
+######################################################################################################################################################################

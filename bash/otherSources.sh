@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 codebergSearch() {
   codebergReposUrl="https://codeberg.org/api/v1/repos"
   while true; do read -r -p ">> Enter repoName: " repoName; [[ "$repoName" =~ ^[Qq] ]] && repoName=; break; [ -n "$repoName" ] && break || echo -e "$notice Please enter a valid repoName!"; done
@@ -240,8 +242,7 @@ IzzyOnDroidSearch() {
 }
 
 dlAppGallery() {
-  [ $isAndroid -eq 1 ] && termux-open-url "https://appgallery.huawei.com"
-  [ $isMacOS -eq 1 ] && open "https://appgallery.huawei.com"
+  if [ $isAndroid == true ]; then termux-open-url "https://appgallery.huawei.com"; elif [ $isMacOS == true ]; then open "https://appgallery.huawei.com"; else xdg-open "https://appgallery.huawei.com"; fi
   while true; do read -r -p ">> Enter appUrl/Id: " appUrl; [[ "$appUrl" =~ ^[Qq] ]] && { appId=""; break; }; [ -n "$appUrl" ] && { appId=$(basename "$appUrl"); break; } || echo -e "$notice Please enter a valid appUrl/Id!"; done
   if [ -n "$appId" ]; then
     dlUrl=$(curl -sL --doh-url "$cloudflareDOH" -D - -o /dev/null "https://appgallery.cloud.huawei.com/appdl/$appId" | grep -i "location:" | head -1 | sed 's/location: //i' | tr -d '\r')  # make GET request but only show response headers
@@ -262,7 +263,11 @@ sf() {
     baseUrl="$sfDomain/projects"
     filesUrl="$baseUrl/$projectName/files"
     while true; do
-      curl -fsL "$filesUrl" >/dev/null 2>&1 || { [ $isAndroid -eq 1 ] && termux-open-url "$filesUrl"; [ $isMacOS -eq 1 ] && open "$filesUrl"; return 1; break; }
+      if ! curl -fsL "$filesUrl" &>/dev/null; then
+        if [ $isAndroid == true ]; then termux-open-url "$filesUrl"; elif [ $isMacOS == true ]; then open "$filesUrl"; else xdg-open "$filesUrl"; fi
+        return 1
+        break
+      fi
       filesHtml=$(curl -sL "$filesUrl")
       filesJson=$(pup '#files_list tbody tr[class^="folder"], #files_list tbody tr[class^="file"] json{}' <<< "$filesHtml")
 
@@ -524,7 +529,7 @@ aptoideAppInfo() {
   path=$(jq -r '.file.path' <<< "$appMetaDataJson")
   sdk=$(jq -r '.file.hardware.sdk' <<< "$appMetaDataJson")
   screen=$(jq -r '.file.hardware.screen' <<< "$appMetaDataJson")
-  cpus=$(jq -r '.file.hardware.cpus.[]' <<< "$appMetaDataJson")
+  cpus=$(jq -r '.file.hardware.cpus.[]' <<< "$appMetaDataJson" | xargs)  # rm \n between abis
   densities=$(jq -r '.file.hardware.densities.[]' <<< "$appMetaDataJson")
   dependencies=$(jq -r '.file.hardware.dependencies.[].type' <<< "$appMetaDataJson")
   malwareRank=$(jq -r '.file.malware.rank' <<< "$appMetaDataJson")
@@ -718,11 +723,7 @@ APIKey() {
   echo -e "${running} Creating VirusTotal API Key.."
   echo -e "$info sign up or sign in to VirusTotal Community > avatar menu > API Key > API KEY > Copy key to clipboard"
   VirusTotalMyApiKeyUrl="https://www.virustotal.com/gui/my-apikey"  # access your API key
-  if [ $isAndroid -eq 1 ]; then
-    termux-open-url "$VirusTotalMyApiKeyUrl"
-  elif [ $isMacOS -eq 1 ]; then
-    open "$VirusTotalMyApiKeyUrl"
-  fi
+  if [ $isAndroid == true ]; then termux-open-url "$VirusTotalMyApiKeyUrl"; elif [ $isMacOS == true ]; then open "$VirusTotalMyApiKeyUrl"; else xdg-open "$VirusTotalMyApiKeyUrl"; fi
   echo -n "KEY: "  # Display prompt
   # Read characters one by one
   while IFS= read -rsn 1 char; do
@@ -810,11 +811,11 @@ virustotalScanUrl() {
 
 dlOther() {
   while true; do
-    if [ $isAndroid -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" "$dlUrl"
-      exitStatus=$?
-    elif [ $isMacOS -eq 1 ]; then
+    if [ $isMacOS == true ]; then
       aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" --ca-certificate="/etc/ssl/cert.pem" "$dlUrl"
+      exitStatus=$?
+    else
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" "$dlUrl"
       exitStatus=$?
     fi
     echo
@@ -824,11 +825,11 @@ dlOther() {
 
 LITEAPKSdl() {
   while true; do
-    if [ $isAndroid -eq 1 ]; then
-      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" --header="Referer: $link" "$dlUrl"
-      exitStatus=$?
-    elif [ $isMacOS -eq 1 ]; then
+    if [ $isMacOS == true ]; then
       aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" --referer="$link" --ca-certificate="/etc/ssl/cert.pem" "$dlUrl"
+      exitStatus=$?
+    else
+      aria2c -x 16 -s 16 --continue=true --console-log-level=error --download-result=hide --summary-interval=0 -d "$Download" -o "$fileName" --header="Referer: $link" "$dlUrl"
       exitStatus=$?
     fi
     echo
@@ -836,160 +837,167 @@ LITEAPKSdl() {
   done
 }
 
-options=(Codeberg IzzyOnDroid AppGallery SourceForge APKCombo Aptoide LITEAPKS)
-while true; do
-  buttons=("<Select>" "<Back>"); if menu options buttons; then selected="${options[$selected]}"; else break; fi
-  case "$selected" in
-    Codeberg)
-      codebergSearch
-      [ $? -ne 0 ] && continue
-      
-      curl -fsL "$codebergReposUrl/${full_name}/releases/latest" >/dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        codebergReleases
+oSources() {
+  selected_o_option=0
+  other_options=(Codeberg IzzyOnDroid AppGallery SourceForge APKCombo Aptoide LITEAPKS)
+  while true; do
+    menu other_options bButtons "" "" $selected_o_option && selected_o_option="$selected" || break
+    case "${other_options[selected_o_option]}" in
+      Codeberg)
+        codebergSearch
         [ $? -ne 0 ] && continue
-      else
-        buttons=("<Latest>" "<Releases>"); confirmPrompt "Please Select release type" "buttons" && opt=Latest || opt=Releases
-        if [ "$opt" == "Latest" ]; then
-          codebergLatestReleases
-          [ $? -ne 0 ] && continue
-        else
+      
+        curl -fsL "$codebergReposUrl/${full_name}/releases/latest" >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
           codebergReleases
           [ $? -ne 0 ] && continue
-        fi
-      fi
-      dlOther
-      if [ $? -eq 0 ]; then
-        if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
-          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt="Yes" || opt="No"
-          if [ "$opt" == "Yes" ]; then
-            [ $isMacOS -eq 1 ] && adbInstall "$filePath"
-            [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+        else
+          buttons=("<Latest>" "<Releases>"); confirmPrompt "Please Select release type" "buttons" && opt=Latest || opt=Releases
+          if [ "$opt" == "Latest" ]; then
+            codebergLatestReleases
+            [ $? -ne 0 ] && continue
+          else
+            codebergReleases
+            [ $? -ne 0 ] && continue
           fi
         fi
-        echo; read -p "Press Enter to continue..."
-      fi
-      ;;
-    IzzyOnDroid)
-      IzzyOnDroidSearch
-      [ $? -ne 0 ] && continue
-      dlOther
-      if [ $? -eq 0 ]; then
-        if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
-          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt="Yes" || opt="No"
-          if [ "$opt" == "Yes" ]; then
-            [ $isMacOS -eq 1 ] && adbInstall "$filePath"
-            [ $isAndroid -eq 1 ] && apkInstall "$filePath"
-          fi
-        fi
-        echo; read -p "Press Enter to continue..."
-      fi
-      ;;
-    AppGallery)
-      dlAppGallery
-      [ $? -ne 0 ] && continue
-      dlOther
-      if [ $? -eq 0 ]; then
-        if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
-          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt="Yes" || opt="No"
-          if [ "$opt" == "Yes" ]; then
-            [ $isMacOS -eq 1 ] && adbInstall "$filePath"
-            [ $isAndroid -eq 1 ] && apkInstall "$filePath"
-          fi
-        fi
-        echo; read -p "Press Enter to continue..."
-      fi
-      ;;
-    SourceForge)
-      sf
-      [ $? -ne 0 ] && continue
-      dlOther
-      if [ $? -eq 0 ]; then
-        ext="${fileName##*.}"
-        if { [[ $isMacOS -eq 1 && ( ( "$ext" == "apk" && -n "$serial" ) || "$ext" == "dmg" || "$ext" == "pkg" ) ]]; } || [[ $isAndroid -eq 1 ]]; then
-          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt="Yes" || opt="No"
-          if [ "$opt" == "Yes" ]; then
-            if [ $isAndroid -eq 1 ]; then
-              apkInstall "$filePath"
-            elif [ $isMacOS -eq 1 ]; then
-              ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
-              ([ "$ext" == "dmg" ] || [ "$ext" == "pkg" ]) && open "$filePath"
+        dlOther
+        if [ $? -eq 0 ]; then
+          if { [ $isAndroid == false ] && [ -n "$serial" ]; } || [ $isAndroid == true ]; then
+            confirmPrompt "Do you want to install $fileName" "ynButtons" && opt="Yes" || opt="No"
+            if [ "$opt" == "Yes" ]; then
+              [ $isAndroid == false ] && adbInstall "$filePath"
+              [ $isAndroid == true ] && apkInstall "$filePath"
             fi
           fi
+          echo; read -p "Press Enter to continue..."
         fi
-        echo; read -p "Press Enter to continue..."
-        { [[ $isMacOS -eq 1 && ( "$ext" == "dmg" || "$ext" == "pkg" ) && $RmFileAfterInstallation -eq 1 ]]; } && rm -f "$filePath"
-      fi
-      ;;
-    APKCombo)
-      APKComboSearch
-      [ $? -ne 0 ] && continue
-      dlOther
-      if [ $? -eq 0 ]; then
-        [ -f "$Download/${appName}_v$version-$arch.apks" ] && apks2apk
-        fileName="${appName}_v$version-$arch.apk"
-        filePath="$Download/$fileName"
-        if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
-          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt="Yes" || opt="No"
-          if [ "$opt" == "Yes" ]; then
-            [ $isMacOS -eq 1 ] && adbInstall "$filePath"
-            [ $isAndroid -eq 1 ] && apkInstall "$filePath"
-          fi
-        fi
-        echo; read -p "Press Enter to continue..."
-      fi
-      ;;
-    Aptoide)
-      aptoideSearch
-      [ $? -ne 0 ] && continue
-
-      aptoideListAppVersions
-      [ $? -ne 0 ] && continue
-
-      aptoideAppInfo
-      [ $? -ne 0 ] && continue
-      dlOther
-      if [ $? -eq 0 ]; then
-        if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
-          buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt="Yes" || opt="No"
-          if [ "$opt" == "Yes" ]; then
-            [ $isMacOS -eq 1 ] && adbInstall "$filePath"
-            [ $isAndroid -eq 1 ] && apkInstall "$filePath"
-          fi
-        fi
-        echo; read -p "Press Enter to continue..."
-      fi
-      ;;
-    LITEAPKS)
-      jq -e '.VirusTotalAPIKey != null' "$apkdlJson" >/dev/null 2>&1 && API_KEY="$(jq -r '.VirusTotalAPIKey' "$apkdlJson" 2>/dev/null)" || API_KEY=
-      if [ -n "$API_KEY" ]; then
-        liteapksSearch
+        ;;
+      IzzyOnDroid)
+        IzzyOnDroidSearch
         [ $? -ne 0 ] && continue
-
-        liteapksAppDetails
-        [ $? -ne 0 ] && continue
-
-        liteapksVersionsUrl
-        [ $? -ne 0 ] && continue
-
-        virustotalScanUrl
-        [ $? -ne 0 ] && continue
-
-        LITEAPKSdl
+        dlOther
         if [ $? -eq 0 ]; then
-          if { [ $isMacOS -eq 1 ] && [ -n "$serial" ]; } || [ $isAndroid -eq 1 ]; then
+          if { [ $isAndroid == false ] && [ -n "$serial" ]; } || [ $isAndroid == true ]; then
+            confirmPrompt "Do you want to install $fileName" "ynButtons" && opt="Yes" || opt="No"
+            if [ "$opt" == "Yes" ]; then
+              [ $isAndroid == false ] && adbInstall "$filePath"
+              [ $isAndroid == true ] && apkInstall "$filePath"
+            fi
+          fi
+          echo; read -p "Press Enter to continue..."
+        fi
+        ;;
+      AppGallery)
+        dlAppGallery
+        [ $? -ne 0 ] && continue
+        dlOther
+        if [ $? -eq 0 ]; then
+          if { [ $isAndroid == false ] && [ -n "$serial" ]; } || [ $isAndroid == true ]; then
+            confirmPrompt "Do you want to install $fileName" "ynButtons" && opt="Yes" || opt="No"
+            if [ "$opt" == "Yes" ]; then
+              [ $isAndroid == false ] && adbInstall "$filePath"
+              [ $isAndroid == true ] && apkInstall "$filePath"
+            fi
+          fi
+          echo; read -p "Press Enter to continue..."
+        fi
+        ;;
+      SourceForge)
+        sf
+        [ $? -ne 0 ] && continue
+        dlOther
+        if [ $? -eq 0 ]; then
+          ext="${fileName##*.}"
+          if { [[ $isMacOS == true && ( ( "$ext" == "apk" && -n "$serial" ) || "$ext" == "dmg" || "$ext" == "pkg" ) ]]; } || { [[ $isFedora == true && ( ( "$ext" == "apk" && -n "$serial" ) || "$ext" == "rpm" ) ]]; } || { [ $isAndroid == true ] && [ "$ext" == "apk" ]; }; then
+            confirmPrompt "Do you want to install $fileName" "ynButtons" && opt="Yes" || opt="No"
+            if [ "$opt" == "Yes" ]; then
+              if [ $isAndroid == true ]; then
+                apkInstall "$filePath"
+              elif [ $isMacOS == true ]; then
+                ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
+                ([ "$ext" == "dmg" ] || [ "$ext" == "pkg" ]) && open "$filePath"
+              else
+                ([ "$ext" == "apk" ] && [ -n "$serial" ]) && adbInstall "$filePath"
+                [ "$ext" == "rpm" ] && xdg-open "$filePath"
+              fi
+            fi
+          fi
+          echo; read -p "Press Enter to continue..."
+          { [[ $isMacOS == true && ( "$ext" == "dmg" || "$ext" == "pkg" ) && $RmFileAfterInstallation == true ]]; } && rm -f "$filePath"
+          ([ $isFedora == true ] && [ "$ext" == "rpm" ] && [ $RmFileAfterInstallation == true ]) && rm -f "$filePath"
+        fi
+        ;;
+      APKCombo)
+        APKComboSearch
+        [ $? -ne 0 ] && continue
+        dlOther
+        if [ $? -eq 0 ]; then
+          [ -f "$Download/${appName}_v$version-$arch.apks" ] && apks2apk
+          fileName="${appName}_v$version-$arch.apk"
+          filePath="$Download/$fileName"
+          if { [ $isAndroid == false ] && [ -n "$serial" ]; } || [ $isAndroid == true ]; then
             buttons=("<Yes>" "<No>"); confirmPrompt "Do you want to install $fileName" "buttons" && opt="Yes" || opt="No"
             if [ "$opt" == "Yes" ]; then
-              [ $isMacOS -eq 1 ] && adbInstall "$filePath"
-              [ $isAndroid -eq 1 ] && apkInstall "$filePath"
+              [ $isAndroid == false ] && adbInstall "$filePath"
+              [ $isAndroid == true ] && apkInstall "$filePath"
             fi
           fi
+          echo; read -p "Press Enter to continue..."
         fi
-      else
-        APIKey
-      fi
-      echo; read -p "Press Enter to continue..."
-      ;;
-  esac
-done
-###############################################################################################################################################################################################################
+        ;;
+      Aptoide)
+        aptoideSearch
+        [ $? -ne 0 ] && continue
+
+        aptoideListAppVersions
+        [ $? -ne 0 ] && continue
+
+        aptoideAppInfo
+        [ $? -ne 0 ] && continue
+        dlOther
+        if [ $? -eq 0 ]; then
+          if { [ $isAndroid == false ] && [ -n "$serial" ]; } || [ $isAndroid == true ]; then
+            confirmPrompt "Do you want to install $fileName" "ynButtons" && opt="Yes" || opt="No"
+            if [ "$opt" == "Yes" ]; then
+              [ $isAndroid == false ] && adbInstall "$filePath"
+              [ $isAndroid == true ] && apkInstall "$filePath"
+            fi
+          fi
+          echo; read -p "Press Enter to continue..."
+        fi
+        ;;
+      LITEAPKS)
+        jq -e '.VirusTotalAPIKey != null' "$apkdlJson" >/dev/null 2>&1 && API_KEY="$(jq -r '.VirusTotalAPIKey' "$apkdlJson" 2>/dev/null)" || API_KEY=
+        if [ -n "$API_KEY" ]; then
+          liteapksSearch
+          [ $? -ne 0 ] && continue
+
+          liteapksAppDetails
+          [ $? -ne 0 ] && continue
+
+          liteapksVersionsUrl
+          [ $? -ne 0 ] && continue
+
+          virustotalScanUrl
+          [ $? -ne 0 ] && continue
+
+          LITEAPKSdl
+          if [ $? -eq 0 ]; then
+            if { [ $isAndroid == false ] && [ -n "$serial" ]; } || [ $isAndroid == true ]; then
+              confirmPrompt "Do you want to install $fileName" "ynButtons" && opt="Yes" || opt="No"
+              if [ "$opt" == "Yes" ]; then
+                [ $isAndroid == false ] && adbInstall "$filePath"
+                [ $isAndroid == true ] && apkInstall "$filePath"
+              fi
+            fi
+          fi
+        else
+          APIKey
+        fi
+        echo; read -p "Press Enter to continue..."
+        ;;
+    esac
+  done
+}
+#####################################################################################################################################################

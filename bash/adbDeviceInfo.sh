@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 # src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/data/providers/DeviceInfoProvider.kt
 getDeviceInfo() {
   BuildRADIO=$(adb -s $serial shell getprop gsm.version.baseband)
@@ -10,7 +12,8 @@ getDeviceInfo() {
   BuildID=$(adb -s $serial shell getprop ro.build.id)
   Platforms=$(adb -s $serial shell getprop ro.product.cpu.abilist)  # Equivalent to Build.SUPPORTED_ABIS
   BuildFINGERPRINT=$(adb -s $serial shell getprop ro.build.fingerprint)
-  Vendingversion=$(adb -s $serial shell dumpsys package com.android.vending | grep "versionCode=" | awk '{print $1}' | cut -d '=' -f 2 | head -1) || Vendingversion="84880700"
+  Vendingversion=$(adb -s $serial shell dumpsys package com.android.vending | grep "versionCode=" | awk '{print $1}' | cut -d '=' -f 2 | head -1)
+  [ -z "$Vendingversion" ] && Vendingversion="84880700"
   resolution=$(adb -s $serial shell wm size | grep "Physical size" | cut -d' ' -f3) && { ScreenWidth=${resolution%x*}; ScreenHeight=${resolution#*x}; } || { ScreenWidth=1920; ScreenHeight=1200; }
   BuildHARDWARE=$(adb -s $serial shell getprop ro.hardware)
   BuildVERSIONRELEASE=$(adb -s $serial shell getprop ro.build.version.release)
@@ -21,14 +24,16 @@ getDeviceInfo() {
   # OpenGL ES version
   GLVersion=$(adb -s $serial shell getprop ro.opengles.version)
   # adb -s $serial shell dumpsys SurfaceFlinger 2>/dev/null | grep -o "OpenGL ES [0-9]\.[0-9]" | awk '{print $3}'
-  GSFversion=$(adb -s $serial shell dumpsys package com.google.android.gms | grep "versionCode=" | awk '{print $1}' | cut -d '=' -f 2 | head -1) || GSFversion="254534004"
+  GSFversion=$(adb -s $serial shell dumpsys package com.google.android.gms | grep "versionCode=" | awk '{print $1}' | cut -d '=' -f 2 | head -1)
+  [ -z "$GSFversion" ] && GSFversion="254534004"
   if adb -s $serial shell dumpsys telephony.registry 2>/dev/null | grep "mServiceState" | head -1 | grep -q "roamingType=NOT_ROAMING"; then
     Roaming="mobile-notroaming"
   else
     Roaming="mobile-roaming"
   fi
   TimeZone=$(adb -s $serial shell getprop persist.sys.timezone)
-  VendingversionString=$(adb -s $serial shell dumpsys package com.android.vending | grep "versionName=" | cut -d '=' -f 2 | head -1) || VendingversionString="48.8.07-23 [0] [PR] 829632341"
+  VendingversionString=$(adb -s $serial shell dumpsys package com.android.vending | grep "versionName=" | cut -d '=' -f 2 | head -1)
+  [ -z "$VendingversionString" ] && VendingversionString="48.8.07-23 [0] [PR] 829632341"
   if adb -s $serial shell dumpsys input 2>/dev/null | grep -q "AT Translated Set 2 keyboard"; then
     HasHardKeyboard="true"
     Keyboard=2  # keyboardCount=hardKeyboard+softKeyboard=1+1=2

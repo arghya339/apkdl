@@ -1,8 +1,10 @@
 #!/usr/bin/bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 runDroidCmd() {
   cmd=${1}
-  if [ $su -eq 1 ]; then
+  if [ $su == true ]; then
     su -c "$cmd"
   elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
     ~/rish -c "$cmd"
@@ -11,20 +13,17 @@ runDroidCmd() {
   fi
 }
 
-runJqCmd() {
-  key=$1
-  curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/deviceInfo.json | jq -r ".$key"
-}
+runJqCmd() { curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/deviceInfo.json | jq -r ".${1}"; }
 
 # src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/data/providers/DeviceInfoProvider.kt
 getDeviceInfo() {
-  if [ $su -eq 1 ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
+  if [ $su == true ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
     runDroidCmdOut=$(runDroidCmd "dumpsys SurfaceFlinger")
     GLExtensions=$(grep -A 30 "GLES:" <<< "$runDroidCmdOut" | grep "GL_" | tr ' ' '\n' | grep "^GL_" | sort -u | tr '\n' ',' | sed 's/,$//') && unset runDroidCmdOut
     
     runDroidCmdOut=$(runDroidCmd "dumpsys package com.android.vending")
-    VendingversionString=$(grep "versionName=" <<< "$runDroidCmdOut" | cut -d '=' -f 2 | head -1) || VendingversionString="48.8.07-23 [0] [PR] 829632341"
-    Vendingversion=$(grep "versionCode=" <<< "$runDroidCmdOut" | awk '{print $1}' | cut -d '=' -f 2 | head -1) && unset runDroidCmdOut || Vendingversion="84880700"
+    VendingversionString=$(grep "versionName=" <<< "$runDroidCmdOut" | cut -d '=' -f 2 | head -1)
+    Vendingversion=$(grep "versionCode=" <<< "$runDroidCmdOut" | awk '{print $1}' | cut -d '=' -f 2 | head -1) && unset runDroidCmdOut
     
     runDroidCmdOut=$(runDroidCmd "wm size")
     resolution=$(grep "Physical size" <<< "$runDroidCmdOut" | cut -d' ' -f3) && { ScreenWidth=${resolution%x*}; ScreenHeight=${resolution#*x}; unset runDroidCmdOut; } || { ScreenWidth=1920; ScreenHeight=1200; }
@@ -33,7 +32,7 @@ getDeviceInfo() {
     SharedLibraries=$(cut -d: -f2 <<< "$runDroidCmdOut" | tr -d '\r' | paste -sd "," -) && unset runDroidCmdOut
     
     runDroidCmdOut=$(runDroidCmd "dumpsys package com.google.android.gms")
-    GSFversion=$(grep "versionCode=" <<< "$runDroidCmdOut" | awk '{print $1}' | cut -d '=' -f 2 | head -1) && unset runDroidCmdOut || GSFversion="254534004"
+    GSFversion=$(grep "versionCode=" <<< "$runDroidCmdOut" | awk '{print $1}' | cut -d '=' -f 2 | head -1) && unset runDroidCmdOut
     
     runDroidCmdOut=$(runDroidCmd "pm list features")
     Features=$(grep -v "reqGlEsVersion" <<< "$runDroidCmdOut" | sed 's/^feature://' | cut -d'=' -f1 | paste -sd "," -) && unset runDroidCmdOut
@@ -51,6 +50,9 @@ getDeviceInfo() {
     Features=$(runJqCmd "Features")
     mGlobalConfiguration="nrml"
   fi
+  [ -z "$VendingversionString" ] && VendingversionString="48.8.07-23 [0] [PR] 829632341"
+  [ -z "$Vendingversion" ] && Vendingversion="84880700"
+  [ -z "$GSFversion" ] && GSFversion="254534004"
   BuildRADIO=$(getprop gsm.version.baseband)
   BuildBOOTLOADER=$(getprop ro.bootloader)
   ScreenDensity=$(getprop ro.sf.lcd_density)  # Equivalent to metrics.densityDpi

@@ -26,16 +26,17 @@ apk downloader
   - [Aptoide](https://en.aptoide.com/group/applications/)
   - [LITEAPKS](https://liteapks.com/)
 - [ReVanced](https://revanced.app/)
+- [Morphe](https://github.com/MorpheApp/morphe-patches/)
 - [RVX](https://github.com/inotia00/revanced-patches/)
 
 ## Prerequisites
 - macOS/ Android device with working internet connection.
 
 ## Usage
-### ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)/ ![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
+### ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white) ![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) ![Fedora](https://img.shields.io/badge/Fedora-294172?style=for-the-badge&logo=fedora&logoColor=white)
   Open macOS Terminal/ Android [Termux](https://github.com/termux/termux-app/releases/) & run script with following command:
   ```sh
-  curl -L --progress-bar -o "$HOME/.apkdl.sh" https://raw.githubusercontent.com/arghya339/apkdl/main/bash/apkdl.sh && bash "$HOME/.apkdl.sh"
+  curl -L --progress-bar -o "$HOME/.apkdl.sh" "https://raw.githubusercontent.com/arghya339/apkdl/main/bash/apkdl.sh" && bash ~/.apkdl.sh
   ```
   Run apkdl with these commands in Terminal/ Termux:
   ```

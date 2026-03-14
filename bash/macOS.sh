@@ -1,33 +1,83 @@
 #!/bin/bash
 
-  # --- Check if brew is installed ---
-  if brew --version >/dev/null 2>&1; then
-    brew update > /dev/null 2>&1
-  else
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" > /dev/null 2>&1
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
+CreateAppIcon() {
+  source="$apkdl/apkdl.png"
+  [ ! -f "$source" ] && curl -L --progress-bar -C - -o "$source" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/.Icon/apkdl.png"  # https://gitlab.com/AuroraOSS/AuroraStore/-/raw/master/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+  PointSizeNames=("16x16" "16x16@2x" "32x32" "32x32@2x" "128x128" "128x128@2x" "256x256" "256x256@2x" "512x512" "512x512@2x")
+  PixelResolutions=("16" "32" "32" "64" "128" "256" "256" "512" "512" "1024")
+  iconset="$apkdl/apkdl.iconset"
+  mkdir -p $iconset
+  for ((i=0; i<${#PointSizeNames[@]}; i++)); do
+    [ ${PixelResolutions[i]} -eq 1024 ] && cp $source $iconset/icon_${PointSizeNames[i]}.png || sips -z ${PixelResolutions[i]} ${PixelResolutions[i]} $source --out $iconset/icon_${PointSizeNames[i]}.png
+  done
+  iconutil -c icns $iconset -o $apkdl/apkdl.icns && rm -rf $iconset
+}
+CreateScriptLaunchpadShortcuts() {
+  shortcutLabel=${1}
+  scriptPath=${2}
+  Interactive=${3:-true}
+  [ ! -f "$apkdl/apkdl.icns" ] && CreateAppIcon
+  mkdir -p "/Applications/${shortcutLabel}.app/Contents/Resources"
+  cp "$apkdl/apkdl.icns" "/Applications/${shortcutLabel}.app/Contents/Resources/apkdl.icns"
+  mkdir -p "/Applications/${shortcutLabel}.app/Contents/MacOS"
+  [ $Interactive == true ] && echo -e "#!/bin/bash\nosascript -e 'tell application \"Terminal\" to do script \"bash ${scriptPath}\"'\nosascript -e 'tell application \"System Events\" to set frontmost of process \"Terminal\" to true'" > "/Applications/${shortcutLabel}.app/Contents/MacOS/launcher" || echo -e "#!/bin/bash\nexport PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"\nsource ${scriptPath}" > "/Applications/${shortcutLabel}.app/Contents/MacOS/launcher"
+  chmod +x "/Applications/${shortcutLabel}.app/Contents/MacOS/launcher"
+  cat > "/Applications/${shortcutLabel}.app/Contents/Info.plist" <<EOL
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>launcher</string>
+    <key>CFBundleIconFile</key>
+    <string>apkdl</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+</dict>
+</plist>
+EOL
+  touch /Applications/${shortcutLabel}.app
+  killall Dock
+}
+[ ! -d "/Applications/apkdl.app/" ] && CreateScriptLaunchpadShortcuts "apkdl" "$HOME/.apkdl.sh"
+
+[ -f "$apkdlJson" ] && AutoUpdatesDependencies=$(jq -r '.AutoUpdatesDependencies' "$apkdlJson" 2>/dev/null) || AutoUpdatesDependencies=true
+[ $(uname -m) == "x86_64" ] && Arch=amd64 || Arch=arm64
+USER_AGENT="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$crVersion Mobile Safari/537.36"
+
+formulaeUpdate() {
+  formulae=$1
+  if echo "$outdatedFormulae" | grep -q "^$formulae" 2>/dev/null; then
+    echo -e "$running Upgrading $formulae formulae.."
+    brew upgrade "$formulae" > /dev/null 2>&1
   fi
+}
+
+formulaeInstall() {
+  formulae=$1
+  if echo "$formulaeList" | grep -q "$formulae" 2>/dev/null; then
+    formulaeUpdate "$formulae"
+  else
+    echo -e "$running Installing $formulae formulae.."
+    brew install "$formulae" > /dev/null 2>&1
+  fi
+}
+
+formulaeUninstall() {
+  formulaeList=$(brew list 2>/dev/null)
+  formulae=$1
+  if echo "$formulaeList" | grep -q "$formulae" 2>/dev/null; then
+    echo -e "$running Uninstalling $formulae formulae.."
+    brew uninstall "$formulae" > /dev/null 2>&1
+  fi
+}
+
+dependencies() {
+  brew --version >/dev/null 2>&1 && brew update > /dev/null 2>&1 || /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   formulaeList=$(brew list 2>/dev/null)
   outdatedFormulae=$(brew outdated 2>/dev/null)
-
-  # --- formulae upgrade function ---
-  formulaeUpdate() {
-    local formulae=$1
-    if echo "$outdatedFormulae" | grep -q "^$formulae" 2>/dev/null; then
-      echo -e "$running Upgrading $formulae formulae.."
-      brew upgrade "$formulae" > /dev/null 2>&1
-    fi
-  }
-
-  # --- formulae install/update function ---
-  formulaeInstall() {
-    local formulae=$1
-    if echo "$formulaeList" | grep -q "$formulae" 2>/dev/null; then
-      formulaeUpdate "$formulae"
-    else
-      echo -e "$running Installing $formulae formulae.."
-      brew install "$formulae" > /dev/null 2>&1
-    fi
-  }
 
   formulaeInstall "bash"  # bash update
   formulaeInstall "grep"  # grep update
@@ -56,32 +106,40 @@
   else
     rm -f ~/aria2Executing
   fi
-  getSerial() {
-    deviceCount=$(adb devices | grep -c "device$")
-    if [ $deviceCount -eq 0 ]; then
-      serial=
-    elif [ $deviceCount -eq 1 ]; then
-      serial=$(adb devices | grep "device$" | awk '{print $1}')
-    elif [ $deviceCount -gt 1 ]; then
-      serials=($(adb devices | grep "device$" | awk '{print $1}'))
-      devices=()
-      for i in "${!serials[@]}"; do
-        serial="${serials[i]}"
-        model=$(adb -s $serial shell getprop ro.product.model)
-        devices+=("$model ($serial)")
-      done
-      buttons=("<Select>" "<Back>")
-      if menu devices buttons; then
-        serial="${serials[$selected]}"
-      fi
-    fi
-    [ $deviceCount -gt 0 ] && echo -e "$info serial: $serial"
-  }; getSerial
+}
+[ "$AutoUpdatesDependencies" == true ] && checkInternet && dependencies
 
-  adb -s $serial shell 'su -c "id"' &>/dev/null && shellSU=1 || shellSU=0
-  su=0
+aapt2=("$HOME/Library/Android/sdk/build-tools/"*/aapt2) && aapt2="${aapt2[-1]}"
+apksigner=("$HOME/Library/Android/sdk/build-tools/"*/apksigner) && apksigner="${apksigner[-1]}"
+keytools=(/usr/local/opt/openjdk*/bin/keytool); keytool="${keytools[0]}"
 
-  aapt2=("$HOME/Library/Android/sdk/build-tools/"*/aapt2) && aapt2="${aapt2[-1]}"
+getSerial() {
+  deviceCount=$(adb devices | grep -c "device$")
+  if [ $deviceCount -eq 0 ]; then
+    serial=
+  elif [ $deviceCount -eq 1 ]; then
+    serial=$(adb devices | grep "device$" | awk '{print $1}')
+  elif [ $deviceCount -gt 1 ]; then
+    serials=($(adb devices | grep "device$" | awk '{print $1}'))
+    devices=()
+    for i in "${!serials[@]}"; do
+      serial="${serials[i]}"
+      model=$(adb -s $serial shell getprop ro.product.model)
+      devices+=("$model ($serial)")
+    done
+    menu devices bButtons && serial="${serials[$selected]}"
+  fi
+  [ $deviceCount -gt 0 ] && echo -e "$info serial: $serial"
+}; getSerial
 
-  curl -sL -o "$apkdl/adbInstall.sh" "https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/bash/adbInstall.sh"
-  source $apkdl/adbInstall.sh
+adb -s $serial shell 'su -c "id"' &>/dev/null && su=true || su=false
+
+if [ -n "$serial" ]; then
+  cpuAbi=$(adb -s $serial shell getprop ro.product.cpu.abi)
+  locale=$(adb -s $serial shell getprop persist.sys.locale | cut -d'-' -f1)
+  [ -z $locale ] && locale=$(adb -s $serial shell getprop ro.product.locale | cut -d'-' -f1)
+  density=$(adb -s $serial shell getprop ro.sf.lcd_density)
+  config "ABI" "$cpuAbi"
+  config "LOCALE" "$locale"
+  config "DENSITY" "$density"
+fi

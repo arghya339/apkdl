@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# https://github.com/protocolbuffers/protobuf?tab=readme-ov-file#protobuf-compiler-installation
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
 
+# https://github.com/protocolbuffers/protobuf?tab=readme-ov-file#protobuf-compiler-installation
 # Generate Binary Protobuf message Body for BulkDetails Request
 genBulkDetailsProtoBin() {
   # Create protobuf SCHEMA file (defines blueprint/STRUCTURE)

@@ -1,14 +1,23 @@
 #!/bin/bash
 
+# Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
+
 APKM_REST_API_URL="https://www.apkmirror.com/wp-json/apkm/v1/app_exists/"
 AUTH_TOKEN="YXBpLXRvb2xib3gtZm9yLWdvb2dsZS1wbGF5OkNiVVcgQVVMZyBNRVJXIHU4M3IgS0s0SCBEbmJL"
 
 cf_chl_error() {
   echo -e "$bad ${Red}Cloudflare security challenge detected!${Reset}\n$notice ${Yellow}This webpage is protected by Cloudflare's anti-bot system.${Reset}\n ${Blue}Solutions${Reset}:\n   ${Blue}1${Reset}. ${Yellow}Please try again after some time.${Reset}\n   ${Blue}2${Reset}. ${Yellow}Disable your VPN if you are connected to one.${Reset}\n   ${Blue}3${Reset}. ${Yellow}Connect to a Cloudflare WARP proxy and try again.${Reset}"
-  if [ $isAndroid -eq 1 ]; then
+  if [ $isAndroid == true ]; then
     am start -n com.cloudflare.onedotonedotonedotone/com.cloudflare.app.presentation.main.SplashActivity &> /dev/null || termux-open-url "https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone"
-  elif [ $isMacOS -eq 1 ]; then
+  elif [ $isMacOS == true ]; then
     [ -d "/Applications/Cloudflare WARP.app" ] && open -a "Cloudflare WARP" || { formulaeInstall "cloudflare-warp"; open -a "Cloudflare WARP"; }
+  elif [ $isFedora == true ]; then
+    if ! warp-cli -V &>/dev/null; then
+      sudo dnf config-manager addrepo --from-repofile=https://pkg.cloudflareclient.com/cloudflare-warp-ascii.repo && sudo dnf check-update
+      sudo dnf install cloudflare-warp -y
+      yes | warp-cli registration new
+    fi
+    warp-cli -V &>/dev/null && warp-cli connect
   fi
   echo; read -p "Press Enter to continue..."
 }
@@ -407,14 +416,13 @@ getAppDetails() {
 }
 
 apkm2apk() {
-  dlAPKEditor
-  if [ $isMacOS -eq 1 ]; then
+  if [ $isMacOS == true ]; then
     if [ -n "$cpuAbi" ]; then
       mkdir -p "$Download/${appName}_v${version}-${arch}"
-      if [ $RipLib -eq 1 ]; then
+      if [ $RipLib == true ]; then
         pv "$apkPath" | tar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "base.apk" "split_config.${cpuAbi//-/_}.apk" "split_config.${locale}.apk" "split_config.${lcd_dpi}.apk"
         tar_exit_status=$?
-      elif [ $RipLib -eq 0 ]; then
+      elif [ $RipLib == false ]; then
         pv "$apkPath" | tar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "base.apk" "split_config.arm64_v8a.apk" "split_config.armeabi_v7a.apk" "split_config.x86_64.apk" "split_config.x86.apk" "split_config.${locale}.apk" "split_config.${lcd_dpi}.apk"
         tar_exit_status=$?
       fi
@@ -428,13 +436,13 @@ apkm2apk() {
     else
       java -jar $APKEditorPath m -i "$apkPath" -o "$Download/${appName}_v${version}-${arch}.apk" && rm -f "$apkPath"
     fi
-  elif [ $isAndroid -eq 1 ]; then
+  else
     mkdir -p "$Download/${appName}_v${version}-${arch}"
     termux-wake-lock
-    if [ $RipLib -eq 1 ]; then
+    if [ $RipLib == true ]; then
       pv "$apkPath" | bsdtar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "base.apk" "split_config.${cpuAbi//-/_}.apk" "split_config.${locale}.apk" "split_config.${lcd_dpi}.apk"
       bsdtar_exit_status=$?
-    elif [ $RipLib -eq 0 ]; then
+    elif [ $RipLib == false ]; then
       pv "$apkPath" | bsdtar -xf - -C "$Download/${appName}_v${version}-${arch}/" --include "base.apk" "split_config.arm64_v8a.apk" "split_config.armeabi_v7a.apk" "split_config.x86_64.apk" "split_config.x86.apk" "split_config.${locale}.apk" "split_config.${lcd_dpi}.apk"
       bsdtar_exit_status=$?
     fi
@@ -448,4 +456,4 @@ apkm2apk() {
     termux-wake-unlock
   fi
 }
-################################################################################################################
+##################################################################################################################################################################################################################################
