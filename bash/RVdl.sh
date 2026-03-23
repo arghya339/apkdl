@@ -6,7 +6,7 @@ RVdl() {
   organization=${1}
 
   if [ "$organization" == "ReVanced" ]; then
-    [ $PreReleasePatches == false ] && requestUrl="https://api.revanced.app/v4/patches/version" || requestUrl="https://api.revanced.app/v4/patches/version?prerelease=true"
+    [ $PreReleasePatches == false ] && requestUrl="https://api.revanced.app/v5/patches/version" || requestUrl="https://api.revanced.app/v5/patches/version/prerelease"
     current_patches_release_version=$(curl -sLX 'GET' "$requestUrl" -H 'accept: application/json' | jq -r '.version')  # Get current patches release version from ReVanced API
   elif [ "$organization" == "Morphe" ] || [ "$organization" == "RVX" ]; then
     # Get current patches release version from GitHub API
@@ -28,8 +28,8 @@ RVdl() {
   
     if [ "$organization" == "ReVanced" ]; then
       # Get list of patches from current patches release using ReVanced API
-      [ $PreReleasePatches == false ] && requestUrl="https://api.revanced.app/v4/patches/list" || requestUrl="https://api.revanced.app/v4/patches?prerelease=true"
-      patchesJson=$(curl -sL "$requestUrl")
+      [ $PreReleasePatches == false ] && branch="stable" || branch="dev"
+      patchesJson=$(curl -sL "https://raw.githubusercontent.com/Jman-Github/ReVanced-Patch-Bundles/refs/heads/bundles/patch-bundles/revanced-patch-bundles/revanced-${branch}-patches-list.json" | jq -r '.patches')
     elif [ "$organization" == "Morphe" ] || [ "$organization" == "RVX" ]; then
       [ $PreReleasePatches == false ] && branch="main" || branch="dev"
       [ "$organization" == "Morphe" ] && patchesJson=$(curl -sL "https://raw.githubusercontent.com/MorpheApp/morphe-patches/refs/heads/${branch}/patches-list.json" | jq -r '.patches') || patchesJson=$(curl -sL "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/${branch}/patches.json")
