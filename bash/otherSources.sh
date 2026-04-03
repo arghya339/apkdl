@@ -595,7 +595,7 @@ liteapksSearch() {
     items_per_page=30
     while true; do
       searchUrl="$liteapksWPPostsAPI?search=${app_name}&page=${page}&per_page=${items_per_page}"
-      searchJson=$(curl -sL "$searchUrl" | jq -r '.[]')
+      searchJson=$(curl -sL -A "$USER_AGENT" "$searchUrl" | jq -r '.[]')
       postsId=($(jq -r '.id' <<< "$searchJson"))
       dates=($(jq -r '.date' <<< "$searchJson"))
       slugs=($(jq -r '.slug' <<< "$searchJson"))
@@ -643,7 +643,7 @@ liteapksSearch() {
 
 liteapksAppDetails() {
   slugUrl="$liteapksWPPostsAPI?slug=$slug"
-  slugJson=$(curl -sL "$slugUrl" | jq -r '.[]')
+  slugJson=$(curl -sL -A "$USER_AGENT" "$slugUrl" | jq -r '.[]')
   postId=$(jq -r '.id' <<< "$slugJson")
   date=$(jq -r '.date' <<< "$slugJson")
   slug=$(jq -r '.slug' <<< "$slugJson")
@@ -661,9 +661,9 @@ liteapksAppDetails() {
   category=$(jq -r '._links."wp:term"[] | select(.taxonomy == "category") | .href' <<< "$slugJson")
   developer=$(jq -r '._links."wp:term"[] | select(.taxonomy == "developer") | .href' <<< "$slugJson")
   app_type=$(jq -r '._links."wp:term"[] | select(.taxonomy == "app_type") | .href' <<< "$slugJson")
-  categoryName=$(curl -sL "$category" | jq -r '.[].name')
-  developerName=$(curl -sL "$developer" | jq -r '.[].name')
-  app_type_name=$(curl -sL "$app_type" | jq -r '.[].name')
+  categoryName=$(curl -sL -A "$USER_AGENT" "$category" | jq -r '.[].name')
+  developerName=$(curl -sL -A "$USER_AGENT" "$developer" | jq -r '.[].name')
+  app_type_name=$(curl -sL -A "$USER_AGENT" "$app_type" | jq -r '.[].name')
   echo -e "$info appName: $title"
   echo -e "$info Publisher: $developerName"
   echo -e "$info Author: $author"
@@ -689,7 +689,7 @@ genExpiryTimestampUrl() {
 liteapksVersionsUrl() {
   liteapksPostsAPI="https://liteapks.com/wp-json/v2/posts"
   versionsUrl="$liteapksPostsAPI/$postId"
-  versionsJson=$(curl -sL "$versionsUrl")
+  versionsJson=$(curl -sL -A "$USER_AGENT" "$versionsUrl")
   original_download_url=$(jq -r '.data.original_download_url' <<< "$versionsJson")
   name=$(jq -r '.data.name' <<< "$versionsJson")
   mapfile -t versions < <(jq -r '.data.versions.[].version' <<< "$versionsJson")
