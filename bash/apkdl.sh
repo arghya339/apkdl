@@ -580,7 +580,7 @@ clearAppCaches() {
 [ $printArt == true ] && { printf '\033[?25l' && print_apkdl && sleep 3 && printf '\033[?25h'; }
 
 declare -a apps applications hiddenApps enabledApps disabledApps uninstalledSystemApps
-selected_option=0
+selected_opt=0
 while true; do
   options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced Morphe RVX)
   if { [ $isAndroid == false ] && [ -n "$serial" ]; } || { [ $isAndroid == true ] && { [ $su == true ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
@@ -589,7 +589,7 @@ while true; do
   if { [ $isAndroid == false ] || [ -n "$serial" ]; } || [ $isAndroid == true ]; then
     options+=(Configuration)
   fi
-  menu options eButtons "" "" $selected_option && selected_option=$selected
+  menu options eButtons "" "" $selected_opt && selected_opt=$selected
   case "${options[selected_option]}" in
     PlayStore)
       source $apkdl/play.sh
@@ -1093,14 +1093,15 @@ while true; do
             # Get available JDK versions
             attempt=0
             while true; do
-              jdkVersion=($(pkg search openjdk 2>&1 | grep -E "^openjdk-[0-9]+/" | awk -F'[-/ ]' '{print $2}'))
+              jdkVersions=($(pkg search openjdk 2>&1 | grep -E "^openjdk-[0-9]+/" | awk -F'[-/ ]' '{print $2}'))
               [ $attempt -eq 7 ] && { echo -e "$notice Not found any java version in search result, after 7 attempts!"; break; }
-              [ ${#jdkVersion[@]} -ne 0 ] && break
+              [ ${#jdkVersions[@]} -ne 0 ] && break
               ((attempt++))
               sleep 0.5  # wait 500 milliseconds
             done
+            for ((i=0; i<${#jdkVersions[@]}; i++)); do [ ${jdkVersions[i]} -eq $jdkVersion ] && selected_jdk=$i; done
             # Select JDK versions
-            menu jdkVersion bButtons && version="${jdkVersion[$selected]}"
+            menu jdkVersions bButtons "" "" $selected_jdk && version="${jdkVersions[selected]}"
             # Set JDK versions
             if [ -n "$version" ]; then
               echo -e "$info Selected: openjdk-$version"
