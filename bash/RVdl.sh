@@ -7,7 +7,7 @@ RVdl() {
 
   if [ "$organization" == "ReVanced" ]; then
     [ $PreReleasePatches == false ] && requestUrl="https://api.revanced.app/v5/patches/version" || requestUrl="https://api.revanced.app/v5/patches/version/prerelease"
-    current_patches_release_version=$(curl -sLX 'GET' "$requestUrl" -H 'accept: application/json' | jq -r '.version')  # Get current patches release version from ReVanced API
+    current_patches_release_version=$(curl -sL "$requestUrl" | jq -r '.version')  # Get current patches release version from ReVanced API
   elif [ "$organization" == "Morphe" ] || [ "$organization" == "RVX" ]; then
     # Get current patches release version from GitHub API
     [ "$organization" == "Morphe" ] && { owner="MorpheApp"; repo="morphe-patches"; } || { owner="anddea"; repo="revanced-patches"; }
@@ -32,7 +32,7 @@ RVdl() {
       patchesJson=$(curl -sL "https://raw.githubusercontent.com/Jman-Github/ReVanced-Patch-Bundles/refs/heads/bundles/patch-bundles/revanced-patch-bundles/revanced-${branch}-patches-list.json" | jq -r '.patches')
     elif [ "$organization" == "Morphe" ] || [ "$organization" == "RVX" ]; then
       [ $PreReleasePatches == false ] && branch="main" || branch="dev"
-      [ "$organization" == "Morphe" ] && patchesJson=$(curl -sL "https://raw.githubusercontent.com/MorpheApp/morphe-patches/refs/heads/${branch}/patches-list.json" | jq -r '.patches') || patchesJson=$(curl -sL "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/${branch}/patches.json")
+      [ "$organization" == "Morphe" ] && patchesJson=$(curl -sL "https://raw.githubusercontent.com/MorpheApp/morphe-patches/refs/heads/${branch}/patches-list.json" | jq -r '.patches') || patchesJson=$(curl -sL "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/${branch}/patches-list.json" | jq -r '.patches')
     fi
     result=$(jq '
     [.[] | select(.compatiblePackages != null) | .compatiblePackages | to_entries[]]
@@ -41,8 +41,8 @@ RVdl() {
       package: .[0].key,
       version: ([.[].value] | flatten | map(select(. != null)) | unique | if length > 0 then .[-1] else null end)
     })' <<< "$patchesJson")
-    total_apps=$(echo "$result" | jq length)
-    pkgName=($(echo "$result" | jq -r ".[].package"))
+    total_apps=$(jq length <<< "$result")
+    pkgName=($(jq -r ".[].package" <<< "$result"))
   
     pkgNames=$(sed 's/ /", "/g; s/^/"/; s/$/"/' <<< "${pkgName[@]}")
     RESPONSE_JSON=$(curl -sL --doh-url "$cloudflareDOH" $APKM_REST_API_URL -A "$USER_AGENT" -H 'Accept: application/json' -H 'Content-Type: application/json' -H "Authorization: Basic $AUTH_TOKEN" -d "{\"pnames\":[$pkgNames]}")
