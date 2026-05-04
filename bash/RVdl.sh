@@ -34,13 +34,7 @@ RVdl() {
       [ $PreReleasePatches == false ] && branch="main" || branch="dev"
       [ "$organization" == "Morphe" ] && patchesJson=$(curl -sL "https://raw.githubusercontent.com/MorpheApp/morphe-patches/refs/heads/${branch}/patches-list.json" | jq -r '.patches') || patchesJson=$(curl -sL "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/${branch}/patches-list.json" | jq -r '.patches')
     fi
-    result=$(jq '
-    [.[] | select(.compatiblePackages != null) | .compatiblePackages | to_entries[]]
-    | group_by(.key)
-    | map({
-      package: .[0].key,
-      version: ([.[].value] | flatten | map(select(. != null)) | unique | if length > 0 then .[-1] else null end)
-    })' <<< "$patchesJson")
+    result=$(jq '[.[] | select(.compatiblePackages != null) | .compatiblePackages | if type == "array" then .[] else to_entries[] end] | group_by(if .key then .key elif .packageName then .packageName else .versions.packageName end) | map({package: (if .[0].key then .[0].key elif .[0].packageName then .[0].packageName else .[0].versions.packageName end), version: (if .[0].value then ([.[].value] | flatten | map(select(. != null)) | unique | sort | .[-1]) elif .[0].targets then ([.[].targets[]?.version] | unique | sort | .[-1]) else ([.[].versions.targets[]?.version] | unique | sort | .[-1]) end | if . == null or . == "" then null else . end)}) | map(select(.package != null))' <<< "$patchesJson")
     total_apps=$(jq length <<< "$result")
     pkgName=($(jq -r ".[].package" <<< "$result"))
   
