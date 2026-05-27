@@ -157,7 +157,7 @@ getLatestUploads() {
     baseUploadsUrl=$(basename "$latestUploadsUrl")
     latestUploadsHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$latestUploadsUrl")
     if ! grep -q "_cf_chl_" <<< "$latestUploadsHTML"; then
-      lastPageLink=$(pup 'a.last[aria-label="Last Page"] attr{href}' <<< "$latestUploadsHTML"); lastPage=$(echo "$lastPageLink" | grep -oE '[0-9]+')
+      lastPage=$(pup 'a.last[aria-label="Last Page"] attr{href}' <<< "$latestUploadsHTML" | grep -oE '[0-9]+' | head -1)
       while true; do
         [ $page -eq 1 ] && echo -e "$info Latest $appName Uploads" || echo -e "$info Latest $appName Uploads - Page $page"
         latestUploadsUrl="https://www.apkmirror.com/uploads/page/$page/$baseUploadsUrl"
