@@ -2,25 +2,10 @@
 
 # Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
 
-runCmd() {
-  command=${1}
-  if [ $isAndroid == true ]; then
-    if [ $su == true ]; then
-      su -c "$command"
-    elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-      ~/rish -c "$command"
-    elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-      ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$command"
-    fi
-  else
-    adb -s $serial shell "$command"
-  fi
-}
-
 packagesList() {
   echo -e "$running Get Installed packages list.."
-  [ $ShowSystemApps == false ] && runCmdOut=$(runCmd "pm list packages -3") || runCmdOut=$(runCmd "pm list packages")
-  packages=($(sed 's/package://g' <<< "$runCmdOut")) && unset runCmdOut
+  [ $ShowSystemApps == false ] && cmdOut=$(shellCmd "pm list packages -3") || cmdOut=$(shellCmd "pm list packages")
+  packages=($(sed 's/package://g' <<< "$cmdOut")) && unset cmdOut
 }
 
 packagesInfo() {
@@ -30,24 +15,24 @@ packagesInfo() {
 if [ $reqAppName == true ]; then
   if [ $isAndroid == true ]; then
     if [ $su == true ]; then
-      su -c "[ ! -f /data/local/tmp/aapt2 ] && { cp $HOME/aapt2 /data/local/tmp/ && chmod +x /data/local/tmp/aapt2; }"
-    elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-      ~/rish -c "[ ! -f /data/local/tmp/aapt2 ] && { cp $HOME/aapt2 /data/local/tmp/ && chmod +x /data/local/tmp/aapt2; }"
-    elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-      ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell [ ! -f "/data/local/tmp/aapt2" ] && { ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) push ~/aapt2 /data/local/tmp/ >/dev/null 2>&1 && ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell chmod +x /data/local/tmp/aapt2; }
+      su -c "[ ! -f /data/local/tmp/aapt2 ] && { cp $PREFIX/bin/aapt2 /data/local/tmp/ && chmod +x /data/local/tmp/aapt2; }"
+    elif [ $rish == true ]; then
+      rish -c "[ ! -f /data/local/tmp/aapt2 ] && { cp $PREFIX/bin/aapt2 /data/local/tmp/ && chmod +x /data/local/tmp/aapt2; }"
+    elif [ $adb == true ]; then
+      adb -s $(adb devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell [ ! -f "/data/local/tmp/aapt2" ] && { adb -s $(adb devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) push $PREFIX/bin/aapt2 /data/local/tmp/ &>/dev/null && adb -s $(adb devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell chmod +x /data/local/tmp/aapt2; }
     fi
   else
     [ ! -f "$apkdl/aapt2" ] && curl -sL --progress-bar -o "$apkdl/aapt2_$cpuAbi" "https://github.com/arghya339/aapt2/releases/download/all/aapt2_$cpuAbi"
     adb -s "$serial" shell "[ ! -f '/data/local/tmp/aapt2' ]" && { adb -s "$serial" push "$apkdl/aapt2_$cpuAbi" /data/local/tmp/aapt2 >/dev/null 2>&1 && adb -s "$serial" shell "chmod +x /data/local/tmp/aapt2"; }
   fi
-  aapt2="/data/local/tmp/aapt2"
+  AAPT2="/data/local/tmp/aapt2"
 fi
   
   echo -e "$running Get Installed packages info.."
   for ((i=0; i<${#packages_name[@]}; i++)); do
     echo -e "$running Processing $((i+1))/${#packages_name[@]}: ${packages_name[$i]}"
-    runCmdOut=$(runCmd "pm dump ${packages_name[$i]}")
-    appInfo=$(grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath|installerPackageName' <<< "$runCmdOut") && unset runCmdOut
+    cmdOut=$(shellCmd "pm dump ${packages_name[$i]}")
+    appInfo=$(grep -E 'versionName|versionCode|firstInstallTime|lastUpdateTime|codePath|installerPackageName' <<< "$cmdOut") && unset cmdOut
     iVersionNames[i]=$(echo "$appInfo" | grep "versionName" | awk -F'=' '{print $2}')
     iVersionCodes[i]=$(echo "$appInfo" | grep "versionCode" | awk -F'=' '{print $2}' | awk '{print $1}')
     firstInstallTimes[i]=$(echo "$appInfo" | grep "firstInstallTime" | awk -F'=' '{print $2}')
@@ -56,8 +41,8 @@ fi
     codePaths[i]=$(echo "$appInfo" | grep "codePath" | sed 's/.*codePath=//')
     basePaths[i]="${codePaths[$i]}/base.apk"
     if [ $reqAppName == true ]; then
-      runCmdOut=$(runCmd "$aapt2 dump badging ${basePaths[$i]}")
-      application_labels[i]=$(grep "application-label:" <<< "$runCmdOut" | cut -d"'" -f2) && unset runCmdOut
+      cmdOut=$(shellCmd "$AAPT2 dump badging ${basePaths[$i]}")
+      application_labels[i]=$(grep "application-label:" <<< "$cmdOut" | cut -d"'" -f2) && unset cmdOut
     fi
   done
 }
@@ -283,22 +268,22 @@ blockInternet() {
     package="${packages[selected]}"
     appLabel="${application_labels[selected]}"
     echo -e "$running Blocking internet access for $package"
-    runCmdOut=$(runCmd "pm list packages -U")
-    uid=$(grep $package <<< "$runCmdOut" | awk -F'uid:' '{print $2}') && unset runCmdOut
+    cmdOut=$(shellCmd "pm list packages -U")
+    uid=$(grep $package <<< "$cmdOut" | awk -F'uid:' '{print $2}') && unset cmdOut
     firewallService
     if [ $isAndroid == true ] && [ $su == true ]; then
-      runCmd "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
-      runCmd "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
-      runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
+      shellCmd "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
+      shellCmd "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
+      cmdOut=$(shellCmd "ip6tables -L OUTPUT -n -v")
       sleep 0.5
-      status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
+      status=$(grep -i $uid <<< "$cmdOut") && unset cmdOut
     elif [ $isAndroid == false ] && [ $su == true ]; then
       adb -s $serial shell su -c "ip6tables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       adb -s $serial shell su -c "iptables -I OUTPUT 1 -m owner --uid-owner $uid -j DROP"
       sleep 0.5
       status=$(adb -s $serial shell su -c "ip6tables -L OUTPUT -n -v | grep -i $uid")
     fi
-    [ -n "$status" ] && { echo -e "$good Successfully blocked internet access for $appLabel."; runCmd "am force-stop $package"; } || echo -e "$notice Failed to blocking internet access for $appLabel!"
+    [ -n "$status" ] && { echo -e "$good Successfully blocked internet access for $appLabel."; shellCmd "am force-stop $package"; } || echo -e "$notice Failed to blocking internet access for $appLabel!"
   fi
 }
 
@@ -347,13 +332,13 @@ unblockInternet() {
       fi
     fi
     if [ $isAndroid == true ] && [ $su == true ]; then
-      runCmd "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
-      runCmd "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
+      shellCmd "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
+      shellCmd "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       sleep 0.5
-      runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
-      ip6status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
-      runCmdOut=$(runCmd "ip6tables -L OUTPUT -n -v")
-      ip4status=$(grep -i $uid <<< "$runCmdOut") && unset runCmdOut
+      cmdOut=$(shellCmd "ip6tables -L OUTPUT -n -v")
+      ip6status=$(grep -i $uid <<< "$cmdOut") && unset cmdOut
+      cmdOut=$(shellCmd "ip6tables -L OUTPUT -n -v")
+      ip4status=$(grep -i $uid <<< "$cmdOut") && unset cmdOut
     elif [ $isAndroid == false ] && [ $su == true ]; then
       adb -s $serial shell su -c "ip6tables -D OUTPUT -m owner --uid-owner $uid -j DROP"
       adb -s $serial shell su -c "iptables -D OUTPUT -m owner --uid-owner $uid -j DROP"
@@ -362,7 +347,7 @@ unblockInternet() {
       ip4status=$(adb -s $serial shell su -c "iptables -L OUTPUT -n -v | grep -i $uid")
     fi
     if [ -z "$ip6status" ] && [ -z "$ip4status" ]; then
-      runCmd "am force-stop $package"
+      shellCmd "am force-stop $package"
       echo -e "$good Successfully unblocked internet access for $appLabel."
     else
       echo -e "ip6status: $ip6status\nip4status: $ip4status"
@@ -376,13 +361,13 @@ hideApps() {
   if menu applications buttons; then
     package="${packages[selected]}"
     appLabel="${application_labels[selected]}"
-    runCmd "pm hide $package" && echo -e "$good Successfully hidden $appLabel." || echo -e "$notice Failed to hidden $appLabel!"
+    shellCmd "pm hide $package" && echo -e "$good Successfully hidden $appLabel." || echo -e "$notice Failed to hidden $appLabel!"
   fi
 }
 
 showHiddenApps() {
-  all_pkgs=$(runCmd "pm list packages -u")
-  installed_pkgs=$(runCmd "pm list packages")
+  all_pkgs=$(shellCmd "pm list packages -u")
+  installed_pkgs=$(shellCmd "pm list packages")
   hidden_pkgs=($(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://'))
   packagesInfo "hidden_pkgs" "1"
   hiddenApps=()
@@ -396,15 +381,15 @@ unhideApps() {
   if menu hiddenApps buttons; then
     package="${hidden_pkgs[selected]}"
     echo -e "$running Unhidden $package"
-    runCmd "pm unhide $package"
+    shellCmd "pm unhide $package"
   fi
 }
 
 showEnabledApps() {
-  #runCmdOut=$(runCmd "pm list packages -e")
-  #enabled_pkgs=($(sed 's/package://' <<< "$runCmdOut")) && unset runCmdOut
-  runCmdOut=$(runCmd "cmd package query-activities -a android.intent.action.MAIN -c android.intent.category.LAUNCHER")  # filter out non-launchable apps (apps without a launcher activity)
-  launchable_pkgs=($(grep 'packageName=' <<< "$runCmdOut" | sed 's/.*packageName=//' | sort -u)) && unset runCmdOut
+  #cmdOut=$(shellCmd "pm list packages -e")
+  #enabled_pkgs=($(sed 's/package://' <<< "$cmdOut")) && unset cmdOut
+  cmdOut=$(shellCmd "cmd package query-activities -a android.intent.action.MAIN -c android.intent.category.LAUNCHER")  # filter out non-launchable apps (apps without a launcher activity)
+  launchable_pkgs=($(grep 'packageName=' <<< "$cmdOut" | sed 's/.*packageName=//' | sort -u)) && unset cmdOut
   packagesInfo "enabled_pkgs" "1"
   enabledApps=()
   for ((i=0; i<${#launchable_pkgs[@]}; i++)); do
@@ -417,13 +402,13 @@ disableApps() {
   if menu enabledApps buttons; then
     package="${launchable_pkgs[selected]}"
     echo -e "$running Disabling $package"
-    runCmd "pm disable-user --user 0 $package" && echo -e "$good Successfully disabled $package." || echo -e "$notice Failed to disabled $package!"
+    shellCmd "pm disable-user --user 0 $package" && echo -e "$good Successfully disabled $package." || echo -e "$notice Failed to disabled $package!"
   fi
 }
 
 showDisabledApps() {
-  runCmdOut=$(runCmd "pm list packages -d")
-  disabled_pkgs=($(sed 's/package://' <<< "$runCmdOut")) && unset runCmdOut
+  cmdOut=$(shellCmd "pm list packages -d")
+  disabled_pkgs=($(sed 's/package://' <<< "$cmdOut")) && unset cmdOut
   packagesInfo "disabled_pkgs" "1"
   disabledApps=()
   for ((i=0; i<${#disabled_pkgs[@]}; i++)); do
@@ -435,7 +420,7 @@ enableApps() {
   buttons=("<Select>" "<Back>")
   if menu disabledApps buttons; then
     package="${disabled_pkgs[selected]}"
-    runCmd "pm enable $package"
+    shellCmd "pm enable $package"
   fi
 }
 
@@ -445,21 +430,21 @@ packagesUninstall() {
     package="${packages[selected]}"
     appLabel="${application_labels[selected]}"
     echo -e "$running Uninstalling $package"
-    runCmdOut=$(runCmd "pm uninstall --user 0 $package")
-    if echo "$runCmdOut" | grep -q 'Success' >/dev/null 2>&1; then
-      unset runCmdOut; echo -e "$good Successfully uninstalled $appLabel."
+    cmdOut=$(shellCmd "pm uninstall --user 0 $package")
+    if echo "$cmdOut" | grep -q 'Success' >/dev/null 2>&1; then
+      unset cmdOut; echo -e "$good Successfully uninstalled $appLabel."
     else
-      unset runCmdOut
-      runCmdOut=$(runCmd "cmd package uninstall -k --user 0 $package")
-      echo "$runCmdOut" | grep -q 'Failure' >/dev/null 2>&1 && echo -e "$notice Failed to uninstall $appLabel!" || echo -e "$good Successfully uninstalled $appLabel."
-      unset runCmdOut
+      unset cmdOut
+      cmdOut=$(shellCmd "cmd package uninstall -k --user 0 $package")
+      echo "$cmdOut" | grep -q 'Failure' >/dev/null 2>&1 && echo -e "$notice Failed to uninstall $appLabel!" || echo -e "$good Successfully uninstalled $appLabel."
+      unset cmdOut
     fi
   fi
 }
 
 showUninstalledSystemApps() {
-  all_pkgs=$(runCmd "pm list packages -s -u")
-  installed_pkgs=$(runCmd "pm list packages -s")
+  all_pkgs=$(shellCmd "pm list packages -s -u")
+  installed_pkgs=$(shellCmd "pm list packages -s")
   uninstalled_pkgs=($(grep -vF -f <(echo "$installed_pkgs") <<< "$all_pkgs" | sed 's/package://'))
   packagesInfo "uninstalled_pkgs" "1"
   uninstalledSystemApps=()
@@ -472,7 +457,7 @@ recoverSystemApps() {
   buttons=("<Select>" "<Back>")
   if menu uninstalledSystemApps buttons; then
     package="${uninstalled_pkgs[selected]}"
-    runCmd "cmd package install-existing $package"
+    shellCmd "cmd package install-existing $package"
   fi
 }
 ######################################################################################################################################################################

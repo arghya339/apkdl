@@ -31,17 +31,19 @@ checkInternet() {
   fi
 }
 
+isMacOS=false; isAndroid=false; isFedora=false
 if [[ "$(uname)" == "Darwin" ]]; then
-  isMacOS=true; isAndroid=false; isFedora=false
+  isMacOS=true; scripts=(macOS adbInstall adbDeviceInfo)
 elif [[ -d "/sdcard" ]] && [[ -d "/system" ]]; then
-  isAndroid=true; isMacOS=false; isFedora=false
+  isAndroid=true; scripts=(apkInstall Termux deviceInfo)
 elif [[ -f "/etc/os-release" ]]; then
   if grep -qi "fedora" /etc/os-release 2>/dev/null; then
-    isFedora=true; isAndroid=false; isMacOS=false
+    isFedora=true; scripts=(Fedora adbInstall adbDeviceInfo)
   fi
 fi
 
-apkdl="$HOME/apkdl"
+apkdl="$HOME/.apkdl"
+[ -d "$HOME/apkdl" ] && mv ~/apkdl ~/.apkdl  # Temporary: Hides script folder from $HOME
 [ $isAndroid == true ] && Download="/sdcard/Download" || Download="$HOME/Downloads"
 mkdir -p $apkdl
 apkdlJson="$apkdl/apkdl.json"
@@ -63,9 +65,36 @@ config() {
   jq --arg key "$key" --arg value "$value" '.[$key] = $value' "$jsonFile" > temp.json && mv temp.json "$jsonFile"
 }
 
-[ $isAndroid == true ] && scripts=(apkInstall Termux deviceInfo)
-[ $isMacOS == true ] && scripts=(macOS adbInstall adbDeviceInfo)
-[ $isFedora == true ] && scripts=(Fedora adbInstall adbDeviceInfo)
+runCmd() {
+  cmd=${1}
+  if [ $isAndroid == true ]; then
+    if [ $su == true ]; then
+      [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=true; } || writeSELinux=false
+      su -c "$cmd"
+      [ $writeSELinux == true ] && su -c "setenforce 1"
+    elif rish -c "id" &>/dev/null; then
+      rish -c "$cmd"
+    elif adb -s $(adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" &>/dev/null; then
+      adb -s $(adb devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) $cmd
+    fi
+  else
+    adb -s $serial $cmd
+  fi
+}
+
+shellCmd() {
+  cmd=$1
+  if [ $isAndroid == true ]; then
+    if [ $su == true ] || rish -c "id" &>/dev/null; then
+      runCmd "$cmd"
+    elif adb -s $(adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" &>/dev/null; then
+      runCmd "shell $cmd"
+    fi
+  else
+    runCmd "shell $cmd"
+  fi
+}
+
 scripts+=(auth genProtoBin genTocPb play dlGitHub dlGitLab dlFDroid APKMdl dlAPKPure dlUptodown RVdl otherSources myApps)
 
 run() { source $apkdl/menu.sh; source $apkdl/confirmPrompt.sh; for ((c=0; c<${#scripts[@]}; c++)); do source $apkdl/${scripts[c]}.sh; done; }
@@ -288,17 +317,9 @@ dlAPKEditor() {
   APKEditor="APKEditor-$tag_name.jar"
   APKEditorPath="$apkdl/$APKEditor"
   findAPKEditorPath=$(find "$apkdl" -maxdepth 1 -type f -name "APKEditor-*.jar" -print -quit)
-  if [ -f "$findAPKEditorPath" ]; then
-    findAPKEditor=$(basename "$findAPKEditorPath" 2>/dev/null)
-    if [ "$APKEditor" != "$findAPKEditor" ]; then
-      echo -e "$notice diffs: $APKEditor ~ $findAPKEditor"
-      rm -f "$findAPKEditorPath"
-      while true; do
-        curl -L --progress-bar -o $APKEditorPath -C - https://github.com/REAndroid/APKEditor/releases/download/V$tag_name/APKEditor-$tag_name.jar
-        [ $? -eq 0 ] && break || sleep 5
-      done
-    fi
-  else
+  findAPKEditor=$(basename "$findAPKEditorPath" 2>/dev/null)
+  if [ "$APKEditor" != "$findAPKEditor" ]; then
+    [ -f "$findAPKEditorPath" ] && { echo -e "$notice diffs: $APKEditor ~ $findAPKEditor"; rm -f "$findAPKEditorPath"; }
     while true; do
       curl -L --progress-bar -o $APKEditorPath -C - https://github.com/REAndroid/APKEditor/releases/download/V$tag_name/APKEditor-$tag_name.jar
       [ $? -eq 0 ] && break || sleep 5
@@ -583,7 +604,7 @@ declare -a apps applications hiddenApps enabledApps disabledApps uninstalledSyst
 selected_opt=0
 while true; do
   options=(PlayStore GitHub GitLab F-Droid APKMirror Uptodown APKPure otherSources ReVanced Morphe RVX)
-  if { [ $isAndroid == false ] && [ -n "$serial" ]; } || { [ $isAndroid == true ] && { [ $su == true ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
+  if { [ $isAndroid == false ] && [ -n "$serial" ]; } || { [ $isAndroid == true ] && { [ $su == true ] || [ $rish == true ] || [ $adb == true ]; }; }; then
     options+=(manageApps)
   fi
   if { [ $isAndroid == false ] || [ -n "$serial" ]; } || [ $isAndroid == true ]; then
@@ -958,21 +979,13 @@ while true; do
         if [ $isAndroid == true ]; then
           CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null)
           jdkVersion="$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null)"
-          if [ $su == true ]; then
-            s_options+=("SU Installation Options")
-          elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-            s_options+=("SUI Installation Options")
-          elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-            s_options+=("ADB Installation Options")
-          fi
-          if [ "$(getprop ro.product.manufacturer)" == "Genymobile" ] && ! "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-            s_options+=(Pair\ ADB)
-          fi
+          if [ $su == true ]; then s_options+=("SU Installation Options"); elif [ $rish == true ]; then s_options+=("SUI Installation Options"); elif [ $adb == true ]; then s_options+=("ADB Installation Options"); fi
+          ([ "$(getprop ro.product.manufacturer)" == "Genymobile" ] && [ $adb == false ]) && s_options+=(Pair\ ADB)
           s_options+=("Check Termux update on startup" "Change Java version")
         elif [ $isAndroid == false ] && [ -n "$serial" ]; then
           s_options+=("ADB Installation Options")
         fi
-        if { [ $isAndroid == false ] && [ -n "$serial" ]; } || { [ $isAndroid == true ] && { [ $su == true ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; }; }; then
+        if { [ $isAndroid == false ] && [ -n "$serial" ]; } || { [ $isAndroid == true ] && { [ $su == true ] || [ $rish == true ] || [ $adb == true ]; }; }; then
           s_options+=(ShowSystemApps)
         fi
         menu s_options bButtons "" "" $selected_settings && selected_settings="$selected" || break
@@ -1082,7 +1095,7 @@ while true; do
             [ $? -ne 0 ] && am start -n "com.android.settings/.Settings\$DevelopmentSettingsDashboardActivity" >/dev/null 2>&1 || am start -n com.android.settings/.Settings\$MyDeviceInfoActivity >/dev/null 2>&1
             read -r -p "HOST[:PORT] [PAIRING CODE] " input
             host_port=$(echo "$input" | awk '{print $1}'); pairing_code=$(echo "$input" | awk '{print $2}')
-            ~/adb pair "$host_port" "$pairing_code"
+            adb pair "$host_port" "$pairing_code"
             ;;
           Check\ Termux\ update\ on\ startup)
             confirmPrompt "CheckTermuxUpdate" tfButtons "$CheckTermuxUpdate" && CheckTermuxUpdate=true || CheckTermuxUpdate=false

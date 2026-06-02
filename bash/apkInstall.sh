@@ -5,16 +5,6 @@
 apkInstall() {
   local outputAPK=${1}
   local activity=$2  # for non-rooted user to launch app after installtion
-  iCmd() {
-    icmd=${1}
-    if [ $su == true ]; then
-      su -c "$icmd"
-    elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-      ~/rish -c "$icmd"
-    elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-      ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$icmd"
-    fi
-  }
   local outputFileName=$(basename "$outputAPK")
   output_dir=$(dirname "$outputAPK")
   wo_ext="${outputAPK%.*}"
@@ -46,23 +36,23 @@ apkInstall() {
       fi
     fi
   fi
-  app_info=$($HOME/aapt2 dump badging "$outputAPK" 2>/dev/null)
+  app_info=$($aapt2 dump badging "$outputAPK" 2>/dev/null)
   pkgName=$(awk -F"'" '/package/ {print $2}' <<< "$app_info" | head -1)
   appName=$(awk -F"'" '/application-label:/ {print $2}' <<< "$app_info")
   if [ $su == true ]; then
-    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=1; } || writeSELinux=0
+    [ "$(su -c 'getenforce 2>/dev/null')" = "Enforcing" ] && { su -c "setenforce 0"; writeSELinux=true; } || writeSELinux=false
   fi
-  if [ $su == true ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-    iCmdOut=$(iCmd "pm resolve-activity --brief $pkgName")
-    local activityClass=$(tail -n 1 <<< "$iCmdOut") && unset iCmdOut
-    [ $DisablePlayProtect == true ] && iCmd "settings put global package_verifier_user_consent -1"  # Disabled Play Protect
+  if [ $su == true ] || [ $rish == true ] || [ $adb == true ]; then
+    cmdOut=$(shellCmd "pm resolve-activity --brief $pkgName")
+    local activityClass=$(tail -n 1 <<< "$cmdOut") && unset cmdOut
+    [ $DisablePlayProtect == true ] && shellCmd "settings put global package_verifier_user_consent -1"  # Disabled Play Protect
     if [ $DisableVerifyAdbInstalls == true ]; then
-      [ $Android -le 10 ] && iCmd "settings put global package_verifier_enable 0" || iCmd "settings put global verifier_verify_adb_installs 0"  # Disable Verify Adb Installs
+      [ $Android -le 10 ] && shellCmd "settings put global package_verifier_enable 0" || shellCmd "settings put global verifier_verify_adb_installs 0"  # Disable Verify Adb Installs
     fi
     if [ $isAPKS == true ] || { [ $isXAPK == true ] && [ $isGame == false ]; }; then
-      iCmdOut=$(iCmd "pm install-create ${pmCmd}") && unset iCmdOut
-      sessionId=$(grep -oE '[0-9]+' <<< "$iCmdOut")
-      [ -z $sessionId ] && { iCmdOut=$(iCmd "dumpsys package installer"); sessionId=$(grep "Active Session" <<< "$iCmdOut" | grep -oE '[0-9]+'); unset iCmdOut; }
+      cmdOut=$(shellCmd "pm install-create ${pmCmd}") && unset cmdOut
+      sessionId=$(grep -oE '[0-9]+' <<< "$cmdOut")
+      [ -z $sessionId ] && { cmdOut=$(shellCmd "dumpsys package installer"); sessionId=$(grep "Active Session" <<< "$cmdOut" | grep -oE '[0-9]+'); unset cmdOut; }
       if [ $cpuAbi == "arm64-v8a" ]; then arch="arm64_v8a"; elif [ $cpuAbi == "armeabi-v7a" ]; then arch="armeabi_v7a"; else arch="$cpuAbi"; fi
       for apk in "${apks[@]}"; do
         case "$apk" in
@@ -83,56 +73,56 @@ apkInstall() {
             esac
             ;;
         esac
-        iCmd "cp \"$wo_ext/splits/$apk\" \"/data/local/tmp/\""
-        iCmd "pm install-write $sessionId $split_identifier \"/data/local/tmp/$apk\""
-        iCmd "rm -f \"/data/local/tmp/$apk\""
+        shellCmd "cp \"$wo_ext/splits/$apk\" \"/data/local/tmp/\""
+        shellCmd "pm install-write $sessionId $split_identifier \"/data/local/tmp/$apk\""
+        shellCmd "rm -f \"/data/local/tmp/$apk\""
       done
-      if ! output=$(iCmd "pm install-commit $sessionId" 2>&1); then
+      if ! output=$(shellCmd "pm install-commit $sessionId" 2>&1); then
         echo "$output"
-        iCmd "pm install-abandon $sessionId" >/dev/null 2>&1
+        shellCmd "pm install-abandon $sessionId" >/dev/null 2>&1
       else
         echo "$output"
       fi
       rm -rf "$wo_ext"
       outputAPK="$wo_ext.$apk_ext"
     else
-      iCmd "cp '$outputAPK' '/data/local/tmp/$outputFileName'"
-      output=$(iCmd "pm install ${pmCmd} \"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
+      shellCmd "cp '$outputAPK' '/data/local/tmp/$outputFileName'"
+      output=$(shellCmd "pm install ${pmCmd} \"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
       if [[ "$output" == *"signatures do not match"* ]]; then
         echo -e "$notice The current app has a different signature than the patched one!"
         confirmPrompt "Do you want to uninstall the current app and proceed?" "ynButtons" "1" && response=Yes || response=No
         if [ "$response" == "Yes" ]; then
-          iCmd "pm uninstall $pkgName"
-          output=$(iCmd "pm install ${pmCmd} \"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
+          shellCmd "pm uninstall $pkgName"
+          output=$(shellCmd "pm install ${pmCmd} \"/data/local/tmp/${outputFileName}\"" 2>&1); echo "$output"
         fi
       fi
-      iCmd "rm -f '/data/local/tmp/$outputFileName'"
+      shellCmd "rm -f '/data/local/tmp/$outputFileName'"
       if [ $isGame == true ]; then
-        iCmd "mkdir -p /sdcard/Android/obb/$pkgName"
-        iCmd "cp \"$outputOBB\" /sdcard/$obbInstallPath" && rm -rf "$wo_ext"
+        shellCmd "mkdir -p /sdcard/Android/obb/$pkgName"
+        shellCmd "cp \"$outputOBB\" /sdcard/$obbInstallPath" && rm -rf "$wo_ext"
         outputAPK="$wo_ext.$apk_ext"
       fi
     fi
-    [ $DisablePlayProtect == true ] && iCmd "settings put global package_verifier_user_consent 1"  # Enabled Play Protect
+    [ $DisablePlayProtect == true ] && shellCmd "settings put global package_verifier_user_consent 1"  # Enabled Play Protect
     if [ $DisableVerifyAdbInstalls == true ]; then
-      [ $Android -le 10 ] && iCmd "settings put global package_verifier_enable 1" || iCmd "settings put global verifier_verify_adb_installs 1"  # Enabled Verify Adb Installs
+      [ $Android -le 10 ] && shellCmd "settings put global package_verifier_enable 1" || shellCmd "settings put global verifier_verify_adb_installs 1"  # Enabled Verify Adb Installs
     fi
     if [[ $output == *"Downgrade detected"* ]] && [ $KeepsData == true ]; then
       echo -e "${Green}$appName uninstall successfully with keeps app data.${Reset}\n${Yellow}Don't forget to restart apkdl after reboot!${Reset}"
-      iCmd "cmd package uninstall -k $pkgName"
+      shellCmd "cmd package uninstall -k $pkgName"
       cp "$outputAPK" "$POST_INSTALL"
       echo; read -p "Press Enter to reboot..."
-      iCmd "reboot"
+      shellCmd "reboot"
     fi
     am start -n "$activityClass" &> /dev/null  # launch app after install
     if [ $? != 0 ]; then
-      iCmd "monkey -p $pkgName -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
+      shellCmd "monkey -p $pkgName -c android.intent.category.LAUNCHER 1" > /dev/null 2>&1
     fi
     if [ $EnableRoolback == true ]; then
       buttons=("<Yes>" "<No>"); confirmPrompt "Is $appName app working correctly?" "buttons" && response=Yes || response=No
       if [[ "$response" == [Nn]* ]]; then
         echo -e "$running Roolback to previous version.."
-        iCmd "pm rollback-app $pkgName"
+        shellCmd "pm rollback-app $pkgName"
         am start -n "$activityClass"
       fi
     fi
@@ -145,9 +135,7 @@ apkInstall() {
     fi
     sleep 15 && am start -n "$activityClass" &> /dev/null  # launch app after install
   fi
-  if [ $su == true ]; then
-    [ $writeSELinux -eq 1 ] && su -c "setenforce 1"
-  fi
+  ([ $su == true ] && [ $writeSELinux == true ]) && su -c "setenforce 1"
   [ $RmFileAfterInstallation == true ] && rm -f "$outputAPK"
 }
 ###############################################################################################################################

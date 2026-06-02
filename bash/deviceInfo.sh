@@ -2,44 +2,33 @@
 
 # Copyright (C) 2025, Arghyadeep Mondal <github.com/arghya339>
 
-runDroidCmd() {
-  cmd=${1}
-  if [ $su == true ]; then
-    su -c "$cmd"
-  elif "$HOME/rish" -c "id" >/dev/null 2>&1; then
-    ~/rish -c "$cmd"
-  elif "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-    ~/adb -s $("$HOME/adb" devices 2>/dev/null | grep "device$" | awk '{print $1}' | tail -1) shell "$cmd"
-  fi
-}
-
 runJqCmd() { curl -sL https://raw.githubusercontent.com/arghya339/apkdl/refs/heads/main/deviceInfo.json | jq -r ".${1}"; }
 
 # src: https://gitlab.com/AuroraOSS/gplayapi/-/blob/master/lib/src/main/java/com/aurora/gplayapi/data/providers/DeviceInfoProvider.kt
 getDeviceInfo() {
-  if [ $su == true ] || "$HOME/rish" -c "id" >/dev/null 2>&1 || "$HOME/adb" -s $(~/adb devices | grep "device$" | awk '{print $1}' | tail -1) shell "id" >/dev/null 2>&1; then
-    runDroidCmdOut=$(runDroidCmd "dumpsys SurfaceFlinger")
-    GLExtensions=$(grep -A 30 "GLES:" <<< "$runDroidCmdOut" | grep "GL_" | tr ' ' '\n' | grep "^GL_" | sort -u | tr '\n' ',' | sed 's/,$//') && unset runDroidCmdOut
+  if [ $su == true ] || [ $rish == true ] || [ $adb == true ]; then
+    cmdOut=$(shellCmd "dumpsys SurfaceFlinger")
+    GLExtensions=$(grep -A 30 "GLES:" <<< "$cmdOut" | grep "GL_" | tr ' ' '\n' | grep "^GL_" | sort -u | tr '\n' ',' | sed 's/,$//') && unset cmdOut
     
-    runDroidCmdOut=$(runDroidCmd "dumpsys package com.android.vending")
-    VendingversionString=$(grep "versionName=" <<< "$runDroidCmdOut" | cut -d '=' -f 2 | head -1)
-    Vendingversion=$(grep "versionCode=" <<< "$runDroidCmdOut" | awk '{print $1}' | cut -d '=' -f 2 | head -1) && unset runDroidCmdOut
+    cmdOut=$(shellCmd "dumpsys package com.android.vending")
+    VendingversionString=$(grep "versionName=" <<< "$cmdOut" | cut -d '=' -f 2 | head -1)
+    Vendingversion=$(grep "versionCode=" <<< "$cmdOut" | awk '{print $1}' | cut -d '=' -f 2 | head -1); unset cmdOut
     
-    runDroidCmdOut=$(runDroidCmd "wm size")
-    resolution=$(grep "Physical size" <<< "$runDroidCmdOut" | cut -d' ' -f3) && { ScreenWidth=${resolution%x*}; ScreenHeight=${resolution#*x}; unset runDroidCmdOut; } || { ScreenWidth=1920; ScreenHeight=1200; }
+    cmdOut=$(shellCmd "wm size")
+    resolution=$(grep "Physical size" <<< "$cmdOut" | cut -d' ' -f3) && { ScreenWidth=${resolution%x*}; ScreenHeight=${resolution#*x}; unset cmdOut; } || { ScreenWidth=1920; ScreenHeight=1200; }
     
-    runDroidCmdOut=$(runDroidCmd "pm list libraries")
-    SharedLibraries=$(cut -d: -f2 <<< "$runDroidCmdOut" | tr -d '\r' | paste -sd "," -) && unset runDroidCmdOut
+    cmdOut=$(shellCmd "pm list libraries")
+    SharedLibraries=$(cut -d: -f2 <<< "$cmdOut" | tr -d '\r' | paste -sd "," -) && unset cmdOut
     
-    runDroidCmdOut=$(runDroidCmd "dumpsys package com.google.android.gms")
-    GSFversion=$(grep "versionCode=" <<< "$runDroidCmdOut" | awk '{print $1}' | cut -d '=' -f 2 | head -1) && unset runDroidCmdOut
+    cmdOut=$(shellCmd "dumpsys package com.google.android.gms")
+    GSFversion=$(grep "versionCode=" <<< "$cmdOut" | awk '{print $1}' | cut -d '=' -f 2 | head -1) && unset cmdOut
     
-    runDroidCmdOut=$(runDroidCmd "pm list features")
-    Features=$(grep -v "reqGlEsVersion" <<< "$runDroidCmdOut" | sed 's/^feature://' | cut -d'=' -f1 | paste -sd "," -) && unset runDroidCmdOut
+    cmdOut=$(shellCmd "pm list features")
+    Features=$(grep -v "reqGlEsVersion" <<< "$cmdOut" | sed 's/^feature://' | cut -d'=' -f1 | paste -sd "," -) && unset cmdOut
     
-    runDroidCmdOut=$(runDroidCmd "dumpsys activity")
-    # runDroidCmdOut=$(runDroidCmd "dumpsys window")
-    mGlobalConfiguration=$(grep "mGlobalConfiguration" <<< "$runDroidCmdOut") && unset runDroidCmdOut
+    cmdOut=$(shellCmd "dumpsys activity")
+    # cmdOut=$(shellCmd "dumpsys window")
+    mGlobalConfiguration=$(grep "mGlobalConfiguration" <<< "$cmdOut") && unset cmdOut
   else
     GLExtensions=$(runJqCmd "GL.Extensions")
     VendingversionString=$(runJqCmd "Vending.versionString")
@@ -70,13 +59,13 @@ getDeviceInfo() {
   GLVersion=$(getprop ro.opengles.version)
   # adb shell dumpsys SurfaceFlinger 2>/dev/null | grep -o "OpenGL ES [0-9]\.[0-9]" | awk '{print $3}'
   
-  if grep "mServiceState" <<< $(runDroidCmd "dumpsys telephony.registry") | head -1 | grep -q "roamingType=ROAMING"; then
+  if grep "mServiceState" <<< $(shellCmd "dumpsys telephony.registry") | head -1 | grep -q "roamingType=ROAMING"; then
     Roaming="mobile-roaming"
   else
     Roaming="mobile-notroaming"
   fi
   TimeZone=$(getprop persist.sys.timezone)
-  if grep -q "AT Translated Set 2 keyboard" <<< $(runDroidCmd "dumpsys input"); then
+  if grep -q "AT Translated Set 2 keyboard" <<< $(shellCmd "dumpsys input"); then
     HasHardKeyboard="true"
     Keyboard=2  # keyboardCount=hardKeyboard+softKeyboard=1+1=2
   else
