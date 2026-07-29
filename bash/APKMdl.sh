@@ -99,7 +99,7 @@ searchApp() {
         else
           appName="$selected"
           searchTerm=$(echo "$appName" | sed 's/ /+/g')
-          selectedUrl=$(echo "$searchResultJSON" | jq -r --arg app "$appName" '.[] | select(.title | startswith($app)) | .href' | head -1)
+          selectedUrl=$(jq -r --arg app "$appName" '.[] | select((.title | sub(" [0-9]+(\\.[0-9]+)*.*$"; "")) == $app) | .href' <<< "$searchResultJSON" | head -1)
           appPageHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$selectedUrl")
           if ! grep -q "_cf_chl_" <<< "$appPageHTML"; then
             appLink="https://www.apkmirror.com$(echo "$appPageHTML" | pup '#breadcrumbs a attr{href}' | sed -n '2p')"
@@ -146,6 +146,27 @@ breadcrumbsMenu() {
   fi
 }
 
+getAllVersions() {
+  allVersionsJson=$(pup '#primary div.listWidget div.appRow h5.appRowTitle a json{}' <<< "$appPageHTML" | jq 'map({title: .text, link: ("https://www.apkmirror.com" + .href)})')
+  mapfile -t availableVersions < <(jq -r '.[] | .title' <<< "$allVersionsJson" | grep -o '[0-9].*')
+  if [ -n "$version" ]; then
+    for i in "${!availableVersions[@]}"; do
+      versionName=$(grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' <<< "${availableVersions[$i]}")
+      [ "$versionName" == "$version" ] && availableVersions[$i]="${availableVersions[$i]} (Recommended)"
+    done
+  fi
+  mapfile -t versionUrls < <(echo "$allVersionsJson" | jq -r '.[] | .link')
+  while true; do
+    buttons=("<Select>" "<Back>"); menu availableVersions buttons || { break; return 1; }
+    selectedVersion="${availableVersions[$selected]}"
+    selectedVersion="${selectedVersion%% (Recommended)}"
+    versionLink="${versionUrls[$selected]}"
+    echo -e "$good Selected Version: ${Green}$selectedVersion${Reset}"
+    echo -e "$info versionLink: ${Blue}$versionLink${Reset}"
+    break; return 0
+  done
+}
+
 getLatestUploads() {
   unset versionLink
   echo -e "$running Get latest $appName uploads list from APKMirror.."
@@ -153,7 +174,9 @@ getLatestUploads() {
   breadcrumbsMenu
   appPageHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$appLink")
   if ! grep -q "_cf_chl_" <<< "$appPageHTML"; then
-    latestUploadsUrl="https://www.apkmirror.com$(pup '#primary a:contains("See more uploads...") attr{href}' <<< "$appPageHTML")"
+    moreUploads=$(pup '#primary a:contains("See more uploads...") attr{href}' <<< "$appPageHTML")
+    [ -z "$moreUploads" ] && { getAllVersions && return; }
+    latestUploadsUrl="https://www.apkmirror.com${moreUploads}"
     baseUploadsUrl=$(basename "$latestUploadsUrl")
     latestUploadsHTML=$(curl -sL --doh-url "$cloudflareDOH" -A "$USER_AGENT" "$latestUploadsUrl")
     if ! grep -q "_cf_chl_" <<< "$latestUploadsHTML"; then

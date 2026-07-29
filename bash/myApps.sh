@@ -4,7 +4,11 @@
 
 packagesList() {
   echo -e "$running Get Installed packages list.."
-  [ $ShowSystemApps == false ] && cmdOut=$(shellCmd "pm list packages -3") || cmdOut=$(shellCmd "pm list packages")
+  if [ $ShowSystemApps == false ]; then
+    cmdOut=$(shellCmd "pm list packages -3")
+  else
+    cmdOut=$(shellCmd "pm list packages")
+  fi
   packages=($(sed 's/package://g' <<< "$cmdOut")) && unset cmdOut
 }
 
@@ -179,7 +183,7 @@ aptoideShowUpdates() {
 
 appsList() {
   packagesList
-  packagesInfo "packages" "1"
+  packagesInfo "packages" "true"
   applications=()
   for ((i=0; i<${#packages[@]}; i++)); do
     applications+=("${application_labels[$i]} (${packages[$i]})")
@@ -187,9 +191,18 @@ appsList() {
 }
 
 firewallService() {
-  if [ ! -f $apkdl/firewallBlocklist.json ]; then
-    jq -n '[]' > $apkdl/firewallBlocklist.json
+  if [ $isAndroid == true ]; then
+    if su -c "[ -f /data/adb/script.apkdl.firewall/firewallBlocklist.json ]"; then
+      firewallBlocklistJson=$(su -c "cat /data/adb/script.apkdl.firewall/firewallBlocklist.json")
+      echo "$firewallBlocklistJson" > $apkdl/firewallBlocklist.json
+    fi
+  else
+    if adb -s $serial shell su -c "[ -f /data/adb/script.apkdl.firewall/firewallBlocklist.json ]"; then
+      adb -s $serial shell su -c "cp /data/adb/script.apkdl.firewall/firewallBlocklist.json /data/local/tmp/firewallBlocklist.json"
+      adb -s $serial pull /data/local/tmp/firewallBlocklist.json $apkdl/firewallBlocklist.json &>/dev/null
+    fi
   fi
+  [ ! -f $apkdl/firewallBlocklist.json ] && jq -n '[]' > $apkdl/firewallBlocklist.json
   if ! jq -e --arg package "$package" 'any(.[]; .package == $package)' $apkdl/firewallBlocklist.json >/dev/null 2>&1; then
     jq --arg package "$package" --arg uid "$uid" --arg label "$appLabel" '. += [{"package": $package,"uid": $uid,"label": $label}]' $apkdl/firewallBlocklist.json > tmp.json && mv tmp.json $apkdl/firewallBlocklist.json
   fi

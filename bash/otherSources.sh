@@ -342,6 +342,7 @@ APKComboVariants() {
     [ "$vtype" == "APK" ] && file_ext="apk" || file_ext="apks"
     fileName="${appName}_v$version-$arch.$file_ext"
     filePath="$Download/$fileName"
+    apkPath="$filePath"
     return
   else
     return 1
@@ -695,7 +696,7 @@ liteapksVersionsUrl() {
   mapfile -t versions < <(jq -r '.data.versions.[].version' <<< "$versionsJson")
   version_download_types=($(jq -r '.data.versions.[].version_downloads.[].version_download_type' <<< "$versionsJson"))
   mapfile -t version_download_sizes < <(jq -r '.data.versions.[].version_downloads.[].version_download_size' <<< "$versionsJson")
-  version_download_links=($(jq -r '.data.versions.[].version_downloads.[].version_download_link' <<< "$versionsJson"))
+  mapfile -t version_download_links < <(jq -r '.data.versions.[].version_downloads.[].version_download_link' <<< "$versionsJson")
   mapfile -t version_download_notes < <(jq -r '.data.versions.[].version_downloads.[].version_download_note' <<< "$versionsJson")
   echo -e "$info Get it On: ${Blue}$original_download_url${Reset}"
   declare -a versionsList
@@ -933,7 +934,7 @@ oSources() {
         [ $? -ne 0 ] && continue
         dlOther
         if [ $? -eq 0 ]; then
-          [ -f "$Download/${appName}_v$version-$arch.apks" ] && apks2apk
+          [ -f "$Download/${appName}_v$version-$arch.apks" ] && { apks2apk && sign "$Download/${appName}_v$version-$arch.apk"; }
           fileName="${appName}_v$version-$arch.apk"
           filePath="$Download/$fileName"
           if { [ $isAndroid == false ] && [ -n "$serial" ]; } || [ $isAndroid == true ]; then

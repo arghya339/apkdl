@@ -56,6 +56,21 @@ cloudflareDOH="https://cloudflare-dns.com/dns-query"
 cloudflareIP="1.1.1.1,1.0.0.1"
 checkInternet && crVersion=$(curl -sL "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=1" | jq -r '.[0].version') || crVersion="146.0.0.0"
 
+reloadConfig() {
+  printArt=$(jq -r '.printArt' "$apkdlJson" 2>/dev/null)
+  AutoUpdatesScript=$(jq -r '.AutoUpdatesScript' "$apkdlJson" 2>/dev/null)
+  AutoUpdatesDependencies=$(jq -r '.AutoUpdatesDependencies' "$apkdlJson" 2>/dev/null)
+  [ $isAndroid == true ] && CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null)
+  ShowSystemApps=$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)
+  RipLocale=$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)
+  RipDpi=$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)
+  RipLib=$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)
+  RmFileAfterInstallation=$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)
+  PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
+  AppUpdatesSource=$(jq -r '.AppUpdatesSource' "$apkdlJson" 2>/dev/null)
+}
+[ -f $apkdlJson ] && reloadConfig
+
 config() {
   local key="$1"
   local value="$2"
@@ -83,7 +98,7 @@ runCmd() {
 }
 
 shellCmd() {
-  cmd=$1
+  cmd=${1}
   if [ $isAndroid == true ]; then
     if [ $su == true ] || rish -c "id" &>/dev/null; then
       runCmd "$cmd"
@@ -149,23 +164,11 @@ fi
 
 [ $isAndroid == true ] && { all_key+=("CheckTermuxUpdate" "openjdk"); all_value+=(true "21"); }
 
+isConfigured=false
 for i in "${!all_key[@]}"; do
-  ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && config "${all_key[i]}" "${all_value[i]}"
+  ! jq -e --arg key "${all_key[i]}" 'has($key)' "$apkdlJson" >/dev/null && { config "${all_key[i]}" "${all_value[i]}"; isConfigured=true; }
 done
-
-reloadConfig() {
-  printArt=$(jq -r '.printArt' "$apkdlJson" 2>/dev/null)
-  AutoUpdatesScript=$(jq -r '.AutoUpdatesScript' "$apkdlJson" 2>/dev/null)
-  AutoUpdatesDependencies=$(jq -r '.AutoUpdatesDependencies' "$apkdlJson" 2>/dev/null)
-  [ $isAndroid == true ] && CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null)
-  ([ $isAndroid == true ] || [ -n $serial ]) && ShowSystemApps=$(jq -r '.ShowSystemApps' "$apkdlJson" 2>/dev/null)
-  RipLocale=$(jq -r '.RipLocale' "$apkdlJson" 2>/dev/null)
-  RipDpi=$(jq -r '.RipDpi' "$apkdlJson" 2>/dev/null)
-  RipLib=$(jq -r '.RipLib' "$apkdlJson" 2>/dev/null)
-  RmFileAfterInstallation=$(jq -r '.RmFileAfterInstallation' "$apkdlJson" 2>/dev/null)
-  PreReleasePatches=$(jq -r '.PreReleasePatches' "$apkdlJson" 2>/dev/null)
-  AppUpdatesSource=$(jq -r '.AppUpdatesSource' "$apkdlJson" 2>/dev/null)
-}; reloadConfig
+[ $isConfigured == true ] && reloadConfig
 
 if [ $isAndroid == false ]; then
   jq -e '.ABI != null' "$apkdlJson" >/dev/null 2>&1 && cpuAbi="$(jq -r '.ABI' "$apkdlJson" 2>/dev/null)" || cpuAbi=

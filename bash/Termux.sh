@@ -5,6 +5,7 @@ if [ -f "$apkdlJson" ]; then
   jdkVersion=$(jq -r '.openjdk' "$apkdlJson" 2>/dev/null)
   AutoUpdatesDependencies=$(jq -r '.AutoUpdatesDependencies' "$apkdlJson" 2>/dev/null)
   CheckTermuxUpdate=$(jq -r '.CheckTermuxUpdate' "$apkdlJson" 2>/dev/null)
+  aapt2=$(jq -r '.aapt2' "$apkdlJson" 2>/dev/null)
 else
   jdkVersion="21"
   AutoUpdatesDependencies=true
@@ -166,6 +167,7 @@ dependencies() {
   pkgInstall "jq"  # jq install/update
   pkgInstall "pup"  # pup install/update
   pkgInstall "openjdk-$jdkVersion" # java install/update
+  pkgInstall "apksigner"  # apksigner install/update
   pkgInstall "bsdtar"  # bsdtar install/update
   pkgInstall "pv"  # pv install/update
   pkgInstall "grep"  # grep update
@@ -177,9 +179,12 @@ dependencies() {
   pkgInstall "xxd"  # xxd install/update
 }
 [ "$AutoUpdatesDependencies" == true ] && checkInternet && dependencies
-  
+
+if checkInternet; then
+  tag_name=$(curl -sL https://api.github.com/repos/ReVanced/aapt2/releases/latest | jq -r '.tag_name')
+  [ "$tag_name" != "$aapt2" ] && { rm -f $PREFIX/bin/aapt2 && curl -L --progress-bar -C - -o $PREFIX/bin/aapt2 https://github.com/ReVanced/aapt2/releases/download/${tag_name}/aapt2-${cpuAbi} && chmod +x $PREFIX/bin/aapt2 && $PREFIX/bin/aapt2 version 2>&1 && config "aapt2" "$tag_name"; }
+fi
 aapt2="$PREFIX/bin/aapt2"
-[[ $($PREFIX/bin/aapt2 version 2>&1 | awk '{print $NF}') =~ ^(2.19-V14.0.6.0.TKSMIXM|2.19-3401)$ ]] || { rm -f $PREFIX/bin/aapt2 && curl -L --progress-bar -C - -o $PREFIX/bin/aapt2 $(curl -sL https://api.github.com/repos/ReVanced/aapt2/releases/latest | jq -r --arg arch "$cpuAbi" '.assets[] | select(.name == "aapt2-" + $arch) | .browser_download_url') && chmod +x $PREFIX/bin/aapt2 && $PREFIX/bin/aapt2 version 2>&1; }
   
 # --- Create apkdl shortcut on Laucher Home ---
 if [ ! -f "$HOME/.shortcuts/apkdl" ] || [ ! -f "$HOME/.termux/widget/dynamic_shortcuts/apkdl" ]; then
