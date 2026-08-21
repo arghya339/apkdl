@@ -25,6 +25,7 @@ apk downloader
   - [APKCombo](https://apkcombo.com/)
   - [Aptoide](https://en.aptoide.com/group/applications/)
   - [LITEAPKS](https://liteapks.com/)
+  - [APKDONE](https://apkdone.com/)
 - [ReVanced](https://revanced.app/)
 - [Morphe](https://github.com/MorpheApp/morphe-patches/)
 - [RVX](https://github.com/inotia00/revanced-patches/)

@@ -585,8 +585,62 @@ aptoideAppInfo() {
 # curl -sL "https://ws75.aptoide.com/api/7/apps/getRecommended" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/GetRecommendedRequest.java
 # curl -sL "https://ws75-cache.aptoide.com/api/7/listApps?sort=latest&limit=10" | jq  # https://github.com/Aptoide/aptoide-client-v8/blob/master/dataprovider/src/main/java/cm/aptoide/pt/dataprovider/ws/v7/ListAppsRequest.java
 
-# top_post_id=$(curl -sL "https://apkdone.com/wp-json/elasticpress/autosuggest?q=picsart" | jq -r '.list.[].post_id' | head -1)
-# https://apkdone.com/wp-json/wp/v2/posts/$top_post_id
+apkdoneSearch() {
+  while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
+  if [ -n "$appName" ]; then
+    app_name=$(sed 's/ /+/g' <<< "$appName")
+    searchURL="https://apkdone.com/api/v1/search?q=${app_name}"
+    searchJson=$(curl -sL "$searchURL")
+    if [ $(jq '.data.apps | length' <<< "$searchJson") -ne 0 ]; then
+      mapfile -t titles < <(jq -r '.data.apps[].title' <<< "$searchJson")
+      hrefs=($(jq -r '.data.apps[] | "https://apkdone.com\(.href)"' <<< "$searchJson"))
+      mapfile -t developers < <(jq -r '.data.apps[].developer' <<< "$searchJson")
+      ratings=($(jq -r '.data.apps[].rating' <<< "$searchJson"))
+      isMods=($(jq -r '.data.apps[].mod' <<< "$searchJson"))
+      mapfile -t ownerNames < <(jq -r '.data.apps[].ownerName' <<< "$searchJson")
+      appsList=()
+      for ((i=0; i<${#titles[@]}; i++)); do
+        [ ${isMods[i]} == true ] && type="MOD" || type="STOCK"
+        appsList+=("${titles[i]} | ${developers[i]} | ${type} | ${ratings[i]}★")
+      done
+      selected_app=0
+      while true; do
+        if menu appsList bButtons hrefs "" $selected_app; then
+          selected_app=$selected
+          appURL="${hrefs[selected_app]}"
+          dlPageURL="$appURL/download/"
+          ownerName="${ownerNames[selected_app]}"
+          return
+          break
+        else
+          return 1
+          break
+        fi
+      done
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
+
+apkdoneSpec() {
+  appPageHtml=$(curl -sL "$appURL")
+  mapfile -t appData < <(pup 'body > div.page > div > div > div > main > article > div.app_view_wrp > div > div.app_view-first > div > ul > li > span text{}' <<< "$appPageHtml")
+  datetime=$(pup 'body > div.page > div > div > div > main > article > div.box_grey.app_moreinfo > div > div:nth-child(1) > div > div.smf > ul > li:nth-child(1) > time text{}' <<< "$appPageHtml")
+  echo -e "Android: ${appData[0]}\nVersion: ${appData[1]}\nSize: ${appData[2]}\nUpdated: ${datetime}"
+  confirmPrompt "Do you want to download this app?" ynButtons && return 0 || return 1
+}
+
+dlAPKDONE() {
+  dlPageHtml=$(curl -sL "$dlPageURL")
+  fileTitle=$(pup 'body > div.page_file > div > div.box-file > h1 text{}' <<< "$dlPageHtml" | head -1)
+  dlURL="https://apkdone.com/uploads/apps/$fileTitle"
+  dlUrl=$dlURL; fileName=$fileTitle; filePath="$Download/$fileName"
+  [ -n "$fileTitle" ] && return 0 || return 1
+}
+
 liteapksSearch() {
   liteapksWPPostsAPI="https://liteapks.com/wp-json/wp/v2/posts"
   while true; do read -r -p ">> Enter appName: " appName; [[ "$appName" =~ ^[Qq] ]] && appName=; break; [ -n "$appName" ] && break || echo -e "$notice Please enter a valid appName!"; done
@@ -617,8 +671,7 @@ liteapksSearch() {
       done
       [ $page -ne 1 ] && appsList+=("<")
       appsList+=(">")
-      buttons=("<Select>" "<Back>")
-      if menu appsList buttons; then
+      if menu appsList bButtons; then
         if [ "${appsList[selected]}" == "<" ]; then
           ((page--))
         elif [ "${appsList[selected]}" == ">" ]; then
@@ -840,7 +893,7 @@ LITEAPKSdl() {
 
 oSources() {
   selected_o_option=0
-  other_options=(Codeberg IzzyOnDroid AppGallery SourceForge APKCombo Aptoide LITEAPKS)
+  other_options=(Codeberg IzzyOnDroid AppGallery SourceForge APKCombo Aptoide LITEAPKS APKDONE)
   while true; do
     menu other_options bButtons "" "" $selected_o_option && selected_o_option="$selected" || break
     case "${other_options[selected_o_option]}" in
@@ -997,6 +1050,19 @@ oSources() {
           APIKey
         fi
         echo; read -p "Press Enter to continue..."
+        ;;
+      APKDONE)
+        apkdoneSearch || continue
+        apkdoneSpec || continue
+        if dlAPKDONE; then
+          dlOther
+          if { [ $isAndroid == false ] && [ -n "$serial" ]; } || [ $isAndroid == true ]; then
+            if confirmPrompt "Do you want to install $fileName" ynButtons; then
+              [ $isAndroid == true ] && apkInstall "$filePath" || adbInstall "$filePath"
+            fi
+          fi
+          echo; read -p "Press Enter to continue..."
+        fi
         ;;
     esac
   done
