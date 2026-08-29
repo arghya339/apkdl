@@ -86,7 +86,12 @@ dependencies() {
   formulaeInstall "ca-certificate"  # ca-certificate update
   formulaeInstall "jq"  # jq install/update
   formulaeInstall "pv"  # pv install/update
-  formulaeInstall "pup"  # pup install/update
+  if [ "$(pup --version 2>/dev/null)" != "0.4.0" ]; then
+    pkgInstall "go"
+    echo -e "$running Installing pup utility.."
+    go install github.com/ericchiang/pup@latest &>/dev/null
+    sudo cp ~/go/bin/pup /usr/local/bin/pup
+  fi
   formulaeInstall "protobuf"  # protoc install/update
   formulaeInstall "android-platform-tools"  # android-platform-tools install/update
   formulaeInstall "openjdk"  # java install/update

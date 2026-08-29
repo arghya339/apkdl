@@ -285,25 +285,24 @@ getVariant() {
   if ! grep -q "_cf_chl_" <<< "$variantHTML"; then
     variantJSON=$(echo "$variantHTML" | pup 'div.table-row json{}')
     
-    mapfile -t variants_table_row < <(echo "$variantJSON" | jq -r '.[] | select((.children | type) == "array" and (.children | length) == 5)
-      | select(
-        (.children[0].children[0].text | type) == "string" and # Version text
-        (.children[0].children[1].text | type) == "string" and # Type text (BUNDLE/APK)
-        (.children[1].text | type) == "string" and # Arch text
-        (.children[2].text | type) == "string" and # OS text
-        (.children[3].text | type) == "string" and # DPI text
-        (.children[4].children[0].href | type) == "string" # Link href
-      )
-      | [
-          (.children[0].text // .children[0].children[0].text), # Version (fallback)
-          (try (.children[0].children | map(select(.class? == "colorLightBlack")) | .[0].text // "") catch ""), # Version code from colorLightBlack class
-          .children[0].children[1].text, # Type (BUNDLE/APK)
-          .children[1].text, # Arch
-          .children[2].text, # OS
-          .children[3].text, # DPI
-          ("https://www.apkmirror.com" + .children[4].children[0].href) # Link
-        ] | join("\t")
-    ')
+    mapfile -t variants_table_row < <(jq -r '.[] | select((.children | type) == "array" and (.children | length) == 4)
+  | select(
+    (.children[0].children[0].text | type) == "string" and
+    (.children[0].children[1].text | type) == "string" and
+    (.children[1].text | type) == "string" and
+    (.children[2].text | type) == "string" and
+    (.children[3].text | type) == "string" and
+    (.children[0].children[0].href | type) == "string"
+  )
+  | [
+      .children[0].children[0].text,
+      (try (.children[0].children | map(select(.class? == "colorLightBlack")) | .[0].text // "") catch ""),
+      .children[0].children[1].text,
+      .children[1].text,
+      .children[2].text,
+      .children[3].text,
+      ("https://www.apkmirror.com" + .children[0].children[0].href)
+    ] | join("\t")' <<< "$variantJSON")
     
     variantList=()
     for i in "${!variants_table_row[@]}"; do
