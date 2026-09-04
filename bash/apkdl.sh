@@ -43,7 +43,6 @@ elif [[ -f "/etc/os-release" ]]; then
 fi
 
 apkdl="$HOME/.apkdl"
-[ -d "$HOME/apkdl" ] && mv ~/apkdl ~/.apkdl  # Temporary: Hides script folder from $HOME
 [ $isAndroid == true ] && Download="/sdcard/Download" || Download="$HOME/Downloads"
 mkdir -p $apkdl
 apkdlJson="$apkdl/apkdl.json"
@@ -110,7 +109,7 @@ shellCmd() {
   fi
 }
 
-scripts+=(auth genProtoBin genTocPb play dlGitHub dlGitLab dlFDroid APKMdl dlAPKPure dlUptodown RVdl otherSources myApps)
+scripts+=(auth genProtoBin genTocPb play AppGallery dlGitHub dlGitLab dlFDroid APKMdl dlAPKPure dlUptodown RVdl otherSources myApps)
 
 run() { source $apkdl/menu.sh; source $apkdl/confirmPrompt.sh; for ((c=0; c<${#scripts[@]}; c++)); do source $apkdl/${scripts[c]}.sh; done; }
 
@@ -897,6 +896,8 @@ while true; do
                   [ "$apk_ext" == "apks" ] && APKS2APK && sign "${filePath%.*}.apk"
                 fi
               fi
+            elif [ "$AppUpdatesSource" == "AppGallery" ]; then
+              clientCheckUpdates
             elif [ "$AppUpdatesSource" == "APKMirror" ]; then
               [ ${#apps[@]} -eq 0 ] && getUpdates
               showUpdates
@@ -1146,10 +1147,11 @@ while true; do
           AppUpdatesSource)
             case "$AppUpdatesSource" in
               "PlayStore") selected_up=0 ;;
-              "APKMirror") selected_up=1 ;;
-              "Aptoide") selected_up=2 ;;
+              "AppGallery") selected_up=1 ;;
+              "APKMirror") selected_up=2 ;;
+              "Aptoide") selected_up=3 ;;
             esac
-            Sources=(PlayStore APKMirror Aptoide)
+            Sources=(PlayStore AppGallery APKMirror Aptoide)
             menu Sources bButtons "" "" $selected_up && { AppUpdatesSource="${Sources[selected]}"; config "AppUpdatesSource" "$AppUpdatesSource"; }
             ;;
           ShowSystemApps)

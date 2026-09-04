@@ -241,20 +241,6 @@ IzzyOnDroidSearch() {
   fi
 }
 
-dlAppGallery() {
-  if [ $isAndroid == true ]; then termux-open-url "https://appgallery.huawei.com"; elif [ $isMacOS == true ]; then open "https://appgallery.huawei.com"; else xdg-open "https://appgallery.huawei.com"; fi
-  while true; do read -r -p ">> Enter appUrl/Id: " appUrl; [[ "$appUrl" =~ ^[Qq] ]] && { appId=""; break; }; [ -n "$appUrl" ] && { appId=$(basename "$appUrl"); break; } || echo -e "$notice Please enter a valid appUrl/Id!"; done
-  if [ -n "$appId" ]; then
-    dlUrl=$(curl -sL --doh-url "$cloudflareDOH" -D - -o /dev/null "https://appgallery.cloud.huawei.com/appdl/$appId" | grep -i "location:" | head -1 | sed 's/location: //i' | tr -d '\r')  # make GET request but only show response headers
-    echo -e "$info dlUrl: ${Blue}$dlUrl${Reset}"
-    fileName=$(echo "$dlUrl" | sed 's/.*\///; s/\?.*//')  # extract everything between last / and ?
-    filePath="$Download/$fileName"
-    [ -n "$dlUrl" ] && return 0 || return 1
-  else
-    return 1
-  fi
-}
-
 sf() {
   sfDomain="https://sourceforge.net"
   while true; do read -r -p ">> Enter projectName: " projectName; [[ "$projectName" =~ ^[Qq] ]] && projectName=; break; [ -n "$projectName" ] && break || echo -e "$notice Please enter a valid projectName!"; done
@@ -943,7 +929,13 @@ oSources() {
         fi
         ;;
       AppGallery)
-        dlAppGallery
+        appdlMethods=(byAppName byAppId byPackageName)
+        menu appdlMethods bButtons || continue
+        case "${appdlMethods[selected]}" in
+          byAppName) clientSearch ;;
+          byAppId) clientAppDetailById ;;
+          byPackageName) clientAppDetailByPackage ;;
+        esac
         [ $? -ne 0 ] && continue
         dlOther
         if [ $? -eq 0 ]; then

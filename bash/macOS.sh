@@ -96,6 +96,12 @@ dependencies() {
   formulaeInstall "android-platform-tools"  # android-platform-tools install/update
   formulaeInstall "openjdk"  # java install/update
   grep -q 'export PATH="/usr/local/opt/openjdk/bin:$PATH"' ~/.zshrc 2>/dev/null || echo 'export PATH="/usr/local/opt/openjdk/bin:$PATH"' >> ~/.zshrc
+  formulaeInstall "android-commandlinetools"
+  aapt2=(/usr/local/share/android-commandlinetools/build-tools/*/aapt2) && aapt2="${aapt2[-1]}"
+  if [ ! -f $aapt2 ]; then
+    yes | /usr/local/bin/sdkmanager --licenses
+    /usr/local/bin/sdkmanager $(/usr/local/bin/sdkmanager --list | grep "^  build-tools;" | awk '{print $1}' | tail -1)
+  fi
   # https://github.com/aria2/aria2/issues/1920
   aria2Executing=$(aria2c -q -d "$HOME" -o aria2Executing -U "User-Agent: $USER_AGENT" --header="Referer: https://one.one.one.one/" --ca-certificate="/etc/ssl/cert.pem" --async-dns=true --async-dns-server="$cloudflareIP" "https://one.one.one.one/")
   if echo "$aria2Executing" | grep -q "--async-dns=true" 2>/dev/null; then
@@ -114,8 +120,8 @@ dependencies() {
 }
 [ "$AutoUpdatesDependencies" == true ] && checkInternet && dependencies
 
-aapt2=("$HOME/Library/Android/sdk/build-tools/"*/aapt2) && aapt2="${aapt2[-1]}"
-apksigner=("$HOME/Library/Android/sdk/build-tools/"*/apksigner) && apksigner="${apksigner[-1]}"
+aapt2=(/usr/local/share/android-commandlinetools/build-tools/*/aapt2) && aapt2="${aapt2[-1]}"
+apksigner=("/usr/local/share/android-commandlinetools/build-tools/"*/apksigner) && apksigner="${apksigner[-1]}"
 keytools=(/usr/local/opt/openjdk*/bin/keytool); keytool="${keytools[0]}"
 
 getSerial() {
